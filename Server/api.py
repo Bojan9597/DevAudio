@@ -445,14 +445,17 @@ def buy_book():
 
         # Insert purchase
         insert_query = "INSERT INTO user_books (user_id, book_id) VALUES (%s, %s)"
-        cursor = db.connection.cursor()
-        cursor.execute(insert_query, (user_id, book_id))
-        db.connection.commit()
-        cursor.close()
+        db.execute_query(insert_query, (user_id, book_id))
 
-        # Check for new badges
-        badge_service = BadgeService(db.connection)
-        new_badges = badge_service.check_badges(user_id)
+        new_badges = []
+        try:
+            # Check for new badges
+            badge_service = BadgeService(db.connection)
+            new_badges = badge_service.check_badges(user_id)
+        except Exception as e:
+            print(f"Error checking badges in buy_book: {e}")
+            import traceback
+            traceback.print_exc()
 
         return jsonify({"message": "Book purchased successfully", "new_badges": new_badges}), 201
 

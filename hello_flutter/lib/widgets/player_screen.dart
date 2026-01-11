@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Badge;
 import '../models/book.dart';
 import 'dart:async';
 import 'package:just_audio/just_audio.dart';
