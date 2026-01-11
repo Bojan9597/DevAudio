@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'l10n/generated/app_localizations.dart';
+import 'states/layout_state.dart';
 import 'app_layout.dart';
 import 'screens/login_screen.dart';
 import 'services/auth_service.dart';
@@ -12,14 +15,33 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
-        useMaterial3: true,
-      ),
-      home: const AuthWrapper(),
+    return ListenableBuilder(
+      listenable: globalLayoutState,
+      builder: (context, child) {
+        return MaterialApp(
+          title: 'AudioBooks',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
+            useMaterial3: true,
+          ),
+          locale: globalLayoutState.locale,
+          localizationsDelegates: [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('en'), // English
+            Locale('es'), // Spanish
+            Locale('sr'), // Serbian
+            Locale('fr'), // French
+            Locale('de'), // German
+          ],
+          home: const AuthWrapper(),
+        );
+      },
     );
   }
 }

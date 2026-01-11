@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
+import '../states/layout_state.dart';
+import '../l10n/generated/app_localizations.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -191,18 +193,62 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 20),
                 ListTile(
                   leading: const Icon(Icons.language),
-                  title: const Text('Language'),
-                  trailing: const Text('English (US)'),
+                  title: Text(AppLocalizations.of(context)!.language),
+                  trailing: Text(
+                    _getLanguageName(globalLayoutState.locale?.languageCode),
+                  ),
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Language settings mocked')),
+                    showDialog(
+                      context: context,
+                      builder: (context) {
+                        return SimpleDialog(
+                          title: const Text('Select Language'),
+                          children: [
+                            SimpleDialogOption(
+                              onPressed: () {
+                                globalLayoutState.setLocale(const Locale('en'));
+                                Navigator.pop(context);
+                              },
+                              child: const Text('English (US)'),
+                            ),
+                            SimpleDialogOption(
+                              onPressed: () {
+                                globalLayoutState.setLocale(const Locale('es'));
+                                Navigator.pop(context);
+                              },
+                              child: const Text('Español'),
+                            ),
+                            SimpleDialogOption(
+                              onPressed: () {
+                                globalLayoutState.setLocale(const Locale('sr'));
+                                Navigator.pop(context);
+                              },
+                              child: const Text('Srpski'),
+                            ),
+                            SimpleDialogOption(
+                              onPressed: () {
+                                globalLayoutState.setLocale(const Locale('fr'));
+                                Navigator.pop(context);
+                              },
+                              child: const Text('Français'),
+                            ),
+                            SimpleDialogOption(
+                              onPressed: () {
+                                globalLayoutState.setLocale(const Locale('de'));
+                                Navigator.pop(context);
+                              },
+                              child: const Text('Deutsch'),
+                            ),
+                          ],
+                        );
+                      },
                     );
                   },
                 ),
                 const Divider(),
                 ListTile(
                   leading: const Icon(Icons.brightness_6),
-                  title: const Text('Theme'),
+                  title: Text(AppLocalizations.of(context)!.theme),
                   trailing: const Text('Light'),
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -213,7 +259,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const Divider(),
                 ListTile(
                   leading: const Icon(Icons.lock),
-                  title: const Text('Change Password'),
+                  title: Text(AppLocalizations.of(context)!.changePassword),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: _showChangePasswordDialog,
                 ),
@@ -221,9 +267,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 40),
                 ListTile(
                   leading: const Icon(Icons.logout, color: Colors.red),
-                  title: const Text(
-                    'Logout',
-                    style: TextStyle(
+                  title: Text(
+                    AppLocalizations.of(context)!.logout,
+                    style: const TextStyle(
                       color: Colors.red,
                       fontWeight: FontWeight.bold,
                     ),
@@ -233,5 +279,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
     );
+  }
+
+  String _getLanguageName(String? code) {
+    switch (code) {
+      case 'es':
+        return 'Español';
+      case 'sr':
+        return 'Srpski';
+      case 'fr':
+        return 'Français';
+      case 'de':
+        return 'Deutsch';
+      default:
+        return 'English (US)';
+    }
   }
 }

@@ -3,6 +3,7 @@ import '../states/layout_state.dart';
 import '../models/book.dart';
 import '../repositories/book_repository.dart';
 import '../services/auth_service.dart';
+import '../l10n/generated/app_localizations.dart';
 import 'player_screen.dart';
 
 import '../screens/profile_screen.dart';
@@ -181,13 +182,19 @@ class _ContentAreaState extends State<ContentArea> {
         children: [
           Container(
             color: Colors.white,
-            child: const TabBar(
+            child: TabBar(
               labelColor: Colors.blueAccent,
               unselectedLabelColor: Colors.grey,
               indicatorColor: Colors.blueAccent,
               tabs: [
-                Tab(icon: Icon(Icons.favorite), text: 'Favorites'),
-                Tab(icon: Icon(Icons.menu_book), text: 'My Books'),
+                Tab(
+                  icon: const Icon(Icons.favorite),
+                  text: AppLocalizations.of(context)!.favorites,
+                ),
+                Tab(
+                  icon: const Icon(Icons.menu_book),
+                  text: AppLocalizations.of(context)!.myBooks,
+                ),
               ],
             ),
           ),

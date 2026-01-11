@@ -1,0 +1,18 @@
+{
+  "appTitle": "AudioBooks",
+  "library": "Library",
+  "profile": "Profile",
+  "categories": "Categories",
+  "settings": "Settings",
+  "language": "Language",
+  "theme": "Theme",
+  "logout": "Logout",
+  "login": "Login",
+  "myBooks": "My Books",
+  "favorites": "Favorites",
+  "allBooks": "All Books",
+  "changePassword": "Change Password",
+  "confirmNewPassword": "Confirm New Password",
+  "currentPassword": "Current Password",
+  "newPassword": "New Password"
+}

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'widgets/side_menu.dart';
 import 'widgets/content_area.dart';
 import 'states/layout_state.dart';
+import 'l10n/generated/app_localizations.dart';
 
 class AppLayout extends StatelessWidget {
   const AppLayout({super.key});
@@ -16,9 +17,9 @@ class AppLayout extends StatelessWidget {
             Expanded(
               child: TextButton(
                 onPressed: () => globalLayoutState.toggleMenu(),
-                child: const Text(
-                  'Categories',
-                  style: TextStyle(color: Colors.white, fontSize: 16),
+                child: Text(
+                  AppLocalizations.of(context)!.categories,
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -27,9 +28,9 @@ class AppLayout extends StatelessWidget {
               child: TextButton.icon(
                 onPressed: () => globalLayoutState.setCategoryId('library'),
                 icon: const Icon(Icons.library_books, color: Colors.white),
-                label: const Text(
-                  'Library',
-                  style: TextStyle(color: Colors.white, fontSize: 16),
+                label: Text(
+                  AppLocalizations.of(context)!.library,
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -38,9 +39,9 @@ class AppLayout extends StatelessWidget {
               child: TextButton.icon(
                 onPressed: () => globalLayoutState.setCategoryId('profile'),
                 icon: const Icon(Icons.person, color: Colors.white),
-                label: const Text(
-                  'Profile',
-                  style: TextStyle(color: Colors.white, fontSize: 16),
+                label: Text(
+                  AppLocalizations.of(context)!.profile,
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),

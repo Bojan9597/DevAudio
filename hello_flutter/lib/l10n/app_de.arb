@@ -1,0 +1,18 @@
+{
+  "appTitle": "Hörbücher",
+  "library": "Bibliothek",
+  "profile": "Profil",
+  "categories": "Kategorien",
+  "settings": "Einstellungen",
+  "language": "Sprache",
+  "theme": "Thema",
+  "logout": "Abmelden",
+  "login": "Anmelden",
+  "myBooks": "Meine Bücher",
+  "favorites": "Favoriten",
+  "allBooks": "Alle Bücher",
+  "changePassword": "Passwort ändern",
+  "confirmNewPassword": "Neues Passwort bestätigen",
+  "currentPassword": "Aktuelles Passwort",
+  "newPassword": "Neues Passwort"
+}

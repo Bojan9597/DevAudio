@@ -1,0 +1,18 @@
+{
+  "appTitle": "LivresAudio",
+  "library": "Bibliothèque",
+  "profile": "Profil",
+  "categories": "Catégories",
+  "settings": "Paramètres",
+  "language": "Langue",
+  "theme": "Thème",
+  "logout": "Se déconnecter",
+  "login": "Se connecter",
+  "myBooks": "Mes Livres",
+  "favorites": "Favoris",
+  "allBooks": "Tous les Livres",
+  "changePassword": "Changer le mot de passe",
+  "confirmNewPassword": "Confirmer le nouveau mot de passe",
+  "currentPassword": "Mot de passe actuel",
+  "newPassword": "Nouveau mot de passe"
+}

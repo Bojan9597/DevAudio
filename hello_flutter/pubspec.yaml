@@ -40,6 +40,9 @@ dependencies:
   shared_preferences: ^2.2.2
   image_picker: ^1.2.1
   http_parser: ^4.1.2
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.2
 
 
 dev_dependencies:
@@ -58,6 +61,7 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  generate: true
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

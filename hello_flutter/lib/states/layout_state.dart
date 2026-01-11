@@ -5,6 +5,14 @@ class LayoutState extends ChangeNotifier {
   String selectedCategoryId =
       'library'; // Default restored to 'library' as per previous successful state
   bool isGridView = true;
+  Locale? _locale;
+
+  Locale? get locale => _locale;
+
+  void setLocale(Locale loc) {
+    _locale = loc;
+    notifyListeners();
+  }
 
   void toggleMenu() {
     isCollapsed = !isCollapsed;

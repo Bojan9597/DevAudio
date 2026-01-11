@@ -1,0 +1,18 @@
+{
+  "appTitle": "AudioKnjige",
+  "library": "Biblioteka",
+  "profile": "Profil",
+  "categories": "Kategorije",
+  "settings": "Podešavanja",
+  "language": "Jezik",
+  "theme": "Tema",
+  "logout": "Odjavi se",
+  "login": "Prijavi se",
+  "myBooks": "Moje Knjige",
+  "favorites": "Omiljeno",
+  "allBooks": "Sve Knjige",
+  "changePassword": "Promeni Lozinku",
+  "confirmNewPassword": "Potvrdi Novu Lozinku",
+  "currentPassword": "Trenutna Lozinka",
+  "newPassword": "Nova Lozinka"
+}
