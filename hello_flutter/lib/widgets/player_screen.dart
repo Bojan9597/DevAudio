@@ -1,0 +1,720 @@
+import 'package:flutter/material.dart';
+import '../models/book.dart';
+import 'dart:async';
+import 'package:just_audio/just_audio.dart';
+import 'dart:ui'; // For BackdropFilter
+import '../repositories/book_repository.dart';
+import '../services/auth_service.dart';
+
+class PlayerScreen extends StatefulWidget {
+  final Book book;
+
+  const PlayerScreen({super.key, required this.book});
+
+  @override
+  State<PlayerScreen> createState() => _PlayerScreenState();
+}
+
+class _PlayerScreenState extends State<PlayerScreen> {
+  late AudioPlayer _player;
+  bool _isSleepTimerActive = false;
+  double _playbackSpeed = 1.0;
+
+  // Purchase State
+  bool _isPurchased = false;
+  bool _isLoadingOwnership = true;
+  int? _userId;
+
+  final GlobalKey _speedButtonKey = GlobalKey();
+  final GlobalKey _moreButtonKey = GlobalKey();
+
+  Timer? _progressTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _player = AudioPlayer();
+    _initPlayer();
+    _checkOwnership();
+  }
+
+  Future<void> _checkOwnership() async {
+    try {
+      final userId = await AuthService().getCurrentUserId();
+      if (userId == null) {
+        setState(() {
+          _isLoadingOwnership = false;
+          _isPurchased = false;
+        });
+        return;
+      }
+
+      _userId = userId;
+      final purchasedIds = await BookRepository().getPurchasedBookIds(userId);
+      final isOwned = purchasedIds.contains(widget.book.id);
+
+      setState(() {
+        _isPurchased = isOwned;
+        _isLoadingOwnership = false;
+      });
+
+      if (isOwned) {
+        _startProgressSync();
+      }
+    } catch (e) {
+      print("Error checking ownership: $e");
+      setState(() => _isLoadingOwnership = false);
+    }
+  }
+
+  Future<void> _buyBook() async {
+    if (_userId == null) return;
+    try {
+      await BookRepository().buyBook(_userId!, widget.book.id);
+      setState(() {
+        _isPurchased = true;
+      });
+      _startProgressSync(); // Start syncing after purchase
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Book Purchased and Unlocked!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Purchase failed: $e')));
+    }
+  }
+
+  Future<void> _initPlayer() async {
+    try {
+      String url = widget.book.audioUrl;
+      if (url == 'placeholder.mp3' || url.isEmpty) {
+        url = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
+      }
+      await _player.setUrl(url);
+
+      // Resume logic
+      if (_userId != null) {
+        final savedPosition = await BookRepository().getBookStatus(
+          _userId!,
+          widget.book.id,
+        );
+        if (savedPosition > 0) {
+          await _player.seek(Duration(seconds: savedPosition));
+        }
+      }
+    } catch (e) {
+      debugPrint("Error loading audio: $e");
+    }
+  }
+
+  void _startProgressSync() {
+    _progressTimer?.cancel();
+    _progressTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      _saveProgress();
+    });
+  }
+
+  Future<void> _saveProgress() async {
+    if (_userId != null && _player.playing) {
+      final position = _player.position.inSeconds;
+      final duration = _player.duration?.inSeconds;
+      if (position > 0) {
+        await BookRepository().updateProgress(
+          _userId!,
+          widget.book.id,
+          position,
+          duration,
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _progressTimer?.cancel();
+    _saveProgress(); // Try to save on exit
+    _player.dispose();
+    super.dispose();
+  }
+
+  String _formatTime(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return "${duration.inHours > 0 ? '${twoDigits(duration.inHours)}:' : ''}$minutes:$seconds";
+  }
+
+  void _showSpeedMenu() async {
+    // ... (keep existing)
+    final RenderBox button =
+        _speedButtonKey.currentContext!.findRenderObject() as RenderBox;
+    final RenderBox overlay =
+        Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
+    final RelativeRect position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        button.localToGlobal(Offset.zero, ancestor: overlay),
+        button.localToGlobal(
+          button.size.bottomRight(Offset.zero),
+          ancestor: overlay,
+        ),
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    final double? selectedSpeed = await showMenu<double>(
+      context: context,
+      position: position,
+      items: [
+        const PopupMenuItem(value: 0.5, child: Text('0.5x')),
+        const PopupMenuItem(value: 1.0, child: Text('1.0x')),
+        const PopupMenuItem(value: 2.0, child: Text('2.0x')),
+      ],
+      elevation: 8.0,
+    );
+
+    if (selectedSpeed != null) {
+      _player.setSpeed(selectedSpeed);
+      setState(() {
+        _playbackSpeed = selectedSpeed;
+      });
+    }
+  }
+
+  void _showMoreMenu() async {
+    // ... (keep existing)
+    final RenderBox button =
+        _moreButtonKey.currentContext!.findRenderObject() as RenderBox;
+    final RenderBox overlay =
+        Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
+    final RelativeRect position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        button.localToGlobal(Offset.zero, ancestor: overlay),
+        button.localToGlobal(
+          button.size.bottomRight(Offset.zero),
+          ancestor: overlay,
+        ),
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    await showMenu(
+      context: context,
+      position: position,
+      items: [
+        const PopupMenuItem(
+          value: 'download',
+          child: Row(
+            children: [
+              Icon(Icons.download, color: Colors.black54),
+              SizedBox(width: 8),
+              Text('Download'),
+            ],
+          ),
+        ),
+      ],
+      elevation: 8.0,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.brown.shade800,
+                  Colors.brown.shade900,
+                  Colors.black,
+                ],
+              ),
+            ),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.keyboard_arrow_down,
+                            color: Colors.white,
+                            size: 30,
+                          ),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                        const Spacer(),
+                        const Text(
+                          'NOW PLAYING',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                            letterSpacing: 2,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Spacer(),
+                        // IconButton with more_horiz removed
+                      ],
+                    ),
+                  ),
+
+                  const Spacer(flex: 1),
+
+                  // Album Art
+                  // Album Art - 35% of screen height, square
+                  Container(
+                    height: MediaQuery.of(context).size.height * 0.35,
+                    width: MediaQuery.of(context).size.height * 0.35,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade800,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.5),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                      image: const DecorationImage(
+                        image: NetworkImage('https://picsum.photos/400'),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+
+                  const Spacer(flex: 1),
+
+                  // Title and Author
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Column(
+                      children: [
+                        Container(
+                          height: 40,
+                          alignment: Alignment.center,
+                          child: _ScrollingText(
+                            text: widget.book.title,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          widget.book.author,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 18,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  // Progress Bar (StreamBuilder)
+                  StreamBuilder<Duration>(
+                    stream: _player.positionStream,
+                    builder: (context, snapshot) {
+                      final position = snapshot.data ?? Duration.zero;
+                      final duration = _player.duration ?? Duration.zero;
+
+                      // Limit slider value to duration
+                      double sliderValue = position.inSeconds.toDouble();
+                      double maxDuration = duration.inSeconds.toDouble();
+                      if (sliderValue > maxDuration) sliderValue = maxDuration;
+                      if (maxDuration <= 0)
+                        maxDuration = 1; // Avoid div by zero
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Column(
+                          children: [
+                            SliderTheme(
+                              data: SliderTheme.of(context).copyWith(
+                                activeTrackColor: Colors.white,
+                                inactiveTrackColor: Colors.white24,
+                                thumbColor: Colors.white,
+                                overlayColor: Colors.white.withOpacity(0.2),
+                                trackHeight: 4,
+                                thumbShape: const RoundSliderThumbShape(
+                                  enabledThumbRadius: 6,
+                                ),
+                              ),
+                              child: Slider(
+                                value: sliderValue,
+                                min: 0.0,
+                                max: maxDuration,
+                                onChanged: (v) {
+                                  _player.seek(Duration(seconds: v.toInt()));
+                                },
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    _formatTime(position),
+                                    style: const TextStyle(
+                                      color: Colors.white54,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  Text(
+                                    _formatTime(duration - position),
+                                    style: const TextStyle(
+                                      color: Colors.white54,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Playback Controls
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.replay_10),
+                        color: Colors.white,
+                        iconSize: 32,
+                        onPressed: () {
+                          _player.seek(
+                            _player.position - const Duration(seconds: 10),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.skip_previous),
+                        color: Colors.white,
+                        iconSize: 40,
+                        onPressed: () {}, // Implement Prev/Next if playlist
+                      ),
+
+                      // Play/Pause Button
+                      StreamBuilder<PlayerState>(
+                        stream: _player.playerStateStream,
+                        builder: (context, snapshot) {
+                          final playerState = snapshot.data;
+                          final processingState = playerState?.processingState;
+                          final playing = playerState?.playing;
+
+                          if (processingState == ProcessingState.loading ||
+                              processingState == ProcessingState.buffering) {
+                            return Container(
+                              width: 70,
+                              height: 70,
+                              padding: const EdgeInsets.all(20),
+                              child: const CircularProgressIndicator(
+                                color: Colors.white,
+                              ),
+                            );
+                          } else if (playing != true) {
+                            return GestureDetector(
+                              onTap: _player.play,
+                              child: Container(
+                                width: 70,
+                                height: 70,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.play_arrow,
+                                  color: Colors.white,
+                                  size: 40,
+                                ),
+                              ),
+                            );
+                          } else {
+                            return GestureDetector(
+                              onTap: _player.pause,
+                              child: Container(
+                                width: 70,
+                                height: 70,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.pause,
+                                  color: Colors.white,
+                                  size: 40,
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+
+                      IconButton(
+                        icon: const Icon(Icons.skip_next),
+                        color: Colors.white,
+                        iconSize: 40,
+                        onPressed: () {},
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.forward_30),
+                        color: Colors.white,
+                        iconSize: 32,
+                        onPressed: () {
+                          _player.seek(
+                            _player.position + const Duration(seconds: 30),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  // Bottom Options
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      GestureDetector(
+                        key: _speedButtonKey,
+                        onTap: _showSpeedMenu,
+                        child: _buildBottomOption(
+                          Icons.speed,
+                          '${_playbackSpeed.toString().replaceAll(RegExp(r"([.]*0)(?!.*\d)"), "")}x',
+                          false,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _isSleepTimerActive = !_isSleepTimerActive;
+                          });
+                        },
+                        child: _buildBottomOption(
+                          Icons.bedtime,
+                          '',
+                          _isSleepTimerActive,
+                        ),
+                      ),
+                      _buildBottomOption(Icons.playlist_play, '', false),
+                      GestureDetector(
+                        key: _moreButtonKey,
+                        onTap: _showMoreMenu,
+                        child: _buildBottomOption(Icons.more_vert, '', false),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+          ),
+          // Purchase Overlay
+          if (!_isLoadingOwnership && !_isPurchased)
+            Positioned.fill(
+              child: Stack(
+                children: [
+                  // Blur Effect
+                  BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: Container(
+                      color: Colors.white.withOpacity(
+                        0.5,
+                      ), // White 50:50 transparent
+                    ),
+                  ),
+                  // Buy Button
+                  Center(
+                    child: ElevatedButton(
+                      onPressed: _buyBook,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 40,
+                          vertical: 20,
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      child: const Text('Buy Book'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (_isLoadingOwnership)
+            const Center(child: CircularProgressIndicator(color: Colors.white)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomOption(IconData icon, String label, bool isActive) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: isActive
+            ? Colors.blueAccent.withOpacity(0.4)
+            : Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: isActive ? Colors.white : Colors.white70, size: 20),
+          if (label.isNotEmpty) ...[
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: isActive ? Colors.white : Colors.white70,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ScrollingText extends StatefulWidget {
+  final String text;
+  final TextStyle style;
+
+  const _ScrollingText({required this.text, required this.style});
+
+  @override
+  State<_ScrollingText> createState() => _ScrollingTextState();
+}
+
+class _ScrollingTextState extends State<_ScrollingText> {
+  late ScrollController _scrollController;
+  Timer? _timer;
+  double _textWidth = 0.0;
+  final double _gap = 50.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _measureText();
+      _startScrolling();
+    });
+  }
+
+  @override
+  void didUpdateWidget(_ScrollingText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text || oldWidget.style != widget.style) {
+      _measureText();
+    }
+  }
+
+  void _measureText() {
+    final textPainter = TextPainter(
+      text: TextSpan(text: widget.text, style: widget.style),
+      maxLines: 1,
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    if (mounted) {
+      setState(() {
+        _textWidth = textPainter.width;
+      });
+    }
+  }
+
+  void _startScrolling() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(milliseconds: 300), (timer) {
+      if (!_scrollController.hasClients || _textWidth == 0) return;
+
+      final maxExtent = _textWidth + _gap;
+      double newOffset = _scrollController.offset + 20.0;
+
+      if (newOffset >= maxExtent) {
+        newOffset -= maxExtent;
+        _scrollController.jumpTo(newOffset);
+      } else {
+        _scrollController.animateTo(
+          newOffset,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.linear,
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (_textWidth == 0 || _textWidth <= constraints.maxWidth) {
+          return Text(
+            widget.text,
+            style: widget.style,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          );
+        }
+
+        return SingleChildScrollView(
+          controller: _scrollController,
+          scrollDirection: Axis.horizontal,
+          physics: const NeverScrollableScrollPhysics(),
+          child: Row(
+            children: [
+              Text(widget.text, style: widget.style),
+              SizedBox(width: _gap),
+              Text(widget.text, style: widget.style),
+              if (_textWidth + _gap < constraints.maxWidth) ...[
+                SizedBox(width: _gap),
+                Text(widget.text, style: widget.style),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}

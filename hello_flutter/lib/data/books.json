@@ -1,0 +1,124 @@
+[
+    {
+        "id": "b1",
+        "title": "Linux Kernel Development",
+        "author": "Robert Love",
+        "audioUrl": "placeholder.mp3",
+        "categoryId": "programming",
+        "subcategoryIds": [
+            "operating_systems",
+            "linux",
+            "linux_system_admin"
+        ]
+    },
+    {
+        "id": "b2",
+        "title": "Windows Internals, Part 1",
+        "author": "Pavel Yosifovich",
+        "audioUrl": "placeholder.mp3",
+        "categoryId": "programming",
+        "subcategoryIds": [
+            "operating_systems",
+            "windows",
+            "windows_internals"
+        ]
+    },
+    {
+        "id": "b3",
+        "title": "Mastering Regular Expressions",
+        "author": "Jeffrey E. F. Friedl",
+        "audioUrl": "placeholder.mp3",
+        "categoryId": "programming",
+        "subcategoryIds": [
+            "programming_languages",
+            "python",
+            "python_scripting"
+        ]
+    },
+    {
+        "id": "b4",
+        "title": "Effective Java",
+        "author": "Joshua Bloch",
+        "audioUrl": "placeholder.mp3",
+        "categoryId": "programming",
+        "subcategoryIds": [
+            "programming_languages",
+            "java",
+            "java_basics"
+        ]
+    },
+    {
+        "id": "b5",
+        "title": "JavaScript: The Good Parts",
+        "author": "Douglas Crockford",
+        "audioUrl": "placeholder.mp3",
+        "categoryId": "programming",
+        "subcategoryIds": [
+            "programming_languages",
+            "javascript",
+            "js_basics"
+        ]
+    },
+    {
+        "id": "b6",
+        "title": "The C++ Programming Language",
+        "author": "Bjarne Stroustrup",
+        "audioUrl": "placeholder.mp3",
+        "categoryId": "programming",
+        "subcategoryIds": [
+            "programming_languages",
+            "c_cpp",
+            "cpp_basics"
+        ]
+    },
+    {
+        "id": "b7",
+        "title": "Advanced Programming in the UNIX Environment",
+        "author": "W. Richard Stevens",
+        "audioUrl": "placeholder.mp3",
+        "categoryId": "programming",
+        "subcategoryIds": [
+            "operating_systems",
+            "linux",
+            "linux_system_admin",
+            "c_cpp",
+            "cpp_system_programming"
+        ]
+    },
+    {
+        "id": "b8",
+        "title": "TCP/IP Illustrated",
+        "author": "W. Richard Stevens",
+        "audioUrl": "placeholder.mp3",
+        "categoryId": "programming",
+        "subcategoryIds": [
+            "operating_systems",
+            "linux",
+            "linux_networking"
+        ]
+    },
+    {
+        "id": "b9",
+        "title": "Clean Code",
+        "author": "Robert C. Martin",
+        "audioUrl": "placeholder.mp3",
+        "categoryId": "programming",
+        "subcategoryIds": [
+            "programming_languages",
+            "java",
+            "java_oop"
+        ]
+    },
+    {
+        "id": "b10",
+        "title": "You Don't Know JS",
+        "author": "Kyle Simpson",
+        "audioUrl": "placeholder.mp3",
+        "categoryId": "programming",
+        "subcategoryIds": [
+            "programming_languages",
+            "javascript",
+            "js_advanced"
+        ]
+    }
+]

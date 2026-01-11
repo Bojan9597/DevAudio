@@ -1,0 +1,421 @@
+{
+    "book_categories": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "comment": ""
+        },
+        {
+            "name": "book_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "category_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        }
+    ],
+    "bookmarks": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "comment": ""
+        },
+        {
+            "name": "user_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "book_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "chapter",
+            "type": "varchar(100)",
+            "nullable": true,
+            "key": "",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "note",
+            "type": "text",
+            "nullable": true,
+            "key": "",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "created_at",
+            "type": "timestamp",
+            "nullable": true,
+            "key": "",
+            "default": "CURRENT_TIMESTAMP",
+            "extra": "DEFAULT_GENERATED",
+            "comment": ""
+        }
+    ],
+    "books": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "comment": ""
+        },
+        {
+            "name": "title",
+            "type": "varchar(200)",
+            "nullable": false,
+            "key": "",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "author",
+            "type": "varchar(150)",
+            "nullable": false,
+            "key": "",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "duration_seconds",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "",
+            "default": "0",
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "audio_path",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": "",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "cover_image_path",
+            "type": "varchar(255)",
+            "nullable": true,
+            "key": "",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "price",
+            "type": "decimal(8,2)",
+            "nullable": false,
+            "key": "",
+            "default": "0.00",
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "created_at",
+            "type": "timestamp",
+            "nullable": true,
+            "key": "",
+            "default": "CURRENT_TIMESTAMP",
+            "extra": "DEFAULT_GENERATED",
+            "comment": ""
+        },
+        {
+            "name": "primary_category_id",
+            "type": "int unsigned",
+            "nullable": true,
+            "key": "MUL",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        }
+    ],
+    "categories": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "comment": ""
+        },
+        {
+            "name": "name",
+            "type": "varchar(100)",
+            "nullable": false,
+            "key": "",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "slug",
+            "type": "varchar(100)",
+            "nullable": true,
+            "key": "UNI",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "parent_id",
+            "type": "int unsigned",
+            "nullable": true,
+            "key": "MUL",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "created_at",
+            "type": "timestamp",
+            "nullable": true,
+            "key": "",
+            "default": "CURRENT_TIMESTAMP",
+            "extra": "DEFAULT_GENERATED",
+            "comment": ""
+        }
+    ],
+    "playback_history": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "comment": ""
+        },
+        {
+            "name": "user_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "book_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "start_time",
+            "type": "timestamp",
+            "nullable": false,
+            "key": "",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "end_time",
+            "type": "timestamp",
+            "nullable": false,
+            "key": "",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "played_seconds",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        }
+    ],
+    "user_books": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "comment": ""
+        },
+        {
+            "name": "user_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "book_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "last_played_position_seconds",
+            "type": "int unsigned",
+            "nullable": true,
+            "key": "",
+            "default": "0",
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "playback_speed",
+            "type": "decimal(3,1)",
+            "nullable": true,
+            "key": "",
+            "default": "1.0",
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "is_downloaded",
+            "type": "tinyint(1)",
+            "nullable": true,
+            "key": "",
+            "default": "0",
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "download_path",
+            "type": "varchar(255)",
+            "nullable": true,
+            "key": "",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "purchased_at",
+            "type": "timestamp",
+            "nullable": true,
+            "key": "",
+            "default": "CURRENT_TIMESTAMP",
+            "extra": "DEFAULT_GENERATED",
+            "comment": ""
+        },
+        {
+            "name": "last_accessed_at",
+            "type": "timestamp",
+            "nullable": true,
+            "key": "",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        }
+    ],
+    "users": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "comment": ""
+        },
+        {
+            "name": "name",
+            "type": "varchar(100)",
+            "nullable": false,
+            "key": "",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "email",
+            "type": "varchar(150)",
+            "nullable": false,
+            "key": "UNI",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "password_hash",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": "",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "status",
+            "type": "enum('active','banned','inactive')",
+            "nullable": false,
+            "key": "",
+            "default": "active",
+            "extra": "",
+            "comment": ""
+        },
+        {
+            "name": "created_at",
+            "type": "timestamp",
+            "nullable": true,
+            "key": "",
+            "default": "CURRENT_TIMESTAMP",
+            "extra": "DEFAULT_GENERATED",
+            "comment": ""
+        },
+        {
+            "name": "last_login",
+            "type": "timestamp",
+            "nullable": true,
+            "key": "",
+            "default": null,
+            "extra": "",
+            "comment": ""
+        }
+    ]
+}
