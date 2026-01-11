@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../models/badge.dart';
 import '../models/book.dart';
 import '../utils/api_constants.dart';
 
@@ -60,6 +61,24 @@ class BookRepository {
     if (response.statusCode != 200 && response.statusCode != 201) {
       final error = json.decode(response.body);
       throw Exception(error['message'] ?? 'Failed to buy book');
+    }
+  }
+
+  Future<List<Badge>> getBadges(int userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiConstants.baseUrl}/badges/$userId'),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map((json) => Badge.fromJson(json)).toList();
+      } else {
+        throw Exception('Failed to load badges');
+      }
+    } catch (e) {
+      print('Error fetching badges: $e');
+      return [];
     }
   }
 

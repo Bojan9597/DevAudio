@@ -1,9 +1,10 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Badge;
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../services/auth_service.dart';
 import '../repositories/book_repository.dart';
 import '../models/book.dart';
+import '../models/badge.dart';
 import '../widgets/player_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -17,6 +18,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Map<String, dynamic>? _user;
   bool _isLoading = true;
   List<Book> _history = [];
+  List<Badge> _badges = [];
   Map<String, dynamic> _stats = {
     'total_listening_time_seconds': 0,
     'books_completed': 0,
@@ -28,6 +30,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadUser();
     _loadHistory();
     _loadStats();
+    _loadBadges();
   }
 
   Future<void> _loadUser() async {
@@ -77,6 +80,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     } catch (e) {
       print("Error loading history: $e");
+    }
+  }
+
+  Future<void> _loadBadges() async {
+    try {
+      final userId = await AuthService().getCurrentUserId();
+      if (userId != null) {
+        final badges = await BookRepository().getBadges(userId);
+        if (mounted) {
+          setState(() {
+            _badges = badges;
+          });
+        }
+      }
+    } catch (e) {
+      print("Error loading badges: $e");
     }
   }
 
@@ -204,7 +223,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               tabs: [
                 Tab(icon: Icon(Icons.history), text: 'Listen History'),
                 Tab(icon: Icon(Icons.bar_chart), text: 'Stats'),
-                Tab(icon: Icon(Icons.emoji_events), text: 'Achievements'),
+                Tab(icon: Icon(Icons.emoji_events), text: 'Badges'),
               ],
             ),
           ),
@@ -303,28 +322,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildAchievementsTab() {
-    return GridView.count(
-      crossAxisCount: 3,
+    if (_badges.isEmpty) {
+      return const Center(child: Text('No badges loaded yet'));
+    }
+    return GridView.builder(
       padding: const EdgeInsets.all(16),
-      mainAxisSpacing: 16,
-      crossAxisSpacing: 16,
-      children: List.generate(6, (index) {
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        mainAxisSpacing: 16,
+        crossAxisSpacing: 16,
+        childAspectRatio: 0.8,
+      ),
+      itemCount: _badges.length,
+      itemBuilder: (context, index) {
+        final badge = _badges[index];
+        final isEarned = badge.isEarned;
+
         return Column(
           children: [
             CircleAvatar(
               radius: 30,
-              backgroundColor: index < 2 ? Colors.amber : Colors.grey.shade300,
+              backgroundColor: isEarned ? Colors.amber : Colors.grey.shade300,
               child: Icon(
-                Icons.star,
-                color: index < 2 ? Colors.white : Colors.grey,
+                Icons.emoji_events,
+                color: isEarned ? Colors.white : Colors.grey,
                 size: 30,
               ),
             ),
             const SizedBox(height: 8),
-            Text('Badge ${index + 1}', style: const TextStyle(fontSize: 12)),
+            Text(
+              badge.name,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isEarned ? FontWeight.bold : FontWeight.normal,
+                color: isEarned ? Colors.black : Colors.grey,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
           ],
         );
-      }),
+      },
     );
   }
 }

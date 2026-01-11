@@ -4,6 +4,7 @@ from werkzeug.utils import secure_filename
 import os
 from werkzeug.security import generate_password_hash, check_password_hash
 from database import Database
+from badge_service import BadgeService
 
 app = Flask(__name__)
 CORS(app) # Enable CORS for all routes
@@ -515,7 +516,11 @@ def update_progress():
             """
             db.execute_query(history_query, (user_id, book_id, position))
             
-            return jsonify({"message": "Progress updated", "is_read": is_read}), 200
+            # Check for new badges
+            badge_service = BadgeService(db.connection)
+            new_badges = badge_service.check_badges(user_id)
+            
+            return jsonify({"message": "Progress updated", "is_read": is_read, "new_badges": new_badges}), 200
         else:
             return jsonify({"error": "Book not found in library"}), 404
             
@@ -618,6 +623,42 @@ def get_book_status(user_id, book_id):
 @app.route('/', methods=['GET'])
 def health_check():
     return jsonify({"status": "ok", "message": "Audiobooks API is running"})
+
+@app.route('/badges/<int:user_id>', methods=['GET'])
+def get_user_badges(user_id):
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+        
+    try:
+        # Fetch all badges with earned status
+        query = """
+            SELECT b.id, b.category, b.name, b.description, b.code, ub.earned_at
+            FROM badges b
+            LEFT JOIN user_badges ub ON b.id = ub.badge_id AND ub.user_id = %s
+            ORDER BY b.category, b.id
+        """
+        results = db.execute_query(query, (user_id,))
+        
+        badges = []
+        if results:
+            for row in results:
+                badges.append({
+                    "id": row['id'],
+                    "category": row['category'],
+                    "name": row['name'],
+                    "description": row['description'],
+                    "code": row['code'],
+                    "isEarned": row['earned_at'] is not None,
+                    "earnedAt": str(row['earned_at']) if row['earned_at'] else None
+                })
+        
+        return jsonify(badges)
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
 
 if __name__ == '__main__':
     # Run on 0.0.0.0 to be accessible, port 5000
