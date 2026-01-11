@@ -172,35 +172,34 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     const SizedBox(height: 40),
                     // Logo
+                    // Logo
                     Center(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text(
-                            'Dev',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 32,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          Text(
-                            'Audio',
-                            style: const TextStyle(
-                              color: _orangeColor,
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          // Optional: Add an icon if desired
-                          const SizedBox(width: 8),
-                          const Icon(
-                            Icons.rss_feed,
-                            color: _orangeColor,
-                            size: 30,
-                          ),
-                        ],
+                      child: Image.asset(
+                        'assets/icon/logo1.png',
+                        height: 120, // Adjust size as needed
                       ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Text(
+                          'Dev',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 32,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Text(
+                          'Audio',
+                          style: TextStyle(
+                            color: _orangeColor,
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 60),
 
