@@ -85,10 +85,6 @@ class _SideMenuState extends State<SideMenu> {
                       ),
               ),
               const Divider(color: Colors.white24),
-              // Static items - Fixed at bottom
-              _buildMenuItem(Icons.library_books, 'Library', 'library'),
-              _buildMenuItem(Icons.person, 'Profile', 'profile'),
-              const Divider(color: Colors.white24),
               _buildLogoutItem(),
               const SizedBox(height: 20),
             ],
@@ -188,47 +184,6 @@ class _SideMenuState extends State<SideMenu> {
     }
 
     return item;
-  }
-
-  Widget _buildMenuItem(IconData icon, String title, String id) {
-    final isCollapsed = globalLayoutState.isCollapsed;
-    final isSelected = globalLayoutState.selectedCategoryId == id;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => globalLayoutState.setCategoryId(id),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          color: isSelected ? Colors.blueGrey.shade800 : null,
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-          child: Row(
-            mainAxisAlignment: isCollapsed
-                ? MainAxisAlignment.center
-                : MainAxisAlignment.start,
-            children: [
-              Icon(icon, color: isSelected ? Colors.blueAccent : Colors.white),
-              if (!isCollapsed) ...[
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      color: isSelected ? Colors.blueAccent : Colors.white,
-                      fontSize: 16,
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _buildLogoutItem() {

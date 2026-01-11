@@ -10,11 +10,43 @@ class AppLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () => globalLayoutState.toggleMenu(),
+        automaticallyImplyLeading: false,
+        title: Row(
+          children: [
+            Expanded(
+              child: TextButton(
+                onPressed: () => globalLayoutState.toggleMenu(),
+                child: const Text(
+                  'Categories',
+                  style: TextStyle(color: Colors.white, fontSize: 16),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+            Expanded(
+              child: TextButton.icon(
+                onPressed: () => globalLayoutState.setCategoryId('library'),
+                icon: const Icon(Icons.library_books, color: Colors.white),
+                label: const Text(
+                  'Library',
+                  style: TextStyle(color: Colors.white, fontSize: 16),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+            Expanded(
+              child: TextButton.icon(
+                onPressed: () => globalLayoutState.setCategoryId('profile'),
+                icon: const Icon(Icons.person, color: Colors.white),
+                label: const Text(
+                  'Profile',
+                  style: TextStyle(color: Colors.white, fontSize: 16),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ],
         ),
-        title: const Text('My App'),
         backgroundColor: Colors.blueAccent,
       ),
       body: ListenableBuilder(
