@@ -8,6 +8,7 @@ class Book {
   final int? lastPosition;
   final DateTime? lastAccessed;
   final int? durationSeconds;
+  final bool isFavorite;
 
   const Book({
     required this.id,
@@ -19,6 +20,7 @@ class Book {
     this.lastPosition,
     this.lastAccessed,
     this.durationSeconds,
+    this.isFavorite = false,
   });
 
   factory Book.fromJson(Map<String, dynamic> json) {
@@ -38,6 +40,27 @@ class Book {
           ? DateTime.tryParse(json['lastAccessed'] as String)
           : null,
       durationSeconds: json['duration'] as int?,
+      isFavorite: json['isFavorite'] as bool? ?? false,
+    );
+  }
+
+  Book copyWith({
+    bool? isFavorite,
+    int? lastPosition,
+    int? durationSeconds,
+    DateTime? lastAccessed,
+  }) {
+    return Book(
+      id: id,
+      title: title,
+      author: author,
+      audioUrl: audioUrl,
+      categoryId: categoryId,
+      subcategoryIds: subcategoryIds,
+      lastPosition: lastPosition ?? this.lastPosition,
+      lastAccessed: lastAccessed ?? this.lastAccessed,
+      durationSeconds: durationSeconds ?? this.durationSeconds,
+      isFavorite: isFavorite ?? this.isFavorite,
     );
   }
 }

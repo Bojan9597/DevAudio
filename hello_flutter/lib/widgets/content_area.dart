@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../states/layout_state.dart';
 import '../models/book.dart';
 import '../repositories/book_repository.dart';
+import '../services/auth_service.dart';
 import 'player_screen.dart';
 
 import '../screens/profile_screen.dart';
@@ -15,6 +16,8 @@ class ContentArea extends StatefulWidget {
 
 class _ContentAreaState extends State<ContentArea> {
   List<Book> _allBooks = [];
+  List<String> _purchasedIds = [];
+  List<Book> _historyBooks = [];
   bool _isLoading = true;
 
   @override
@@ -26,9 +29,41 @@ class _ContentAreaState extends State<ContentArea> {
   Future<void> _loadBooks() async {
     try {
       final books = await BookRepository().getBooks();
+      final userId = await AuthService().getCurrentUserId();
+
+      List<int> favoriteIds = [];
+      List<String> purchasedIds = [];
+      List<Book> history = [];
+
+      if (userId != null) {
+        favoriteIds = await BookRepository().getFavoriteBookIds(userId);
+        purchasedIds = await BookRepository().getPurchasedBookIds(userId);
+        history = await BookRepository().getListenHistory(userId);
+      }
+
+      // Map favorites and merge history progress
+      final updatedBooks = books.map((book) {
+        final isFav = favoriteIds.contains(int.tryParse(book.id) ?? -1);
+
+        // Find if we have history for this book to get progress
+        final historyBook = history.firstWhere(
+          (h) => h.id == book.id,
+          orElse: () => book, // fallback to current book (no progress)
+        );
+
+        return book.copyWith(
+          isFavorite: isFav,
+          lastPosition: historyBook.lastPosition,
+          durationSeconds: historyBook.durationSeconds,
+          lastAccessed: historyBook.lastAccessed,
+        );
+      }).toList();
+
       if (mounted) {
         setState(() {
-          _allBooks = books;
+          _allBooks = updatedBooks;
+          _purchasedIds = purchasedIds;
+          _historyBooks = history;
           _isLoading = false;
         });
       }
@@ -53,12 +88,12 @@ class _ContentAreaState extends State<ContentArea> {
           return const ProfileScreen();
         }
 
-        if (categoryId == 'library') {
-          return _buildPlaceholder(categoryId);
-        }
-
         if (_isLoading) {
           return const Center(child: CircularProgressIndicator());
+        }
+
+        if (categoryId == 'library') {
+          return _buildLibraryView();
         }
 
         final filteredBooks = BookRepository().filterBooks(
@@ -115,40 +150,7 @@ class _ContentAreaState extends State<ContentArea> {
                 ],
               ),
               const SizedBox(height: 20),
-              Expanded(
-                child: globalLayoutState.isGridView
-                    ? LayoutBuilder(
-                        builder: (context, constraints) {
-                          // Calculate column count targeting ~200px width
-                          int crossAxisCount = (constraints.maxWidth / 200)
-                              .toInt();
-                          // Enforce minimum of 2 columns
-                          if (crossAxisCount < 2) crossAxisCount = 2;
-
-                          return GridView.builder(
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: crossAxisCount,
-                                  childAspectRatio: 0.75,
-                                  crossAxisSpacing: 20,
-                                  mainAxisSpacing: 20,
-                                ),
-                            itemCount: filteredBooks.length,
-                            itemBuilder: (context, index) {
-                              final book = filteredBooks[index];
-                              return _buildBookCard(book);
-                            },
-                          );
-                        },
-                      )
-                    : ListView.builder(
-                        itemCount: filteredBooks.length,
-                        itemBuilder: (context, index) {
-                          final book = filteredBooks[index];
-                          return _buildBookListTile(book);
-                        },
-                      ),
-              ),
+              Expanded(child: _buildBookGridOrList(filteredBooks)),
             ],
           ),
         );
@@ -156,25 +158,155 @@ class _ContentAreaState extends State<ContentArea> {
     );
   }
 
-  Widget _buildPlaceholder(String title) {
-    return Container(
-      color: Colors.white,
-      child: Center(
-        child: Text(
-          title.toUpperCase(),
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
+  String _formatDuration(int seconds) {
+    if (seconds <= 0) return "0:00";
+    final d = Duration(seconds: seconds);
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(d.inMinutes.remainder(60));
+    final sec = twoDigits(d.inSeconds.remainder(60));
+    return "${d.inHours > 0 ? '${twoDigits(d.inHours)}:' : ''}$minutes:$sec";
+  }
+
+  Widget _buildLibraryView() {
+    final favoriteBooks = _allBooks.where((b) => b.isFavorite == true).toList();
+
+    // "My Books" = Purchased Books
+    final myBooks = _allBooks
+        .where((b) => _purchasedIds.contains(b.id))
+        .toList();
+
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          Container(
+            color: Colors.white,
+            child: const TabBar(
+              labelColor: Colors.blueAccent,
+              unselectedLabelColor: Colors.grey,
+              indicatorColor: Colors.blueAccent,
+              tabs: [
+                Tab(icon: Icon(Icons.favorite), text: 'Favorites'),
+                Tab(icon: Icon(Icons.menu_book), text: 'My Books'),
+              ],
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                // Favorites Tab
+                favoriteBooks.isEmpty
+                    ? const Center(child: Text('No favorite books yet'))
+                    : Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: _buildBookGridOrList(favoriteBooks),
+                      ),
+                // My Books Tab
+                myBooks.isEmpty
+                    ? const Center(child: Text('No purchased books'))
+                    : Padding(
+                        padding: const EdgeInsets.all(
+                          16.0,
+                        ), // Match profile padding
+                        child: ListView.builder(
+                          itemCount: myBooks.length,
+                          itemBuilder: (context, index) {
+                            final book = myBooks[index];
+                            return _buildMyBookTile(book);
+                          },
+                        ),
+                      ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  void _openPlayer(Book book) {
-    showModalBottomSheet(
+  Widget _buildMyBookTile(Book book) {
+    final position = book.lastPosition ?? 0;
+    final duration = book.durationSeconds ?? 1;
+    final percent = (duration > 0 ? (position / duration * 100) : 0)
+        .clamp(0, 100)
+        .toStringAsFixed(0);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        leading: const Icon(
+          Icons.play_circle_fill,
+          color: Colors.blueAccent,
+          size: 40,
+        ),
+        title: Text(
+          book.title,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(book.author),
+            if (position > 0)
+              Text(
+                'Progress: ${_formatDuration(position)} / ${_formatDuration(duration)}',
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+          ],
+        ),
+        trailing: Text('$percent%'),
+        onTap: () => _openPlayer(book),
+      ),
+    );
+  }
+
+  Widget _buildBookGridOrList(List<Book> books) {
+    if (globalLayoutState.isGridView) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          int crossAxisCount = (constraints.maxWidth / 200).toInt();
+          if (crossAxisCount < 2) crossAxisCount = 2;
+
+          return GridView.builder(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              childAspectRatio: 0.75,
+              crossAxisSpacing: 20,
+              mainAxisSpacing: 20,
+            ),
+            itemCount: books.length,
+            itemBuilder: (context, index) {
+              final book = books[index];
+              return _buildBookCard(book);
+            },
+          );
+        },
+      );
+    } else {
+      return ListView.builder(
+        itemCount: books.length,
+        itemBuilder: (context, index) {
+          final book = books[index];
+          return _buildBookListTile(book);
+        },
+      );
+    }
+  }
+
+  void _openPlayer(Book book) async {
+    // We need to pass the most up-to-date book state (fav status)
+    // Actually, passing 'book' is fine, but if we toggle fav in player, we want to reflect that back here?
+    // PlayerScreen can accept a callback or we reload on close?
+    // Let's reload on close for simplicity.
+
+    await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => PlayerScreen(book: book),
     );
+    // After player closes, reload to refresh favorites/progress
+    _loadBooks();
   }
 
   Widget _buildBookCard(Book book) {
@@ -191,8 +323,27 @@ class _ContentAreaState extends State<ContentArea> {
               flex: 2,
               child: Container(
                 decoration: BoxDecoration(color: Colors.blueAccent.shade100),
-                child: const Center(
-                  child: Icon(Icons.menu_book, size: 50, color: Colors.white),
+                child: Center(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      const Icon(
+                        Icons.menu_book,
+                        size: 50,
+                        color: Colors.white,
+                      ),
+                      if (book.isFavorite)
+                        const Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Icon(
+                            Icons.favorite,
+                            color: Colors.red,
+                            size: 24,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -202,7 +353,6 @@ class _ContentAreaState extends State<ContentArea> {
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 child: LayoutBuilder(
                   builder: (context, constraints) {
-                    // If space is too small, hide text completely
                     if (constraints.maxHeight < 35) {
                       return const SizedBox.shrink();
                     }
@@ -269,7 +419,15 @@ class _ContentAreaState extends State<ContentArea> {
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Text(book.author),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (book.isFavorite)
+              const Icon(Icons.favorite, color: Colors.red, size: 20),
+            const SizedBox(width: 8),
+            const Icon(Icons.chevron_right),
+          ],
+        ),
       ),
     );
   }

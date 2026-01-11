@@ -26,6 +26,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   bool _isPurchased = false;
   bool _isLoadingOwnership = true;
   int? _userId;
+  bool _isFavorite = false;
 
   final GlobalKey _speedButtonKey = GlobalKey();
   final GlobalKey _moreButtonKey = GlobalKey();
@@ -36,6 +37,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   void initState() {
     super.initState();
     _player = AudioPlayer();
+    _isFavorite = widget.book.isFavorite;
     _initPlayer();
     _checkOwnership();
   }
@@ -164,6 +166,39 @@ class _PlayerScreenState extends State<PlayerScreen> {
     final minutes = twoDigits(duration.inMinutes.remainder(60));
     final seconds = twoDigits(duration.inSeconds.remainder(60));
     return "${duration.inHours > 0 ? '${twoDigits(duration.inHours)}:' : ''}$minutes:$seconds";
+  }
+
+  void _toggleFavorite() async {
+    if (_userId == null) {
+      // Prompt logic? Or just return.
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please login to use favorites')),
+      );
+      return;
+    }
+
+    // Optimistic update
+    setState(() {
+      _isFavorite = !_isFavorite;
+    });
+
+    final success = await BookRepository().toggleFavorite(
+      _userId!,
+      widget.book.id,
+      !_isFavorite, // Pass OLD state (if it was favorite, we pass true to remove)
+    );
+
+    if (!success) {
+      // Revert if failed
+      if (mounted) {
+        setState(() {
+          _isFavorite = !_isFavorite;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update favorite')),
+        );
+      }
+    }
   }
 
   void _showSpeedMenu() async {
@@ -545,7 +580,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
                           _isSleepTimerActive,
                         ),
                       ),
-                      _buildBottomOption(Icons.playlist_play, '', false),
+                      GestureDetector(
+                        onTap: _toggleFavorite,
+                        child: _buildBottomOption(
+                          _isFavorite ? Icons.favorite : Icons.favorite_border,
+                          '',
+                          _isFavorite,
+                        ),
+                      ),
                       GestureDetector(
                         key: _moreButtonKey,
                         onTap: _showMoreMenu,

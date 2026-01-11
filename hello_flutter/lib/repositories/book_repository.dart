@@ -28,9 +28,9 @@ class BookRepository {
     if (clickedCategoryId.isEmpty) return allBooks;
 
     return allBooks.where((book) {
-      if (book.categoryId == clickedCategoryId) return true;
-      if (book.subcategoryIds.contains(clickedCategoryId)) return true;
-      return false;
+      final matchesCategory = book.categoryId == clickedCategoryId;
+      final matchesSub = book.subcategoryIds.contains(clickedCategoryId);
+      return (matchesCategory == true) || (matchesSub == true);
     }).toList();
   }
 
@@ -157,6 +157,7 @@ class BookRepository {
   }
 
   Future<Map<String, dynamic>> getUserStats(int userId) async {
+    // ... existing ...
     try {
       final response = await http.get(
         Uri.parse('${ApiConstants.baseUrl}/user-stats/$userId'),
@@ -169,6 +170,65 @@ class BookRepository {
     } catch (e) {
       print('Error fetching stats: $e');
       return {'total_listening_time_seconds': 0, 'books_completed': 0};
+    }
+  }
+
+  Future<List<int>> getFavoriteBookIds(int userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiConstants.baseUrl}/favorites/$userId'),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map((e) => e as int).toList();
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching favorites: $e');
+      return [];
+    }
+  }
+
+  Future<bool> toggleFavorite(
+    int userId,
+    String bookId,
+    bool isFavorite,
+  ) async {
+    // if currently isFavorite, we want to remove it (delete)
+    // if currently!isFavorite, we want to add it (post)
+    // WAIT: logic usually is 'setFavorite(bool)'.
+    // If I pass 'isFavorite' as 'the desired state' -> No, usually toggle takes current state
+    // Let's assume argument `isFavorite` means "Is it currently favorite?".
+
+    try {
+      final url = Uri.parse('${ApiConstants.baseUrl}/favorites');
+      final body = json.encode({
+        'user_id': userId,
+        'book_id': int.parse(bookId),
+      });
+
+      http.Response response;
+      if (isFavorite) {
+        // Remove
+        response = await http.delete(
+          url,
+          headers: {'Content-Type': 'application/json'},
+          body: body,
+        );
+      } else {
+        // Add
+        response = await http.post(
+          url,
+          headers: {'Content-Type': 'application/json'},
+          body: body,
+        );
+      }
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Error toggling favorite: $e');
+      return false;
     }
   }
 }

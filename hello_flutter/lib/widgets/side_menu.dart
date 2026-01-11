@@ -85,7 +85,6 @@ class _SideMenuState extends State<SideMenu> {
                       ),
               ),
               const Divider(color: Colors.white24),
-              _buildLogoutItem(),
               const SizedBox(height: 20),
             ],
           ),
@@ -184,50 +183,5 @@ class _SideMenuState extends State<SideMenu> {
     }
 
     return item;
-  }
-
-  Widget _buildLogoutItem() {
-    final isCollapsed = globalLayoutState.isCollapsed;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () async {
-          await AuthService().logout();
-          if (mounted) {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (context) => const AuthWrapper()),
-              (route) => false,
-            );
-          }
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-          child: Row(
-            mainAxisAlignment: isCollapsed
-                ? MainAxisAlignment.center
-                : MainAxisAlignment.start,
-            children: [
-              const Icon(Icons.logout, color: Colors.redAccent),
-              if (!isCollapsed) ...[
-                const SizedBox(width: 10),
-                const Expanded(
-                  child: Text(
-                    'Logout',
-                    style: TextStyle(
-                      color: Colors.redAccent,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

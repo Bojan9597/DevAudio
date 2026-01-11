@@ -62,11 +62,17 @@ class AuthService {
     String name,
     String email,
     String password,
+    String confirmPassword,
   ) async {
     final response = await http.post(
       Uri.parse('$baseUrl/register'),
       headers: {'Content-Type': 'application/json'},
-      body: json.encode({'name': name, 'email': email, 'password': password}),
+      body: json.encode({
+        'name': name,
+        'email': email,
+        'password': password,
+        'confirm_password': confirmPassword,
+      }),
     );
 
     if (response.statusCode == 201) {
@@ -129,6 +135,27 @@ class AuthService {
     } catch (error) {
       print('Google Sign In Error: $error');
       rethrow;
+    }
+  }
+
+  Future<void> changePassword(
+    int userId,
+    String currentPassword,
+    String newPassword,
+  ) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/change-password'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'user_id': userId,
+        'current_password': currentPassword,
+        'new_password': newPassword,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      final error = json.decode(response.body);
+      throw Exception(error['error'] ?? 'Password change failed');
     }
   }
 

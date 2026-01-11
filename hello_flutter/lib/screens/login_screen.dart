@@ -24,6 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _verificationCodeController = TextEditingController();
 
   // Colors
@@ -46,6 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
           _nameController.text.trim(),
           _emailController.text.trim(),
           _passwordController.text.trim(),
+          _confirmPasswordController.text.trim(),
         );
 
         // Check if verification is needed
@@ -396,10 +398,46 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
                               obscureText: _obscurePassword,
-                              validator: (v) => v!.length < 6
-                                  ? 'Password must be at least 6 characters'
-                                  : null,
+                              validator: (v) {
+                                if (v == null || v.isEmpty) {
+                                  return 'Please enter a password';
+                                }
+                                if (v.length < 8) {
+                                  return 'Password must be at least 8 characters';
+                                }
+                                if (!_isLogin) {
+                                  // Complexity check for registration
+                                  String pattern =
+                                      r'''^(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$%^&*()_+={}\[\]:;"'<>,.?/\\|~-]).{8,}$''';
+                                  RegExp regex = RegExp(pattern);
+                                  if (!regex.hasMatch(v)) {
+                                    return 'Password must contain uppercase, number and special char';
+                                  }
+                                }
+                                return null;
+                              },
                             ),
+                            if (!_isLogin) ...[
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                controller: _confirmPasswordController,
+                                style: const TextStyle(color: Colors.white),
+                                decoration: _inputDecoration(
+                                  'Confirm Password',
+                                  suffixIcon: const Icon(
+                                    Icons.lock_outline,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                                obscureText: true,
+                                validator: (v) {
+                                  if (v != _passwordController.text) {
+                                    return 'Passwords do not match';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ],
                             const SizedBox(height: 30),
 
                             SizedBox(

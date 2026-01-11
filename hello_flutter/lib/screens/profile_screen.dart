@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart' hide Badge;
+import 'settings_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../services/auth_service.dart';
@@ -153,60 +154,83 @@ class _ProfileScreenState extends State<ProfileScreen> {
             height: MediaQuery.of(context).size.height * 0.30,
             width: double.infinity,
             child: Container(
-              color: Colors.blueGrey.shade50,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Stack(
                 children: [
-                  Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Colors.blueAccent.shade100,
-                        backgroundImage: _user?['profile_picture_url'] != null
-                            ? NetworkImage(
-                                _getProfilePictureUrl(
-                                  _user!['profile_picture_url'],
+                  Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Stack(
+                          children: [
+                            CircleAvatar(
+                              radius: 50,
+                              backgroundColor: Colors.blueAccent.shade100,
+                              backgroundImage:
+                                  _user?['profile_picture_url'] != null
+                                  ? NetworkImage(
+                                      _getProfilePictureUrl(
+                                        _user!['profile_picture_url'],
+                                      ),
+                                    )
+                                  : null,
+                              child: _user?['profile_picture_url'] == null
+                                  ? Text(
+                                      userName.isNotEmpty
+                                          ? userName[0].toUpperCase()
+                                          : '?',
+                                      style: const TextStyle(
+                                        fontSize: 40,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    )
+                                  : null,
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: CircleAvatar(
+                                radius: 15,
+                                backgroundColor: Colors.white,
+                                child: IconButton(
+                                  icon: const Icon(Icons.camera_alt, size: 15),
+                                  onPressed: _pickImage,
                                 ),
-                              )
-                            : null,
-                        child: _user?['profile_picture_url'] == null
-                            ? Text(
-                                userName.isNotEmpty
-                                    ? userName[0].toUpperCase()
-                                    : '?',
-                                style: const TextStyle(
-                                  fontSize: 40,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              )
-                            : null,
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: CircleAvatar(
-                          radius: 15,
-                          backgroundColor: Colors.white,
-                          child: IconButton(
-                            icon: const Icon(Icons.camera_alt, size: 15),
-                            onPressed: _pickImage,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          userName,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    userName,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                        Text(
+                          userEmail,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Text(
-                    userEmail,
-                    style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: IconButton(
+                      icon: const Icon(Icons.settings, color: Colors.grey),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const SettingsScreen(),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),

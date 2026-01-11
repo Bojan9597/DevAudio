@@ -6,6 +6,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from database import Database
 from badge_service import BadgeService
 
+import re
+
 app = Flask(__name__)
 CORS(app) # Enable CORS for all routes
 
@@ -17,9 +19,20 @@ def register():
     name = data.get('name')
     email = data.get('email')
     password = data.get('password')
+    confirm_password = data.get('confirm_password')
 
-    if not all([name, email, password]):
+    if not all([name, email, password, confirm_password]):
         return jsonify({"error": "Missing fields"}), 400
+
+    if password != confirm_password:
+        return jsonify({"error": "Passwords do not match"}), 400
+
+    # Password complexity check
+    # At least 8 chars, 1 uppercase, 1 number, 1 special char
+    if not re.match(r'''^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+={}\[\]:;"'<>,.?/\\|~-]).{8,}$''', password):
+        return jsonify({
+            "error": "Password must be at least 8 characters long and include an uppercase letter, a number, and a special character"
+        }), 400
 
     db = Database()
     if not db.connect():
@@ -161,6 +174,52 @@ def login():
             }), 200
         else:
             return jsonify({"error": "Invalid credentials"}), 401
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
+
+@app.route('/change-password', methods=['POST'])
+def change_password():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    current_password = data.get('current_password')
+    new_password = data.get('new_password')
+
+    if not all([user_id, current_password, new_password]):
+        return jsonify({"error": "Missing fields"}), 400
+
+    # Password complexity check for new password
+    if not re.match(r'''^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+={}\[\]:;"'<>,.?/\\|~-]).{8,}$''', new_password):
+        return jsonify({
+            "error": "New password must be at least 8 characters long and include an uppercase letter, a number, and a special character"
+        }), 400
+
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        # Fetch user
+        query = "SELECT password_hash FROM users WHERE id = %s"
+        users = db.execute_query(query, (user_id,))
+        
+        if not users:
+            return jsonify({"error": "User not found"}), 404
+            
+        user = users[0]
+        
+        # Verify current password
+        if not check_password_hash(user['password_hash'], current_password):
+            return jsonify({"error": "Incorrect current password"}), 401
+            
+        # Update with new password
+        new_hash = generate_password_hash(new_password)
+        update_query = "UPDATE users SET password_hash = %s WHERE id = %s"
+        db.execute_query(update_query, (new_hash, user_id))
+        
+        return jsonify({"message": "Password updated successfully"}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -642,6 +701,67 @@ def get_user_badges(user_id):
         badges = badge_service.get_all_badges_with_progress(user_id)
         return jsonify(badges)
         
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
+
+@app.route('/favorites', methods=['POST'])
+def add_favorite():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    book_id = data.get('book_id')
+
+    if not all([user_id, book_id]):
+        return jsonify({"error": "Missing user_id or book_id"}), 400
+
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        query = "INSERT IGNORE INTO favorites (user_id, book_id) VALUES (%s, %s)"
+        db.execute_query(query, (user_id, book_id))
+        return jsonify({"message": "Added to favorites"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
+
+@app.route('/favorites', methods=['DELETE'])
+def remove_favorite():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    book_id = data.get('book_id')
+
+    if not all([user_id, book_id]):
+        return jsonify({"error": "Missing user_id or book_id"}), 400
+
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        query = "DELETE FROM favorites WHERE user_id = %s AND book_id = %s"
+        db.execute_query(query, (user_id, book_id))
+        return jsonify({"message": "Removed from favorites"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
+
+@app.route('/favorites/<int:user_id>', methods=['GET'])
+def get_favorites(user_id):
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        # Use a JOIN to optionally ensure books exist if we went with No FK
+        query = "SELECT book_id FROM favorites WHERE user_id = %s"
+        results = db.execute_query(query, (user_id,))
+        favorites = [row['book_id'] for row in results]
+        return jsonify(favorites), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
