@@ -164,7 +164,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           children: [
                             CircleAvatar(
                               radius: 50,
-                              backgroundColor: Colors.blueAccent.shade100,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.primary.withOpacity(0.5),
                               backgroundImage:
                                   _user?['profile_picture_url'] != null
                                   ? NetworkImage(
@@ -178,9 +180,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       userName.isNotEmpty
                                           ? userName[0].toUpperCase()
                                           : '?',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 40,
-                                        color: Colors.white,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onPrimary,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     )
@@ -191,9 +195,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               right: 0,
                               child: CircleAvatar(
                                 radius: 15,
-                                backgroundColor: Colors.white,
+                                backgroundColor: Theme.of(context).cardColor,
                                 child: IconButton(
-                                  icon: const Icon(Icons.camera_alt, size: 15),
+                                  icon: Icon(
+                                    Icons.camera_alt,
+                                    size: 15,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
+                                  ),
                                   onPressed: _pickImage,
                                 ),
                               ),
@@ -212,7 +222,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           userEmail,
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey.shade600,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.7),
                           ),
                         ),
                       ],
@@ -222,7 +234,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     top: 16,
                     right: 16,
                     child: IconButton(
-                      icon: const Icon(Icons.settings, color: Colors.grey),
+                      icon: Icon(
+                        Icons.settings,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.5),
+                      ),
                       onPressed: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
@@ -239,12 +256,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           // Tab Bar
           Container(
-            color: Colors.white,
-            child: const TabBar(
-              labelColor: Colors.blueAccent,
-              unselectedLabelColor: Colors.grey,
-              indicatorColor: Colors.blueAccent,
-              tabs: [
+            color:
+                Theme.of(context).cardTheme.color ??
+                Theme.of(context).cardColor,
+            child: TabBar(
+              labelColor: Theme.of(context).colorScheme.primary,
+              unselectedLabelColor: Theme.of(
+                context,
+              ).colorScheme.onSurface.withOpacity(0.6),
+              indicatorColor: Theme.of(context).colorScheme.primary,
+              tabs: const [
                 Tab(icon: Icon(Icons.history), text: 'Listen History'),
                 Tab(icon: Icon(Icons.bar_chart), text: 'Stats'),
                 Tab(icon: Icon(Icons.emoji_events), text: 'Badges'),
@@ -285,9 +306,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
-            leading: const Icon(
+            leading: Icon(
               Icons.play_circle_fill,
-              color: Colors.blueAccent,
+              color: Theme.of(context).colorScheme.primary,
             ),
             title: Text(book.title),
             subtitle: Text(
@@ -370,10 +391,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               CircleAvatar(
                 radius: 30,
-                backgroundColor: isEarned ? Colors.amber : Colors.grey.shade300,
+                backgroundColor: isEarned
+                    ? Colors.amber
+                    : Theme.of(context).disabledColor,
                 child: Icon(
                   Icons.emoji_events,
-                  color: isEarned ? Colors.white : Colors.grey,
+                  color: isEarned
+                      ? Colors.white
+                      : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.5),
                   size: 30,
                 ),
               ),
@@ -383,7 +410,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: isEarned ? FontWeight.bold : FontWeight.normal,
-                  color: isEarned ? Colors.black : Colors.grey,
+                  color: isEarned
+                      ? Theme.of(context).colorScheme.onSurface
+                      : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.5),
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
@@ -417,7 +448,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Icon(
                 Icons.emoji_events,
                 size: 60,
-                color: isEarned ? Colors.amber : Colors.grey,
+                color: isEarned
+                    ? Colors.amber
+                    : Theme.of(context).disabledColor,
               ),
               const SizedBox(height: 16),
               Text(
@@ -431,12 +464,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Text(
                 badge.description,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey[700]),
+                style: TextStyle(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.7),
+                ),
               ),
               const SizedBox(height: 24),
               LinearProgressIndicator(
                 value: progress,
-                backgroundColor: Colors.grey.shade200,
+                backgroundColor: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest,
                 color: Colors.amber,
                 minHeight: 8,
               ),

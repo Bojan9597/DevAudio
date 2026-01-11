@@ -202,7 +202,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       context: context,
                       builder: (context) {
                         return SimpleDialog(
-                          title: const Text('Select Language'),
+                          title: Text(AppLocalizations.of(context)!.language),
                           children: [
                             SimpleDialogOption(
                               onPressed: () {
@@ -245,14 +245,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     );
                   },
                 ),
-                const Divider(),
                 ListTile(
                   leading: const Icon(Icons.brightness_6),
                   title: Text(AppLocalizations.of(context)!.theme),
-                  trailing: const Text('Light'),
+                  trailing: Text(_getThemeName(globalLayoutState.themeMode)),
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Theme settings mocked')),
+                    showDialog(
+                      context: context,
+                      builder: (context) {
+                        return SimpleDialog(
+                          title: Text(AppLocalizations.of(context)!.theme),
+                          children: [
+                            SimpleDialogOption(
+                              onPressed: () {
+                                globalLayoutState.setThemeMode(
+                                  ThemeMode.system,
+                                );
+                                Navigator.pop(context);
+                              },
+                              child: const Text('System'),
+                            ),
+                            SimpleDialogOption(
+                              onPressed: () {
+                                globalLayoutState.setThemeMode(ThemeMode.light);
+                                Navigator.pop(context);
+                              },
+                              child: const Text('Light'),
+                            ),
+                            SimpleDialogOption(
+                              onPressed: () {
+                                globalLayoutState.setThemeMode(ThemeMode.dark);
+                                Navigator.pop(context);
+                              },
+                              child: const Text('Dark'),
+                            ),
+                          ],
+                        );
+                      },
                     );
                   },
                 ),
@@ -279,6 +308,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
     );
+  }
+
+  String _getThemeName(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.light:
+        return 'Light';
+      case ThemeMode.dark:
+        return 'Dark';
+      default:
+        return 'System';
+    }
   }
 
   String _getLanguageName(String? code) {

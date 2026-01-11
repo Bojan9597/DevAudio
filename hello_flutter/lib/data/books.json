@@ -1,124 +1,110 @@
 [
     {
         "id": "b1",
-        "title": "Linux Kernel Development",
-        "author": "Robert Love",
-        "audioUrl": "placeholder.mp3",
-        "categoryId": "programming",
+        "title": "The Great Gatsby",
+        "author": "F. Scott Fitzgerald",
+        "audioUrl": "http://10.0.2.2:5000/static/audio/b1.mp3",
+        "categoryId": "novel",
         "subcategoryIds": [
-            "operating_systems",
-            "linux",
-            "linux_system_admin"
+            "classic",
+            "drama"
         ]
     },
     {
         "id": "b2",
-        "title": "Windows Internals, Part 1",
-        "author": "Pavel Yosifovich",
-        "audioUrl": "placeholder.mp3",
-        "categoryId": "programming",
+        "title": "1984",
+        "author": "George Orwell",
+        "audioUrl": "http://10.0.2.2:5000/static/audio/b2.mp3",
+        "categoryId": "novel",
         "subcategoryIds": [
-            "operating_systems",
-            "windows",
-            "windows_internals"
+            "dystopian",
+            "sci_fi"
         ]
     },
     {
         "id": "b3",
-        "title": "Mastering Regular Expressions",
-        "author": "Jeffrey E. F. Friedl",
-        "audioUrl": "placeholder.mp3",
-        "categoryId": "programming",
+        "title": "To Kill a Mockingbird",
+        "author": "Harper Lee",
+        "audioUrl": "http://10.0.2.2:5000/static/audio/b3.mp3",
+        "categoryId": "novel",
         "subcategoryIds": [
-            "programming_languages",
-            "python",
-            "python_scripting"
+            "classic",
+            "drama"
         ]
     },
     {
         "id": "b4",
-        "title": "Effective Java",
-        "author": "Joshua Bloch",
-        "audioUrl": "placeholder.mp3",
-        "categoryId": "programming",
+        "title": "The Hobbit",
+        "author": "J.R.R. Tolkien",
+        "audioUrl": "http://10.0.2.2:5000/static/audio/b4.mp3",
+        "categoryId": "novel",
         "subcategoryIds": [
-            "programming_languages",
-            "java",
-            "java_basics"
+            "fantasy"
         ]
     },
     {
         "id": "b5",
-        "title": "JavaScript: The Good Parts",
-        "author": "Douglas Crockford",
-        "audioUrl": "placeholder.mp3",
-        "categoryId": "programming",
+        "title": "Pride and Prejudice",
+        "author": "Jane Austen",
+        "audioUrl": "http://10.0.2.2:5000/static/audio/b5.mp3",
+        "categoryId": "novel",
         "subcategoryIds": [
-            "programming_languages",
-            "javascript",
-            "js_basics"
+            "romance",
+            "classic"
         ]
     },
     {
         "id": "b6",
-        "title": "The C++ Programming Language",
-        "author": "Bjarne Stroustrup",
-        "audioUrl": "placeholder.mp3",
-        "categoryId": "programming",
+        "title": "The Catcher in the Rye",
+        "author": "J.D. Salinger",
+        "audioUrl": "http://10.0.2.2:5000/static/audio/b6.mp3",
+        "categoryId": "novel",
         "subcategoryIds": [
-            "programming_languages",
-            "c_cpp",
-            "cpp_basics"
+            "classic"
         ]
     },
     {
         "id": "b7",
-        "title": "Advanced Programming in the UNIX Environment",
-        "author": "W. Richard Stevens",
-        "audioUrl": "placeholder.mp3",
-        "categoryId": "programming",
+        "title": "Moby Dick",
+        "author": "Herman Melville",
+        "audioUrl": "http://10.0.2.2:5000/static/audio/b7.mp3",
+        "categoryId": "novel",
         "subcategoryIds": [
-            "operating_systems",
-            "linux",
-            "linux_system_admin",
-            "c_cpp",
-            "cpp_system_programming"
+            "adventure",
+            "classic"
         ]
     },
     {
         "id": "b8",
-        "title": "TCP/IP Illustrated",
-        "author": "W. Richard Stevens",
-        "audioUrl": "placeholder.mp3",
-        "categoryId": "programming",
+        "title": "War and Peace",
+        "author": "Leo Tolstoy",
+        "audioUrl": "http://10.0.2.2:5000/static/audio/b8.mp3",
+        "categoryId": "novel",
         "subcategoryIds": [
-            "operating_systems",
-            "linux",
-            "linux_networking"
+            "historical",
+            "classic"
         ]
     },
     {
         "id": "b9",
-        "title": "Clean Code",
-        "author": "Robert C. Martin",
-        "audioUrl": "placeholder.mp3",
-        "categoryId": "programming",
+        "title": "The Odyssey",
+        "author": "Homer",
+        "audioUrl": "http://10.0.2.2:5000/static/audio/b9.mp3",
+        "categoryId": "novel",
         "subcategoryIds": [
-            "programming_languages",
-            "java",
-            "java_oop"
+            "epic",
+            "classic"
         ]
     },
     {
         "id": "b10",
-        "title": "You Don't Know JS",
-        "author": "Kyle Simpson",
-        "audioUrl": "placeholder.mp3",
-        "categoryId": "programming",
+        "title": "Ulysses",
+        "author": "James Joyce",
+        "audioUrl": "http://10.0.2.2:5000/static/audio/b10.mp3",
+        "categoryId": "novel",
         "subcategoryIds": [
-            "programming_languages",
-            "javascript",
-            "js_advanced"
+            "classic",
+            "modernist"
         ]
     }
 ]

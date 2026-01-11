@@ -5,6 +5,7 @@ import 'states/layout_state.dart';
 import 'app_layout.dart';
 import 'screens/login_screen.dart';
 import 'services/auth_service.dart';
+import 'theme/app_theme.dart';
 
 void main() {
   runApp(const MyApp());
@@ -21,10 +22,9 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           title: 'AudioBooks',
           debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
-            useMaterial3: true,
-          ),
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: globalLayoutState.themeMode,
           locale: globalLayoutState.locale,
           localizationsDelegates: [
             AppLocalizations.delegate,

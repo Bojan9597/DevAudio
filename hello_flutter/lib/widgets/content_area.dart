@@ -107,11 +107,20 @@ class _ContentAreaState extends State<ContentArea> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.book_outlined, size: 60, color: Colors.grey),
+                Icon(
+                  Icons.book_outlined,
+                  size: 60,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.5),
+                ),
                 const SizedBox(height: 16),
                 Text(
                   'No books found in "$categoryId"',
-                  style: const TextStyle(color: Colors.grey, fontSize: 18),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 18,
+                  ),
                 ),
               ],
             ),
@@ -119,7 +128,7 @@ class _ContentAreaState extends State<ContentArea> {
         }
 
         return Container(
-          color: Colors.grey.shade100,
+          color: Theme.of(context).scaffoldBackgroundColor,
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,11 +190,15 @@ class _ContentAreaState extends State<ContentArea> {
       child: Column(
         children: [
           Container(
-            color: Colors.white,
+            color:
+                Theme.of(context).cardTheme.color ??
+                Theme.of(context).cardColor,
             child: TabBar(
-              labelColor: Colors.blueAccent,
-              unselectedLabelColor: Colors.grey,
-              indicatorColor: Colors.blueAccent,
+              labelColor: Theme.of(context).colorScheme.primary,
+              unselectedLabelColor: Theme.of(
+                context,
+              ).colorScheme.onSurface.withOpacity(0.6),
+              indicatorColor: Theme.of(context).colorScheme.primary,
               tabs: [
                 Tab(
                   icon: const Icon(Icons.favorite),
@@ -241,9 +254,9 @@ class _ContentAreaState extends State<ContentArea> {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
-        leading: const Icon(
+        leading: Icon(
           Icons.play_circle_fill,
-          color: Colors.blueAccent,
+          color: Theme.of(context).colorScheme.primary,
           size: 40,
         ),
         title: Text(
@@ -257,7 +270,12 @@ class _ContentAreaState extends State<ContentArea> {
             if (position > 0)
               Text(
                 'Progress: ${_formatDuration(position)} / ${_formatDuration(duration)}',
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.7),
+                ),
               ),
           ],
         ),
@@ -329,15 +347,17 @@ class _ContentAreaState extends State<ContentArea> {
             Expanded(
               flex: 2,
               child: Container(
-                decoration: BoxDecoration(color: Colors.blueAccent.shade100),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                ),
                 child: Center(
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.menu_book,
                         size: 50,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                       ),
                       if (book.isFavorite)
                         const Positioned(
@@ -373,7 +393,7 @@ class _ContentAreaState extends State<ContentArea> {
                             alignment: Alignment.centerLeft,
                             child: Text(
                               book.title,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -386,9 +406,11 @@ class _ContentAreaState extends State<ContentArea> {
                             alignment: Alignment.centerLeft,
                             child: Text(
                               book.author,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
-                                color: Colors.grey,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.6),
                               ),
                             ),
                           ),
@@ -416,10 +438,13 @@ class _ContentAreaState extends State<ContentArea> {
           width: 50,
           height: 50,
           decoration: BoxDecoration(
-            color: Colors.blueAccent.shade100,
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Icon(Icons.menu_book, color: Colors.white),
+          child: Icon(
+            Icons.menu_book,
+            color: Theme.of(context).colorScheme.onPrimary,
+          ),
         ),
         title: Text(
           book.title,

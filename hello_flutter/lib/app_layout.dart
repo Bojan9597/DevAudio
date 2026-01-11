@@ -12,6 +12,7 @@ class AppLayout extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         title: Row(
           children: [
             Expanded(
@@ -19,7 +20,10 @@ class AppLayout extends StatelessWidget {
                 onPressed: () => globalLayoutState.toggleMenu(),
                 child: Text(
                   AppLocalizations.of(context)!.categories,
-                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                  style: TextStyle(
+                    color: Theme.of(context).appBarTheme.foregroundColor,
+                    fontSize: 16,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -27,10 +31,16 @@ class AppLayout extends StatelessWidget {
             Expanded(
               child: TextButton.icon(
                 onPressed: () => globalLayoutState.setCategoryId('library'),
-                icon: const Icon(Icons.library_books, color: Colors.white),
+                icon: Icon(
+                  Icons.library_books,
+                  color: Theme.of(context).appBarTheme.foregroundColor,
+                ),
                 label: Text(
                   AppLocalizations.of(context)!.library,
-                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                  style: TextStyle(
+                    color: Theme.of(context).appBarTheme.foregroundColor,
+                    fontSize: 16,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -38,17 +48,22 @@ class AppLayout extends StatelessWidget {
             Expanded(
               child: TextButton.icon(
                 onPressed: () => globalLayoutState.setCategoryId('profile'),
-                icon: const Icon(Icons.person, color: Colors.white),
+                icon: Icon(
+                  Icons.person,
+                  color: Theme.of(context).appBarTheme.foregroundColor,
+                ),
                 label: Text(
                   AppLocalizations.of(context)!.profile,
-                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                  style: TextStyle(
+                    color: Theme.of(context).appBarTheme.foregroundColor,
+                    fontSize: 16,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),
           ],
         ),
-        backgroundColor: Colors.blueAccent,
       ),
       body: ListenableBuilder(
         listenable: globalLayoutState,

@@ -7,6 +7,7 @@ import '../repositories/book_repository.dart';
 import '../services/auth_service.dart';
 import 'badge_dialog.dart';
 import '../models/badge.dart';
+import '../services/download_service.dart';
 
 class PlayerScreen extends StatefulWidget {
   final Book book;
@@ -27,6 +28,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   bool _isLoadingOwnership = true;
   int? _userId;
   bool _isFavorite = false;
+  bool _isDownloading = false;
 
   final GlobalKey _speedButtonKey = GlobalKey();
   final GlobalKey _moreButtonKey = GlobalKey();
@@ -84,9 +86,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
       });
       _startProgressSync(); // Start syncing after purchase
 
+      _downloadBook(); // Trigger download
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Book Purchased and Unlocked!')),
+          const SnackBar(
+            content: Text('Book Purchased and Unlocked! Downloading...'),
+          ),
         );
 
         for (var badge in newBadges) {
@@ -100,13 +106,54 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
   }
 
+  Future<void> _downloadBook() async {
+    setState(() => _isDownloading = true);
+    try {
+      await DownloadService().downloadBook(
+        widget.book.id,
+        widget.book.audioUrl,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Download Complete! Playing local file.'),
+          ),
+        );
+        // Re-init player to switch to local file if currently playing placeholder
+        _initPlayer();
+      }
+    } catch (e) {
+      print("Download error: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Download failed: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isDownloading = false);
+    }
+  }
+
   Future<void> _initPlayer() async {
     try {
       String url = widget.book.audioUrl;
-      if (url == 'placeholder.mp3' || url.isEmpty) {
-        url = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
+
+      // Check for local file
+      final isDownloaded = await DownloadService().isBookDownloaded(
+        widget.book.id,
+      );
+      if (isDownloaded) {
+        final localPath = await DownloadService().getLocalBookPath(
+          widget.book.id,
+        );
+        print("Playing from local file: $localPath");
+        await _player.setFilePath(localPath);
+      } else {
+        if (url == 'placeholder.mp3' || url.isEmpty) {
+          url = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
+        }
+        await _player.setUrl(url);
       }
-      await _player.setUrl(url);
 
       // Resume logic
       if (_userId != null) {
@@ -498,7 +545,28 @@ class _PlayerScreenState extends State<PlayerScreen> {
                             );
                           } else if (playing != true) {
                             return GestureDetector(
-                              onTap: _player.play,
+                              onTap: () async {
+                                if (_isPurchased) {
+                                  final isDownloaded = await DownloadService()
+                                      .isBookDownloaded(widget.book.id);
+                                  if (!isDownloaded) {
+                                    if (!_isDownloading) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Book not downloaded. Retrying download...',
+                                          ),
+                                        ),
+                                      );
+                                      _downloadBook();
+                                    }
+                                    return;
+                                  }
+                                }
+                                _player.play();
+                              },
                               child: Container(
                                 width: 70,
                                 height: 70,

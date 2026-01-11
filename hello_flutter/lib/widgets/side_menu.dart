@@ -67,7 +67,7 @@ class _SideMenuState extends State<SideMenu> {
         return AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           width: width,
-          color: Colors.blueGrey.shade900,
+          color: Theme.of(context).cardColor,
           clipBehavior: Clip.hardEdge,
           child: Column(
             children: [
@@ -75,8 +75,10 @@ class _SideMenuState extends State<SideMenu> {
               // Dynamic Categories - Takes up available space
               Expanded(
                 child: _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(color: Colors.white),
+                    ? Center(
+                        child: CircularProgressIndicator(
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                       )
                     : ListView(
                         padding: EdgeInsets.zero,
@@ -85,7 +87,7 @@ class _SideMenuState extends State<SideMenu> {
                             .toList(),
                       ),
               ),
-              const Divider(color: Colors.white24),
+              Divider(color: Theme.of(context).dividerColor),
               const SizedBox(height: 20),
             ],
           ),
@@ -103,6 +105,9 @@ class _SideMenuState extends State<SideMenu> {
         category.children != null && category.children!.isNotEmpty;
     final isExpanded = _expandedIds.contains(category.id);
 
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     Widget item = Material(
       color: Colors.transparent,
       child: InkWell(
@@ -116,7 +121,9 @@ class _SideMenuState extends State<SideMenu> {
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 300),
-          color: isSelected ? Colors.blueGrey.shade800 : null,
+          color: isSelected
+              ? colorScheme.primaryContainer.withOpacity(0.2)
+              : null,
           padding: EdgeInsets.symmetric(
             vertical: 10,
             horizontal: isCollapsed ? 10 : 10 + (level * 16.0),
@@ -132,7 +139,9 @@ class _SideMenuState extends State<SideMenu> {
                 children: [
                   Icon(
                     category.hasBooks ? Icons.book : Icons.folder,
-                    color: isSelected ? Colors.blueAccent : Colors.white70,
+                    color: isSelected
+                        ? colorScheme.primary
+                        : colorScheme.onSurface.withOpacity(0.7),
                     size: 20,
                   ),
                   if (showExpanded) ...[
@@ -142,8 +151,8 @@ class _SideMenuState extends State<SideMenu> {
                         category.title,
                         style: TextStyle(
                           color: isSelected
-                              ? Colors.blueAccent
-                              : Colors.white70,
+                              ? colorScheme.primary
+                              : colorScheme.onSurface.withOpacity(0.7),
                           fontSize: 14,
                           fontWeight: isSelected
                               ? FontWeight.bold
