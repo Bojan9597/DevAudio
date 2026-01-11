@@ -4,6 +4,8 @@ import '../models/badge.dart';
 import '../models/book.dart';
 import '../utils/api_constants.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 class BookRepository {
   Future<List<Book>> getBooks() async {
     try {
@@ -13,13 +15,22 @@ class BookRepository {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
+        // Cache data
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cached_books', response.body);
         return data.map((json) => Book.fromJson(json)).toList();
       } else {
         throw Exception('Failed to load books');
       }
     } catch (e) {
-      print('Error fetching books: $e');
-      return []; // Return empty list on error
+      print('Error fetching books: $e. Trying cache...');
+      final prefs = await SharedPreferences.getInstance();
+      final cachedData = prefs.getString('cached_books');
+      if (cachedData != null) {
+        final List<dynamic> data = json.decode(cachedData);
+        return data.map((json) => Book.fromJson(json)).toList();
+      }
+      return []; // Return empty list only if both network and cache fail
     }
   }
 
@@ -42,11 +53,20 @@ class BookRepository {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
+        // Cache data
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cached_user_books_$userId', response.body);
         return data.map((e) => e.toString()).toList();
       }
       return [];
     } catch (e) {
-      print('Error fetching purchased books: $e');
+      print('Error fetching purchased books: $e. Trying cache...');
+      final prefs = await SharedPreferences.getInstance();
+      final cachedData = prefs.getString('cached_user_books_$userId');
+      if (cachedData != null) {
+        final List<dynamic> data = json.decode(cachedData);
+        return data.map((e) => e.toString()).toList();
+      }
       return [];
     }
   }
@@ -164,11 +184,19 @@ class BookRepository {
       );
 
       if (response.statusCode == 200) {
+        // Cache data
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cached_stats_$userId', response.body);
         return json.decode(response.body);
       }
       return {'total_listening_time_seconds': 0, 'books_completed': 0};
     } catch (e) {
-      print('Error fetching stats: $e');
+      print('Error fetching stats: $e. Trying cache...');
+      final prefs = await SharedPreferences.getInstance();
+      final cachedData = prefs.getString('cached_stats_$userId');
+      if (cachedData != null) {
+        return json.decode(cachedData);
+      }
       return {'total_listening_time_seconds': 0, 'books_completed': 0};
     }
   }
