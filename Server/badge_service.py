@@ -29,6 +29,8 @@ class BadgeService:
             
             if current_value >= threshold:
                 self._award_badge(user_id, badge['id'])
+                badge['currentValue'] = current_value
+                badge['isEarned'] = True
                 newly_earned.append(badge) # Return full badge object for frontend display
         
         return newly_earned
