@@ -5,6 +5,8 @@ import 'package:just_audio/just_audio.dart';
 import 'dart:ui'; // For BackdropFilter
 import '../repositories/book_repository.dart';
 import '../services/auth_service.dart';
+import 'badge_dialog.dart';
+import '../models/badge.dart';
 
 class PlayerScreen extends StatefulWidget {
   final Book book;
@@ -70,14 +72,25 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Future<void> _buyBook() async {
     if (_userId == null) return;
     try {
-      await BookRepository().buyBook(_userId!, widget.book.id);
+      final newBadges = await BookRepository().buyBook(
+        _userId!,
+        widget.book.id,
+      );
+
       setState(() {
         _isPurchased = true;
       });
       _startProgressSync(); // Start syncing after purchase
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Book Purchased and Unlocked!')),
-      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Book Purchased and Unlocked!')),
+        );
+
+        for (var badge in newBadges) {
+          BadgeDialog.show(context, badge);
+        }
+      }
     } catch (e) {
       ScaffoldMessenger.of(
         context,
@@ -120,12 +133,20 @@ class _PlayerScreenState extends State<PlayerScreen> {
       final position = _player.position.inSeconds;
       final duration = _player.duration?.inSeconds;
       if (position > 0) {
-        await BookRepository().updateProgress(
+        final newBadges = await BookRepository().updateProgress(
           _userId!,
           widget.book.id,
           position,
           duration,
         );
+
+        if (newBadges.isNotEmpty && mounted) {
+          // If we earned a badge, maybe pause? Or just show dialog over it.
+          // Dialog over it is fine.
+          for (var badge in newBadges) {
+            BadgeDialog.show(context, badge);
+          }
+        }
       }
     }
   }

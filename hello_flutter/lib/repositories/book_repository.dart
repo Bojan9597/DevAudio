@@ -51,14 +51,23 @@ class BookRepository {
     }
   }
 
-  Future<void> buyBook(int userId, String bookId) async {
+  Future<List<Badge>> buyBook(int userId, String bookId) async {
     final response = await http.post(
       Uri.parse('${ApiConstants.baseUrl}/buy-book'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'user_id': userId, 'book_id': int.parse(bookId)}),
     );
 
-    if (response.statusCode != 200 && response.statusCode != 201) {
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = json.decode(response.body);
+      if (data['new_badges'] != null) {
+        return (data['new_badges'] as List).map((e) {
+          e['isEarned'] = true;
+          return Badge.fromJson(e);
+        }).toList();
+      }
+      return [];
+    } else {
       final error = json.decode(response.body);
       throw Exception(error['message'] ?? 'Failed to buy book');
     }
@@ -82,7 +91,7 @@ class BookRepository {
     }
   }
 
-  Future<void> updateProgress(
+  Future<List<Badge>> updateProgress(
     int userId,
     String bookId,
     int positionSeconds,
@@ -99,9 +108,18 @@ class BookRepository {
       }),
     );
 
-    if (response.statusCode != 200) {
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      if (data['new_badges'] != null) {
+        return (data['new_badges'] as List).map((e) {
+          e['isEarned'] = true;
+          return Badge.fromJson(e);
+        }).toList();
+      }
+    } else {
       print('Failed to update progress: ${response.body}');
     }
+    return [];
   }
 
   Future<int> getBookStatus(int userId, String bookId) async {

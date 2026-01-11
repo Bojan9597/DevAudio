@@ -6,6 +6,8 @@ class Badge {
   final String code;
   final bool isEarned;
   final DateTime? earnedAt;
+  final dynamic currentValue;
+  final int threshold;
 
   Badge({
     required this.id,
@@ -15,6 +17,8 @@ class Badge {
     required this.code,
     required this.isEarned,
     this.earnedAt,
+    this.currentValue = 0,
+    this.threshold = 1,
   });
 
   factory Badge.fromJson(Map<String, dynamic> json) {
@@ -28,6 +32,8 @@ class Badge {
       earnedAt: json['earnedAt'] != null
           ? DateTime.tryParse(json['earnedAt'].toString())
           : null,
+      currentValue: json['currentValue'] ?? 0,
+      threshold: json['threshold'] ?? 1,
     );
   }
 }

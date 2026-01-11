@@ -450,7 +450,11 @@ def buy_book():
         db.connection.commit()
         cursor.close()
 
-        return jsonify({"message": "Book purchased successfully"}), 201
+        # Check for new badges
+        badge_service = BadgeService(db.connection)
+        new_badges = badge_service.check_badges(user_id)
+
+        return jsonify({"message": "Book purchased successfully", "new_badges": new_badges}), 201
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -631,28 +635,8 @@ def get_user_badges(user_id):
         return jsonify({"error": "Database connection failed"}), 500
         
     try:
-        # Fetch all badges with earned status
-        query = """
-            SELECT b.id, b.category, b.name, b.description, b.code, ub.earned_at
-            FROM badges b
-            LEFT JOIN user_badges ub ON b.id = ub.badge_id AND ub.user_id = %s
-            ORDER BY b.category, b.id
-        """
-        results = db.execute_query(query, (user_id,))
-        
-        badges = []
-        if results:
-            for row in results:
-                badges.append({
-                    "id": row['id'],
-                    "category": row['category'],
-                    "name": row['name'],
-                    "description": row['description'],
-                    "code": row['code'],
-                    "isEarned": row['earned_at'] is not None,
-                    "earnedAt": str(row['earned_at']) if row['earned_at'] else None
-                })
-        
+        badge_service = BadgeService(db.connection)
+        badges = badge_service.get_all_badges_with_progress(user_id)
         return jsonify(badges)
         
     except Exception as e:

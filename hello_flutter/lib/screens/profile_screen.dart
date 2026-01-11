@@ -338,28 +338,102 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final badge = _badges[index];
         final isEarned = badge.isEarned;
 
-        return Column(
-          children: [
-            CircleAvatar(
-              radius: 30,
-              backgroundColor: isEarned ? Colors.amber : Colors.grey.shade300,
-              child: Icon(
+        return InkWell(
+          onTap: () => _showBadgeDetails(badge),
+          borderRadius: BorderRadius.circular(8),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircleAvatar(
+                radius: 30,
+                backgroundColor: isEarned ? Colors.amber : Colors.grey.shade300,
+                child: Icon(
+                  Icons.emoji_events,
+                  color: isEarned ? Colors.white : Colors.grey,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                badge.name,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isEarned ? FontWeight.bold : FontWeight.normal,
+                  color: isEarned ? Colors.black : Colors.grey,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showBadgeDetails(Badge badge) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        double current = 0;
+        if (badge.currentValue is num) {
+          current = (badge.currentValue as num).toDouble();
+        }
+        final double progress = (current / badge.threshold).clamp(0.0, 1.0);
+        final bool isEarned = badge.isEarned;
+
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
                 Icons.emoji_events,
-                color: isEarned ? Colors.white : Colors.grey,
-                size: 30,
+                size: 60,
+                color: isEarned ? Colors.amber : Colors.grey,
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              badge.name,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isEarned ? FontWeight.bold : FontWeight.normal,
-                color: isEarned ? Colors.black : Colors.grey,
+              const SizedBox(height: 16),
+              Text(
+                badge.name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
               ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+              const SizedBox(height: 8),
+              Text(
+                badge.description,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[700]),
+              ),
+              const SizedBox(height: 24),
+              LinearProgressIndicator(
+                value: progress,
+                backgroundColor: Colors.grey.shade200,
+                color: Colors.amber,
+                minHeight: 8,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${current.toStringAsFixed(0)} / ${badge.threshold}',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              if (isEarned) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Earned on ${badge.earnedAt?.toString().split(" ")[0] ?? ""}',
+                  style: const TextStyle(color: Colors.green, fontSize: 12),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
             ),
           ],
         );
