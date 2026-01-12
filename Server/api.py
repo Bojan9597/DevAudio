@@ -433,19 +433,27 @@ def get_books():
         
         offset = (page - 1) * limit
 
-        # Base query
-        query = """
-            SELECT b.id, b.title, b.author, b.audio_path, c.slug as category_slug, u.name as posted_by_name
-            FROM books b 
-            LEFT JOIN categories c ON b.primary_category_id = c.id
-            LEFT JOIN users u ON b.posted_by_user_id = u.id
-        """
-        
         params = []
         if search_query:
-            query += " WHERE b.title LIKE %s"
-            params.append(f"%{search_query}%")
-            
+             # Search by title
+             query = """
+                SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug, 
+                       u.name as posted_by_name, b.description, b.price, b.posted_by_user_id
+                FROM books b 
+                LEFT JOIN categories c ON b.primary_category_id = c.id
+                LEFT JOIN users u ON b.posted_by_user_id = u.id
+                WHERE b.title LIKE %s
+            """
+             params.append(f"%{search_query}%")
+        else:
+            # Standard List
+            query = """
+                SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug, 
+                       u.name as posted_by_name, b.description, b.price, b.posted_by_user_id
+                FROM books b 
+                LEFT JOIN categories c ON b.primary_category_id = c.id
+                LEFT JOIN users u ON b.posted_by_user_id = u.id
+            """
         # Add ordering (optional but good for consistency)
         query += " ORDER BY b.id DESC" 
         
@@ -475,14 +483,32 @@ def get_books():
                     # Use CamelCase AudioBooks to match directory
                     audio_path = f"{BASE_URL}static/AudioBooks/{audio_path}"
 
+                # Construct full Cover URL if relative
+                cover_path = row['cover_image_path']
+                if cover_path and not cover_path.startswith('http'):
+                     # Use BookCovers for new standard, or check if it exists in images?
+                     # Let's assume BookCovers for consistency with new logic.
+                     # But old logic used 'static/images'.
+                     # Helper: if it doesn't exist in BookCovers, maybe it is in images?
+                     # For now, let's default to BookCovers for uniformity, or 'images' if likely legacy.
+                     # Actually, legacy DB has just filename.
+                     # Let's use 'images' as default fallback if not specified, OR just plain path.
+                     # User wants NEW folder.
+                     # Let's point to 'static/BookCovers/'
+                     cover_path = f"{BASE_URL}static/BookCovers/{cover_path}"
+                
                 books.append({
                     "id": str(book_id),
                     "title": row['title'],
                     "author": row['author'],
                     "audioUrl": audio_path,
+                    "coverUrl": cover_path,
                     "categoryId": row['category_slug'] or "", 
                     "subcategoryIds": subcategory_ids,
-                    "postedBy": row['posted_by_name'] or "Unknown" 
+                    "postedBy": row['posted_by_name'] or "Unknown",
+                    "description": row['description'],
+                    "price": float(row['price']) if row['price'] else 0.0,
+                    "postedByUserId": str(row['posted_by_user_id']),
                 })
         
         return jsonify(books)
@@ -665,8 +691,8 @@ def get_listen_history(user_id):
     try:
         # Fetch books that have been started (position > 0) ordered by recent access
         query = """
-            SELECT b.id, b.title, b.author, b.audio_path, b.duration_seconds, ub.last_played_position_seconds, 
-                   ub.last_accessed_at, c.slug as category_slug
+            SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug, 
+                   ub.last_played_position_seconds, b.duration_seconds, ub.last_accessed_at
             FROM user_books ub
             JOIN books b ON ub.book_id = b.id
             LEFT JOIN categories c ON b.primary_category_id = c.id
@@ -678,11 +704,22 @@ def get_listen_history(user_id):
         history = []
         if result:
             for row in result:
+                # Construct full Cover URL if relative
+                cover_path = row['cover_image_path']
+                if cover_path and not cover_path.startswith('http'):
+                    cover_path = f"{BASE_URL}static/BookCovers/{cover_path}"
+
+                # Construct full Audio URL if relative
+                audio_path = row['audio_path']
+                if audio_path and not audio_path.startswith('http'):
+                    audio_path = f"{BASE_URL}static/AudioBooks/{audio_path}"
+
                 history.append({
                     "id": str(row['id']),
                     "title": row['title'],
                     "author": row['author'],
-                    "audioUrl": row['audio_path'],
+                    "audioUrl": audio_path,
+                    "coverUrl": cover_path,
                     "categoryId": row['category_slug'] or "",
                     "lastPosition": row['last_played_position_seconds'],
                     "duration": row['duration_seconds'],
@@ -857,27 +894,38 @@ def upload_book():
             cover_file = request.files['cover']
             if cover_file.filename != '':
                 cover_filename = secure_filename(f"{int(datetime.datetime.now().timestamp())}_{cover_file.filename}")
-                cover_save_path = os.path.join(static_dir, "images", cover_filename) 
+                # Save to Server/static/BookCovers
+                cover_save_path = os.path.join(static_dir, "BookCovers", cover_filename) 
                 os.makedirs(os.path.dirname(cover_save_path), exist_ok=True)
                 cover_file.save(cover_save_path)
-                db_cover_path = cover_filename
+                
+                # Save FULL URL
+                db_cover_path = f"{BASE_URL}static/BookCovers/{cover_filename}"
 
         # db is already connected from category lookup
         
-        # Insert Query
+        # Insert Book
         insert_query = """
             INSERT INTO books 
             (title, author, primary_category_id, audio_path, cover_image_path, posted_by_user_id, description, price, duration_seconds)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 0)
         """
+        params = (title, author, numeric_cat_id, db_audio_path, db_cover_path, user_id, description, price)
         
         cursor = db.connection.cursor()
-        cursor.execute(insert_query, (title, author, numeric_cat_id, db_audio_path, db_cover_path, user_id, description, price))
+        cursor.execute(insert_query, params)
         book_id = cursor.lastrowid
+        
+        # Auto-Buy: Grant ownership to uploader
+        # Check if already owned (unlikely for new book, but safe) -> No, new book_id.
+        own_query = "INSERT INTO user_books (user_id, book_id) VALUES (%s, %s)"
+        cursor.execute(own_query, (user_id, book_id))
+        
         db.connection.commit()
+        cursor.close()
         db.disconnect()
         
-        return jsonify({"message": "Book uploaded successfully", "book_id": book_id}), 201
+        return jsonify({"message": "Book uploaded and added to library successfully", "book_id": book_id}), 201
 
     except Exception as e:
         print(f"Upload Error: {e}")
@@ -894,7 +942,7 @@ def get_my_uploads():
          return jsonify({"error": "Database error"}), 500
          
     query = """
-        SELECT b.id, b.title, b.author, b.audio_path, c.slug as category_slug, 
+        SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug, 
                b.description, b.price, b.posted_by_user_id
         FROM books b 
         LEFT JOIN categories c ON b.primary_category_id = c.id
@@ -912,11 +960,17 @@ def get_my_uploads():
              if audio_path and not audio_path.startswith('http'):
                  audio_path = f"{BASE_URL}static/AudioBooks/{audio_path}"
 
+             # Construct full Cover URL if relative
+             cover_path = row['cover_image_path']
+             if cover_path and not cover_path.startswith('http'):
+                 cover_path = f"{BASE_URL}static/BookCovers/{cover_path}"
+
              books.append({
                 "id": str(row['id']),
                 "title": row['title'],
                 "author": row['author'],
                 "audioUrl": audio_path,
+                "coverUrl": cover_path,
                 "categoryId": row['category_slug'] or "",
                 "description": row['description'],
                 "price": float(row['price']) if row['price'] else 0.0,

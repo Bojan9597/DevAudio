@@ -170,10 +170,27 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       child: ListTile(
         contentPadding: const EdgeInsets.all(12),
         // Leading Image (Placeholder if no url)
-        leading: Icon(
-          Icons.play_circle_fill,
-          color: Theme.of(context).colorScheme.primary,
-          size: 40,
+        // Leading Image (Placeholder if no url)
+        leading: Container(
+          width: 50,
+          height: 50,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
+          child: (book.coverUrl != null && book.coverUrl!.isNotEmpty)
+              ? Image.network(
+                  book.coverUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Icon(
+                    Icons.play_circle_fill,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 40,
+                  ),
+                )
+              : Icon(
+                  Icons.play_circle_fill,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 40,
+                ),
         ),
         title: Text(
           book.title,

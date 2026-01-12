@@ -306,9 +306,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
-            leading: Icon(
-              Icons.play_circle_fill,
-              color: Theme.of(context).colorScheme.primary,
+            leading: Container(
+              width: 50,
+              height: 50,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+              ),
+              child: (book.coverUrl != null && book.coverUrl!.isNotEmpty)
+                  ? Image.network(
+                      book.coverUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Icon(
+                        Icons.play_circle_fill,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    )
+                  : Icon(
+                      Icons.play_circle_fill,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
             ),
             title: Text(book.title),
             subtitle: Text(

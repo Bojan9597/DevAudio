@@ -26,11 +26,33 @@ class _ContentAreaState extends State<ContentArea> {
   List<Category> _categories = []; // State for recursive filtering
   bool _isLoading = true;
 
+  int _lastRefreshVersion = 0;
+
   @override
   void initState() {
     super.initState();
     _loadBooks();
     _loadCategories(); // Load categories for filtering
+
+    // Listen for refresh triggers
+    globalLayoutState.addListener(_handleLayoutChange);
+    _lastRefreshVersion = globalLayoutState.refreshVersion;
+  }
+
+  @override
+  void dispose() {
+    globalLayoutState.removeListener(_handleLayoutChange);
+    super.dispose();
+  }
+
+  void _handleLayoutChange() {
+    if (globalLayoutState.refreshVersion != _lastRefreshVersion) {
+      _lastRefreshVersion = globalLayoutState.refreshVersion;
+      // Show loading state to indicate refresh
+      if (mounted) setState(() => _isLoading = true);
+      _loadBooks(); // Reload data
+      _loadCategories(); // Reload categories
+    }
   }
 
   Future<void> _loadCategories() async {
@@ -204,9 +226,21 @@ class _ContentAreaState extends State<ContentArea> {
   Widget _buildLibraryView() {
     final favoriteBooks = _allBooks.where((b) => b.isFavorite == true).toList();
 
-    // "My Books" = Purchased Books
+    // "My Books" = Purchased Books EXCLUDING my own uploads
+    // (Uploads have their own tab)
+    // We need current userId for this.
+    // Since _loadBooks fetches it locally, we should store it in state or fetch again?
+    // Better: _loadBooks stored _uploadedBooks.
+    // Logic: If a book is in _uploadedBooks, exclude it from My Books.
+    // Or check b.postedByUserId == currentUserId (if we had it).
+    // We have _uploadedBooks. Let's use that.
+
+    final uploadedIds = _uploadedBooks.map((b) => b.id).toSet();
+
     final myBooks = _allBooks
-        .where((b) => _purchasedIds.contains(b.id))
+        .where(
+          (b) => _purchasedIds.contains(b.id) && !uploadedIds.contains(b.id),
+        )
         .toList();
 
     return DefaultTabController(
@@ -291,10 +325,27 @@ class _ContentAreaState extends State<ContentArea> {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
-        leading: Icon(
-          Icons.play_circle_fill,
-          color: Theme.of(context).colorScheme.primary,
-          size: 40,
+        leading: Container(
+          width: 50,
+          height: 50,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+          ),
+          child: (book.coverUrl != null && book.coverUrl!.isNotEmpty)
+              ? Image.network(
+                  book.coverUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Icon(
+                    Icons.play_circle_fill,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                )
+              : Icon(
+                  Icons.play_circle_fill,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
         ),
         title: Text(
           book.title,
@@ -391,11 +442,24 @@ class _ContentAreaState extends State<ContentArea> {
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      Icon(
-                        Icons.menu_book,
-                        size: 50,
-                        color: Theme.of(context).colorScheme.onPrimary,
-                      ),
+                      if (book.coverUrl != null && book.coverUrl!.isNotEmpty)
+                        Image.network(
+                          book.coverUrl!,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          height: double.infinity,
+                          errorBuilder: (ctx, _, __) => Icon(
+                            Icons.menu_book,
+                            size: 50,
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          ),
+                        )
+                      else
+                        Icon(
+                          Icons.menu_book,
+                          size: 50,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
                       if (book.isFavorite)
                         const Positioned(
                           top: 8,
@@ -474,14 +538,24 @@ class _ContentAreaState extends State<ContentArea> {
         leading: Container(
           width: 50,
           height: 50,
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(
-            Icons.menu_book,
-            color: Theme.of(context).colorScheme.onPrimary,
-          ),
+          child: (book.coverUrl != null && book.coverUrl!.isNotEmpty)
+              ? Image.network(
+                  book.coverUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Icon(
+                    Icons.menu_book,
+                    color: Theme.of(context).colorScheme.onPrimary,
+                  ),
+                )
+              : Icon(
+                  Icons.menu_book,
+                  color: Theme.of(context).colorScheme.onPrimary,
+                ),
         ),
         title: Text(
           book.title,

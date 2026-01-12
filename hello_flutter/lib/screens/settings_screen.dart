@@ -291,13 +291,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   leading: const Icon(Icons.cloud_upload),
                   title: const Text('Upload Audio Book'),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    Navigator.push(
+                  onTap: () async {
+                    final result = await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => const UploadBookScreen(),
                       ),
                     );
+
+                    if (result == true) {
+                      // Wait a bit to ensure backend consistency and UI readiness
+                      await Future.delayed(const Duration(milliseconds: 500));
+                      // Trigger app-wide refresh
+                      globalLayoutState.triggerRefresh();
+                      // Optional: Navigate to My Uploads?
+                      // globalLayoutState.setCategoryId('library');
+                    }
                   },
                 ),
                 ListTile(

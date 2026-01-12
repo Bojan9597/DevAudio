@@ -13,6 +13,7 @@ class Book {
   final String? description;
   final double? price;
   final String? postedByUserId;
+  final String? coverUrl;
 
   const Book({
     required this.id,
@@ -29,6 +30,7 @@ class Book {
     this.description,
     this.price,
     this.postedByUserId,
+    this.coverUrl,
   });
 
   factory Book.fromJson(Map<String, dynamic> json) {
@@ -53,6 +55,7 @@ class Book {
       description: json['description'] as String?,
       price: (json['price'] as num?)?.toDouble(),
       postedByUserId: json['postedByUserId'] as String?,
+      coverUrl: json['coverUrl'] as String?,
     );
   }
 
@@ -65,6 +68,7 @@ class Book {
     String? description,
     double? price,
     String? postedByUserId,
+    String? coverUrl,
   }) {
     return Book(
       id: id,
@@ -81,6 +85,7 @@ class Book {
       description: description ?? this.description,
       price: price ?? this.price,
       postedByUserId: postedByUserId ?? this.postedByUserId,
+      coverUrl: coverUrl ?? this.coverUrl,
     );
   }
 }

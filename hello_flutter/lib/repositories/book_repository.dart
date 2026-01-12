@@ -369,7 +369,14 @@ class BookRepository {
 
     final response = await request.send();
 
-    if (response.statusCode != 200 && response.statusCode != 201) {
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      // Clear cache on successful upload so user sees new book/ownership immediately
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('cached_books');
+      await prefs.remove('cached_categories'); // Clear categories too
+      await prefs.remove('cached_my_uploads_$userId');
+      await prefs.remove('cached_user_books_$userId');
+    } else {
       final respStr = await response.stream.bytesToString();
       throw Exception('Failed to upload book: $respStr');
     }

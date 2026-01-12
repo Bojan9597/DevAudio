@@ -131,10 +131,10 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Book uploaded successfully!')),
-        );
-        Navigator.pop(context);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Upload successful!')));
+        Navigator.pop(context, true); // Return success
       }
     } catch (e) {
       if (mounted) {

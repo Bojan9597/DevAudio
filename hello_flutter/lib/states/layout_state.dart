@@ -61,8 +61,15 @@ class LayoutState extends ChangeNotifier {
     notifyListeners();
   }
 
+  int refreshVersion = 0;
+
   void toggleViewMode() {
     isGridView = !isGridView;
+    notifyListeners();
+  }
+
+  void triggerRefresh() {
+    refreshVersion++;
     notifyListeners();
   }
 }
