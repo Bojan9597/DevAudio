@@ -18,7 +18,7 @@ class PlayerScreen extends StatefulWidget {
   final VoidCallback? onPurchaseSuccess;
   final List<dynamic>? playlist;
   final int initialIndex;
-  final VoidCallback? onPlaybackComplete;
+  final void Function(int index)? onPlaybackComplete;
 
   const PlayerScreen({
     super.key,
@@ -110,7 +110,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _player.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
         if (widget.onPlaybackComplete != null) {
-          widget.onPlaybackComplete!();
+          // Pass the index that JUST finished (which is _currentIndex BEFORE incrementing if we haven't auto-advanced yet,
+          // but actually we are inside the listener so _currentIndex hasn't changed yet).
+          widget.onPlaybackComplete!(_currentIndex);
         }
         // Auto-advance if playlist
         if (widget.playlist != null &&

@@ -128,8 +128,8 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
         onPurchaseSuccess: () => _handlePurchaseSuccess(track),
         playlist: _tracks,
         initialIndex: index,
-        onPlaybackComplete: () =>
-            _onTrackFinished(track), // Need to implement this in PlayerScreen
+        onPlaybackComplete: (completedIndex) =>
+            _onTrackFinished(_tracks[completedIndex]), // Look up track by index
       ),
     );
 
