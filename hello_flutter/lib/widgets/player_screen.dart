@@ -6,7 +6,7 @@ import 'dart:ui'; // For BackdropFilter
 import '../repositories/book_repository.dart';
 import '../services/auth_service.dart';
 import 'badge_dialog.dart';
-import '../models/badge.dart';
+// import '../models/badge.dart'; // Unused
 import '../services/download_service.dart';
 
 class PlayerScreen extends StatefulWidget {
@@ -301,7 +301,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       Offset.zero & overlay.size,
     );
 
-    await showMenu(
+    final String? selectedValue = await showMenu<String>(
       context: context,
       position: position,
       items: [
@@ -315,8 +315,150 @@ class _PlayerScreenState extends State<PlayerScreen> {
             ],
           ),
         ),
+        const PopupMenuItem(
+          value: 'details',
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.black54),
+              SizedBox(width: 8),
+              Text('Details'),
+            ],
+          ),
+        ),
       ],
       elevation: 8.0,
+    );
+
+    if (selectedValue == 'download') {
+      final isDownloaded = await DownloadService().isBookDownloaded(
+        widget.book.id,
+      );
+      if (isDownloaded) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Book is already downloaded.')),
+          );
+        }
+      } else {
+        _downloadBook();
+      }
+    } else if (selectedValue == 'details') {
+      _showBookDetailsDialog();
+    }
+  }
+
+  void _showBookDetailsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Colors.brown.shade900, Colors.black],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white24),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Text(
+                    'Book Information',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  widget.book.title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  widget.book.author,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 16,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Divider(color: Colors.white24),
+                const SizedBox(height: 16),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Text(
+                      widget.book.description ?? 'No description available.',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (widget.book.price != null && widget.book.price! > 0) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.sell, color: Colors.white54, size: 16),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Price: \$${widget.book.price!.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.category, color: Colors.white54, size: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Category: ${widget.book.categoryId}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text(
+                      'Close',
+                      style: TextStyle(color: Colors.blueAccent, fontSize: 16),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -380,6 +522,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   Container(
                     height: MediaQuery.of(context).size.height * 0.35,
                     width: MediaQuery.of(context).size.height * 0.35,
+                    clipBehavior: Clip.antiAlias,
                     decoration: BoxDecoration(
                       color: Colors.grey.shade800,
                       borderRadius: BorderRadius.circular(12),
@@ -390,11 +533,24 @@ class _PlayerScreenState extends State<PlayerScreen> {
                           offset: const Offset(0, 10),
                         ),
                       ],
-                      image: const DecorationImage(
-                        image: NetworkImage('https://picsum.photos/400'),
-                        fit: BoxFit.cover,
-                      ),
                     ),
+                    child:
+                        (widget.book.coverUrl != null &&
+                            widget.book.coverUrl!.isNotEmpty)
+                        ? Image.network(
+                            widget.book.coverUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Icon(
+                              Icons.music_note,
+                              size: 80,
+                              color: Colors.white.withOpacity(0.5),
+                            ),
+                          )
+                        : Icon(
+                            Icons.music_note,
+                            size: 80,
+                            color: Colors.white.withOpacity(0.5),
+                          ),
                   ),
 
                   const Spacer(flex: 1),

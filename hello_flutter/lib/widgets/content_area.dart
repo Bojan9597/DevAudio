@@ -10,6 +10,7 @@ import 'player_screen.dart';
 
 import '../screens/profile_screen.dart';
 import '../screens/discover_screen.dart';
+import '../screens/upload_book_screen.dart';
 
 class ContentArea extends StatefulWidget {
   const ContentArea({super.key});
@@ -293,20 +294,62 @@ class _ContentAreaState extends State<ContentArea> {
                           },
                         ),
                       ),
-                // Uploaded Tab
-                _uploadedBooks.isEmpty
-                    ? const Center(child: Text('No uploaded books'))
-                    : Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: ListView.builder(
-                          itemCount: _uploadedBooks.length,
-                          itemBuilder: (context, index) {
-                            // Reuse MyBookTile style for consistency
-                            final book = _uploadedBooks[index];
-                            return _buildMyBookTile(book);
+                // Uploaded Tab with FAB
+                Stack(
+                  children: [
+                    _uploadedBooks.isEmpty
+                        ? const Center(child: Text('No uploaded books'))
+                        : Padding(
+                            padding: const EdgeInsets.only(
+                              top: 16.0,
+                              left: 16.0,
+                              right: 16.0,
+                              bottom: 130, // Increased padding
+                            ), // Extra padding for FAB
+                            child: ListView.builder(
+                              itemCount: _uploadedBooks.length,
+                              itemBuilder: (context, index) {
+                                final book = _uploadedBooks[index];
+                                return _buildMyBookTile(book);
+                              },
+                            ),
+                          ),
+                    Positioned(
+                      bottom: 24,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: FloatingActionButton.extended(
+                          onPressed: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const UploadBookScreen(),
+                              ),
+                            );
+
+                            if (result == true) {
+                              // Wait a bit to ensure backend consistency and UI readiness
+                              await Future.delayed(
+                                const Duration(milliseconds: 500),
+                              );
+                              // Trigger app-wide refresh
+                              globalLayoutState.triggerRefresh();
+                            }
                           },
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primary,
+                          icon: const Icon(Icons.cloud_upload),
+                          label: const Text(
+                            'Upload Audio Book',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
