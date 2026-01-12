@@ -141,10 +141,8 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Google Login Failed: Use Email for now. Check console.',
-            ),
-            backgroundColor: Colors.orange,
+            content: Text('Google Login Failed: $e'),
+            backgroundColor: Colors.red,
           ),
         );
       }
@@ -179,7 +177,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         height: 120, // Adjust size as needed
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: const [
@@ -201,7 +199,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 60),
+                    const SizedBox(height: 40),
 
                     if (_showVerification) ...[
                       // Verification UI
