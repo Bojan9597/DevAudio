@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' hide Badge;
 import 'package:screen_brightness/screen_brightness.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../models/book.dart';
 import 'dart:async';
 import 'package:just_audio/just_audio.dart';
@@ -12,8 +13,9 @@ import '../services/download_service.dart';
 
 class PlayerScreen extends StatefulWidget {
   final Book book;
+  final String? uniqueAudioId; // Use this for local file storage if provided
 
-  const PlayerScreen({super.key, required this.book});
+  const PlayerScreen({super.key, required this.book, this.uniqueAudioId});
 
   @override
   State<PlayerScreen> createState() => _PlayerScreenState();
@@ -26,6 +28,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   double? _originalBrightness;
 
   Future<void> _resetBrightness() async {
+    if (kIsWeb) return; // Skip on web
     if (_originalBrightness != null) {
       try {
         await ScreenBrightness().setScreenBrightness(_originalBrightness!);
@@ -46,6 +49,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
     setState(() {
       _isSleepTimerActive = !_isSleepTimerActive;
     });
+
+    if (kIsWeb) return; // Skip brightness logic on web
 
     try {
       if (_isSleepTimerActive) {
@@ -150,7 +155,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     setState(() => _isDownloading = true);
     try {
       await DownloadService().downloadBook(
-        widget.book.id,
+        widget.uniqueAudioId ?? widget.book.id,
         widget.book.audioUrl,
       );
       if (mounted) {
@@ -179,13 +184,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
       String url = widget.book.audioUrl;
 
       // Check for local file
-      final isDownloaded = await DownloadService().isBookDownloaded(
-        widget.book.id,
-      );
+      final storageId = widget.uniqueAudioId ?? widget.book.id;
+      final isDownloaded = await DownloadService().isBookDownloaded(storageId);
+
       if (isDownloaded) {
-        final localPath = await DownloadService().getLocalBookPath(
-          widget.book.id,
-        );
+        final localPath = await DownloadService().getLocalBookPath(storageId);
         print("Playing from local file: $localPath");
         await _player.setFilePath(localPath);
       } else {
@@ -747,8 +750,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
                             return GestureDetector(
                               onTap: () async {
                                 if (_isPurchased) {
+                                  // Use storage ID here!
+                                  final storageId =
+                                      widget.uniqueAudioId ?? widget.book.id;
                                   final isDownloaded = await DownloadService()
-                                      .isBookDownloaded(widget.book.id);
+                                      .isBookDownloaded(storageId);
                                   if (!isDownloaded) {
                                     if (!_isDownloading) {
                                       ScaffoldMessenger.of(

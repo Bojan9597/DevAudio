@@ -20,7 +20,7 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
   final _priceController = TextEditingController(text: '0.0');
 
   String? _selectedCategoryId;
-  String? _selectedAudioPath;
+  List<String> _selectedAudioPaths = [];
   String? _selectedCoverPath;
 
   bool _isUploading = false;
@@ -77,10 +77,11 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['mp3', 'm4a', 'wav', 'aac'],
+      allowMultiple: true,
     );
     if (result != null) {
       setState(() {
-        _selectedAudioPath = result.files.single.path;
+        _selectedAudioPaths = result.paths.whereType<String>().toList();
       });
     }
   }
@@ -104,9 +105,9 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
       ).showSnackBar(const SnackBar(content: Text('Please select a category')));
       return;
     }
-    if (_selectedAudioPath == null) {
+    if (_selectedAudioPaths.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an audio file')),
+        const SnackBar(content: Text('Please select at least one audio file')),
       );
       return;
     }
@@ -124,7 +125,7 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
         author: _authorController.text,
         categoryId: _selectedCategoryId!,
         userId: userId.toString(),
-        audioPath: _selectedAudioPath!,
+        audioPaths: _selectedAudioPaths,
         coverPath: _selectedCoverPath,
         description: _descriptionController.text,
         price: double.tryParse(_priceController.text) ?? 0.0,
@@ -211,9 +212,11 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
               // Audio Picker
               ListTile(
                 title: Text(
-                  _selectedAudioPath == null
-                      ? 'Select Audio File *'
-                      : 'Audio Selected: ...${_selectedAudioPath!.split(r'\').last}',
+                  _selectedAudioPaths.isEmpty
+                      ? 'Select Audio File(s) *'
+                      : _selectedAudioPaths.length == 1
+                      ? 'Audio Selected: ...${_selectedAudioPaths.first.split(r'\').last}'
+                      : '${_selectedAudioPaths.length} Audio Files Selected',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),

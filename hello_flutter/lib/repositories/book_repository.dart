@@ -346,7 +346,7 @@ class BookRepository {
     required String author,
     required String categoryId,
     required String userId,
-    required String audioPath,
+    required List<String> audioPaths,
     String? coverPath,
     String description = '',
     double price = 0.0,
@@ -361,7 +361,11 @@ class BookRepository {
     request.fields['description'] = description;
     request.fields['price'] = price.toString();
 
-    request.files.add(await http.MultipartFile.fromPath('audio', audioPath));
+    for (var path in audioPaths) {
+      if (path.isNotEmpty) {
+        request.files.add(await http.MultipartFile.fromPath('audio', path));
+      }
+    }
 
     if (coverPath != null && coverPath.isNotEmpty) {
       request.files.add(await http.MultipartFile.fromPath('cover', coverPath));

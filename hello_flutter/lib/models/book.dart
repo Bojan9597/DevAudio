@@ -14,6 +14,7 @@ class Book {
   final double? price;
   final String? postedByUserId;
   final String? coverUrl;
+  final bool isPlaylist;
 
   const Book({
     required this.id,
@@ -31,6 +32,7 @@ class Book {
     this.price,
     this.postedByUserId,
     this.coverUrl,
+    this.isPlaylist = false,
   });
 
   factory Book.fromJson(Map<String, dynamic> json) {

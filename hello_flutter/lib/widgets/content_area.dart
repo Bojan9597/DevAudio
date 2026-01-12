@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import '../states/layout_state.dart';
 import '../models/book.dart';
-import '../models/category.dart'; // Import Category
+import '../models/category.dart';
 import '../repositories/book_repository.dart';
-import '../repositories/category_repository.dart'; // Import CategoryRepository
+import '../repositories/category_repository.dart';
 import '../services/auth_service.dart';
 import '../l10n/generated/app_localizations.dart';
-import 'player_screen.dart';
+// import 'player_screen.dart'; // Removed unused import
 
 import '../screens/profile_screen.dart';
 import '../screens/discover_screen.dart';
 import '../screens/upload_book_screen.dart';
+import '../screens/playlist_screen.dart';
 
 class ContentArea extends StatefulWidget {
   const ContentArea({super.key});
@@ -453,15 +454,13 @@ class _ContentAreaState extends State<ContentArea> {
     // We need to pass the most up-to-date book state (fav status)
     // Actually, passing 'book' is fine, but if we toggle fav in player, we want to reflect that back here?
     // PlayerScreen can accept a callback or we reload on close?
-    // Let's reload on close for simplicity.
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => PlayerScreen(book: book),
+    // Let's  void _openPlayer(Book book) async {
+    // "Unified Playlist Mode": All books open as a playlist first.
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => PlaylistScreen(book: book)),
     );
-    // After player closes, reload to refresh favorites/progress
+    // After returning, reload to update stats
     _loadBooks();
   }
 

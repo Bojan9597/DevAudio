@@ -24,6 +24,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     'total_listening_time_seconds': 0,
     'books_completed': 0,
   };
+  int _imageCacheKey = 0; // To force image refresh
 
   @override
   void initState() {
@@ -102,7 +103,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    // Compress image to avoid large upload failures
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024, // limit width
+      maxHeight: 1024, // limit height
+      imageQuality: 70, // compress quality
+    );
 
     if (pickedFile != null) {
       try {
@@ -112,6 +119,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (_user != null && _user!['id'] != null) {
           await AuthService().uploadProfilePicture(imageFile, _user!['id']);
           await _loadUser();
+          setState(() {
+            _imageCacheKey++; // Increment to invalidate cache
+          });
         }
       } catch (e) {
         if (mounted) {
@@ -126,12 +136,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   String _getProfilePictureUrl(String path) {
+    String url;
     if (path.startsWith('http')) {
-      return path;
+      url = path;
+    } else {
+      // Remove leading slash if present to avoid double slash with baseUrl
+      final cleanPath = path.startsWith('/') ? path.substring(1) : path;
+      url = '${AuthService().baseUrl}/$cleanPath';
     }
-    // Remove leading slash if present to avoid double slash with baseUrl
-    final cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    return '${AuthService().baseUrl}/$cleanPath';
+
+    // Append cache busting query param
+    return '$url?v=$_imageCacheKey';
   }
 
   @override
@@ -167,16 +182,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               backgroundColor: Theme.of(
                                 context,
                               ).colorScheme.primary.withOpacity(0.5),
-                              backgroundImage:
-                                  _user?['profile_picture_url'] != null
-                                  ? NetworkImage(
-                                      _getProfilePictureUrl(
-                                        _user!['profile_picture_url'],
+                              child: _user?['profile_picture_url'] != null
+                                  ? ClipOval(
+                                      child: Image.network(
+                                        _getProfilePictureUrl(
+                                          _user!['profile_picture_url'],
+                                        ),
+                                        width: 100,
+                                        height: 100,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                              return Text(
+                                                userName.isNotEmpty
+                                                    ? userName[0].toUpperCase()
+                                                    : '?',
+                                                style: TextStyle(
+                                                  fontSize: 40,
+                                                  color: Theme.of(
+                                                    context,
+                                                  ).colorScheme.onPrimary,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              );
+                                            },
                                       ),
                                     )
-                                  : null,
-                              child: _user?['profile_picture_url'] == null
-                                  ? Text(
+                                  : Text(
                                       userName.isNotEmpty
                                           ? userName[0].toUpperCase()
                                           : '?',
@@ -187,8 +219,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         ).colorScheme.onPrimary,
                                         fontWeight: FontWeight.bold,
                                       ),
-                                    )
-                                  : null,
+                                    ),
                             ),
                             Positioned(
                               bottom: 0,

@@ -292,7 +292,7 @@ def google_login():
 # Configure upload folder
 basedir = os.path.abspath(os.path.dirname(__file__))
 UPLOAD_FOLDER = os.path.join(basedir, 'static', 'profilePictures')
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
@@ -420,6 +420,43 @@ def get_categories():
     finally:
         db.disconnect()
 
+@app.route('/playlist/<int:book_id>', methods=['GET'])
+def get_playlist(book_id):
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+    try:
+        query = "SELECT * FROM playlist_items WHERE book_id = %s ORDER BY track_order ASC"
+        result = db.execute_query(query, (book_id,))
+        if result:
+            return jsonify(result)
+        
+        # Fallback for "Single Book" treated as Playlist
+        book_query = "SELECT title, audio_path, duration_seconds FROM books WHERE id = %s"
+        book_res = db.execute_query(book_query, (book_id,))
+        if book_res:
+            book = book_res[0]
+            audio_path = book['audio_path']
+            # Ensure Full URL
+            if audio_path and not audio_path.startswith('http'):
+                 audio_path = f"{BASE_URL}static/AudioBooks/{audio_path}"
+            
+            synthetic_item = {
+                "id": -1, # Virtual ID
+                "book_id": book_id,
+                "file_path": audio_path,
+                "title": book['title'],
+                "duration_seconds": book['duration_seconds'],
+                "track_order": 0
+            }
+            return jsonify([synthetic_item])
+            
+        return jsonify([])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
+
 @app.route('/books', methods=['GET'])
 def get_books():
     db = Database()
@@ -434,26 +471,22 @@ def get_books():
         offset = (page - 1) * limit
 
         params = []
+        # Updated query to check for playlist items existence
+        base_select = """
+            SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug, 
+                   u.name as posted_by_name, b.description, b.price, b.posted_by_user_id,
+                   (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count
+            FROM books b 
+            LEFT JOIN categories c ON b.primary_category_id = c.id
+            LEFT JOIN users u ON b.posted_by_user_id = u.id
+        """
+        
         if search_query:
-             # Search by title
-             query = """
-                SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug, 
-                       u.name as posted_by_name, b.description, b.price, b.posted_by_user_id
-                FROM books b 
-                LEFT JOIN categories c ON b.primary_category_id = c.id
-                LEFT JOIN users u ON b.posted_by_user_id = u.id
-                WHERE b.title LIKE %s
-            """
+             query = base_select + " WHERE b.title LIKE %s"
              params.append(f"%{search_query}%")
         else:
-            # Standard List
-            query = """
-                SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug, 
-                       u.name as posted_by_name, b.description, b.price, b.posted_by_user_id
-                FROM books b 
-                LEFT JOIN categories c ON b.primary_category_id = c.id
-                LEFT JOIN users u ON b.posted_by_user_id = u.id
-            """
+            query = base_select
+            
         # Add ordering (optional but good for consistency)
         query += " ORDER BY b.id DESC" 
         
@@ -467,7 +500,7 @@ def get_books():
             for row in books_result:
                 book_id = row['id']
                 
-                # Fetch subcategory slugs (this remains same, though explicit subquery per row is inefficient, but keeping for minimal diff)
+                # Fetch subcategory slugs
                 sub_query = """
                     SELECT c.slug 
                     FROM book_categories bc
@@ -480,21 +513,11 @@ def get_books():
                 # Construct full Audio URL if relative
                 audio_path = row['audio_path']
                 if audio_path and not audio_path.startswith('http'):
-                    # Use CamelCase AudioBooks to match directory
                     audio_path = f"{BASE_URL}static/AudioBooks/{audio_path}"
 
                 # Construct full Cover URL if relative
                 cover_path = row['cover_image_path']
                 if cover_path and not cover_path.startswith('http'):
-                     # Use BookCovers for new standard, or check if it exists in images?
-                     # Let's assume BookCovers for consistency with new logic.
-                     # But old logic used 'static/images'.
-                     # Helper: if it doesn't exist in BookCovers, maybe it is in images?
-                     # For now, let's default to BookCovers for uniformity, or 'images' if likely legacy.
-                     # Actually, legacy DB has just filename.
-                     # Let's use 'images' as default fallback if not specified, OR just plain path.
-                     # User wants NEW folder.
-                     # Let's point to 'static/BookCovers/'
                      cover_path = f"{BASE_URL}static/BookCovers/{cover_path}"
                 
                 books.append({
@@ -509,6 +532,7 @@ def get_books():
                     "description": row['description'],
                     "price": float(row['price']) if row['price'] else 0.0,
                     "postedByUserId": str(row['posted_by_user_id']),
+                    "isPlaylist": row['playlist_count'] > 0
                 })
         
         return jsonify(books)
@@ -845,10 +869,9 @@ def upload_book():
         price = request.form.get('price', 0.0)
 
         if not all([title, author, category_id, user_id]):
-             return jsonify({"error": "Missing required fields (title, author, category_id, user_id)"}), 400
+             return jsonify({"error": "Missing required fields"}), 400
 
-        # Lookup numeric Category ID from Slug
-        # category_id from params is actually the slug (e.g. 'programming')
+        # Lookup numeric Category ID
         cat_query = "SELECT id FROM categories WHERE slug = %s"
         db = Database()
         if not db.connect():
@@ -856,7 +879,6 @@ def upload_book():
         
         cats = db.execute_query(cat_query, (category_id,))
         if not cats:
-             # Try assuming it MIGHT be an ID if integer, or fallback
              if category_id.isdigit():
                  numeric_cat_id = int(category_id)
              else:
@@ -864,60 +886,106 @@ def upload_book():
         else:
             numeric_cat_id = cats[0]['id']
 
-        if 'audio' not in request.files:
+        # Check for files
+        audio_files = request.files.getlist('audio')
+        if not audio_files or (len(audio_files) == 1 and audio_files[0].filename == ''):
             db.disconnect()
-            return jsonify({"error": "No audio file provided"}), 400
-        
-        audio_file = request.files['audio']
-        if audio_file.filename == '':
-            db.disconnect()
-            return jsonify({"error": "No audio file selected"}), 400
+            return jsonify({"error": "No audio files provided"}), 400
 
-        # Build paths relative to api.py
+        # Base directories
         base_dir = os.path.dirname(os.path.abspath(__file__))
         static_dir = os.path.join(base_dir, 'static')
         
-        # Handle Audio Save
-        audio_filename = secure_filename(f"{int(datetime.datetime.now().timestamp())}_{audio_file.filename}")
-        # Use AudioBooks (CamelCase)
-        # Save to Server/static/AudioBooks
-        audio_save_path = os.path.join(static_dir, "AudioBooks", audio_filename)
-        os.makedirs(os.path.dirname(audio_save_path), exist_ok=True)
-        audio_file.save(audio_save_path)
+        # Audio Path & Playlist Logic
+        # If 1 file -> Standard behavior (save to AudioBooks/filename)
+        # If >1 file -> Playlist behavior (save to AudioBooks/timestamp_title/filename)
         
-        # Save FULL URL to database
-        db_audio_path = f"{BASE_URL}static/AudioBooks/{audio_filename}"
+        is_playlist = len(audio_files) > 1
+        
+        main_audio_path = "" # For books table (first file or empty?)
+        # Strategy: 
+        # If Playlist: main_audio_path can be null or point to first file as fallback.
+        # Let's verify schema: audio_path is VARCHAR, maybe Not Null? 
+        # Usually it is allowed to be empty if we relax it, but let's point to first track.
+        
+        timestamp_prefix = int(datetime.datetime.now().timestamp())
+        
+        saved_files_info = [] # (filename, full_db_path)
 
-        # Handle Cover Save (Optional)
+        if is_playlist:
+            # Create Folder: timestamp_safeTitle
+            safe_title = secure_filename(title)
+            folder_name = f"{timestamp_prefix}_{safe_title}"
+            book_folder_path = os.path.join(static_dir, "AudioBooks", folder_name)
+            os.makedirs(book_folder_path, exist_ok=True)
+            
+            for index, file in enumerate(audio_files):
+                if file.filename == '': continue
+                
+                safe_fname = secure_filename(f"{index+1:02d}_{file.filename}") # Add order prefix
+                save_path = os.path.join(book_folder_path, safe_fname)
+                file.save(save_path)
+                
+                # DB Path: static/AudioBooks/folder/file
+                # Full URL constructed in getter usually, but we store relative/semi-relative
+                # Current logic stores FULL URL often.
+                # Let's store semi-relative for playlist items?
+                # Existing code: db_audio_path = f"{BASE_URL}static/AudioBooks/{audio_filename}"
+                
+                full_url = f"{BASE_URL}static/AudioBooks/{folder_name}/{safe_fname}"
+                saved_files_info.append({
+                    "path": full_url,
+                    "title": file.filename, # Or metadata
+                    "order": index
+                })
+                
+            main_audio_path = saved_files_info[0]["path"] if saved_files_info else ""
+
+        else:
+            # Single File
+            audio_file = audio_files[0]
+            audio_filename = secure_filename(f"{timestamp_prefix}_{audio_file.filename}")
+            audio_save_path = os.path.join(static_dir, "AudioBooks", audio_filename)
+            os.makedirs(os.path.dirname(audio_save_path), exist_ok=True)
+            audio_file.save(audio_save_path)
+            
+            main_audio_path = f"{BASE_URL}static/AudioBooks/{audio_filename}"
+            saved_files_info.append({"path": main_audio_path, "title": audio_file.filename, "order": 0})
+
+        # Handle Cover (Standard)
         db_cover_path = None
         if 'cover' in request.files:
             cover_file = request.files['cover']
             if cover_file.filename != '':
-                cover_filename = secure_filename(f"{int(datetime.datetime.now().timestamp())}_{cover_file.filename}")
-                # Save to Server/static/BookCovers
+                cover_filename = secure_filename(f"{timestamp_prefix}_{cover_file.filename}")
                 cover_save_path = os.path.join(static_dir, "BookCovers", cover_filename) 
                 os.makedirs(os.path.dirname(cover_save_path), exist_ok=True)
                 cover_file.save(cover_save_path)
-                
-                # Save FULL URL
                 db_cover_path = f"{BASE_URL}static/BookCovers/{cover_filename}"
 
-        # db is already connected from category lookup
-        
         # Insert Book
+        # We can add an 'is_playlist' column later, or infer it from playlist_items existence
         insert_query = """
             INSERT INTO books 
             (title, author, primary_category_id, audio_path, cover_image_path, posted_by_user_id, description, price, duration_seconds)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 0)
         """
-        params = (title, author, numeric_cat_id, db_audio_path, db_cover_path, user_id, description, price)
+        params = (title, author, numeric_cat_id, main_audio_path, db_cover_path, user_id, description, price)
         
         cursor = db.connection.cursor()
         cursor.execute(insert_query, params)
         book_id = cursor.lastrowid
         
-        # Auto-Buy: Grant ownership to uploader
-        # Check if already owned (unlikely for new book, but safe) -> No, new book_id.
+        # Insert Playlist Items if Playlist
+        if is_playlist:
+            pl_query = """
+                INSERT INTO playlist_items (book_id, file_path, title, track_order)
+                VALUES (%s, %s, %s, %s)
+            """
+            for item in saved_files_info:
+                cursor.execute(pl_query, (book_id, item['path'], item['title'], item['order']))
+
+        # Auto-Buy
         own_query = "INSERT INTO user_books (user_id, book_id) VALUES (%s, %s)"
         cursor.execute(own_query, (user_id, book_id))
         
@@ -925,7 +993,7 @@ def upload_book():
         cursor.close()
         db.disconnect()
         
-        return jsonify({"message": "Book uploaded and added to library successfully", "book_id": book_id}), 201
+        return jsonify({"message": "Book/Playlist uploaded successfully", "book_id": book_id}), 201
 
     except Exception as e:
         print(f"Upload Error: {e}")
@@ -943,7 +1011,8 @@ def get_my_uploads():
          
     query = """
         SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug, 
-               b.description, b.price, b.posted_by_user_id
+               b.description, b.price, b.posted_by_user_id,
+               (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count
         FROM books b 
         LEFT JOIN categories c ON b.primary_category_id = c.id
         WHERE b.posted_by_user_id = %s
@@ -975,6 +1044,7 @@ def get_my_uploads():
                 "description": row['description'],
                 "price": float(row['price']) if row['price'] else 0.0,
                 "postedByUserId": str(row['posted_by_user_id']),
+                "isPlaylist": row['playlist_count'] > 0
             })
             
     return jsonify(books)

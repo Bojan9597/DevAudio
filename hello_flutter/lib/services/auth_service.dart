@@ -192,10 +192,13 @@ class AuthService {
       // Update local user data with new URL
       final user = await getUser();
       if (user != null) {
-        user['profile_picture_url'] = data['url'];
+        // Use relative path ('path') if available to allow dynamic base URL (e.g. if Ngrok changes)
+        // Fallback to 'url' only if 'path' is missing.
+        user['profile_picture_url'] = data['path'] ?? data['url'];
         await _saveUser(user);
       }
-      return data['url'];
+      // Return the full URL for immediate display
+      return data['url'] ?? data['path'];
     } else {
       final error = json.decode(response.body);
       throw Exception(error['error'] ?? 'Upload failed');

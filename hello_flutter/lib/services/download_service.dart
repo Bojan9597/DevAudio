@@ -10,20 +10,20 @@ class DownloadService {
     return directory.path;
   }
 
-  Future<String> getLocalBookPath(String bookId) async {
+  Future<String> getLocalBookPath(String fileKey) async {
     final path = await _getLocalPath();
     // Assuming mp3 for now, matching the URLs
-    return '$path/$bookId.mp3';
+    return '$path/$fileKey.mp3';
   }
 
-  Future<bool> isBookDownloaded(String bookId) async {
-    final filePath = await getLocalBookPath(bookId);
+  Future<bool> isBookDownloaded(String fileKey) async {
+    final filePath = await getLocalBookPath(fileKey);
     return File(filePath).exists();
   }
 
-  Future<void> downloadBook(String bookId, String url) async {
+  Future<void> downloadBook(String fileKey, String url) async {
     try {
-      final filePath = await getLocalBookPath(bookId);
+      final filePath = await getLocalBookPath(fileKey);
       await _dio.download(url, filePath);
     } catch (e) {
       print('Download failed: $e');
@@ -31,9 +31,9 @@ class DownloadService {
     }
   }
 
-  Future<void> deleteBook(String bookId) async {
+  Future<void> deleteBook(String fileKey) async {
     try {
-      final filePath = await getLocalBookPath(bookId);
+      final filePath = await getLocalBookPath(fileKey);
       final file = File(filePath);
       if (await file.exists()) {
         await file.delete();
