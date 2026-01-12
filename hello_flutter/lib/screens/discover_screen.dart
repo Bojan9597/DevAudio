@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/book.dart';
 import '../repositories/book_repository.dart';
 import '../theme/app_theme.dart';
-import '../widgets/player_screen.dart';
+import 'playlist_screen.dart';
 
 class DiscoverScreen extends StatefulWidget {
   const DiscoverScreen({Key? key}) : super(key: key);
@@ -230,12 +230,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     );
   }
 
-  void _openPlayer(Book book) async {
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => PlayerScreen(book: book),
+  void _openPlayer(Book book) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => PlaylistScreen(book: book)),
     );
   }
 }

@@ -91,8 +91,14 @@ class BadgeService:
             res_read = cursor.fetchone()
             books_completed = res_read['cnt'] if res_read else 0
 
-            # Books bought
-            cursor.execute("SELECT COUNT(*) as cnt FROM user_books WHERE user_id = %s", (user_id,))
+            # Books bought (Exclude own uploads)
+            cursor.execute("""
+                SELECT COUNT(*) as cnt 
+                FROM user_books ub
+                JOIN books b ON ub.book_id = b.id
+                WHERE ub.user_id = %s 
+                  AND (b.posted_by_user_id IS NULL OR b.posted_by_user_id != ub.user_id)
+            """, (user_id,))
             res_bought = cursor.fetchone()
             books_bought = res_bought['cnt'] if res_bought else 0
 
