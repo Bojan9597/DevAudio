@@ -422,13 +422,30 @@ def get_categories():
 
 @app.route('/playlist/<int:book_id>', methods=['GET'])
 def get_playlist(book_id):
+    user_id = request.args.get('user_id')
+    
     db = Database()
     if not db.connect():
         return jsonify({"error": "Database connection failed"}), 500
     try:
-        query = "SELECT * FROM playlist_items WHERE book_id = %s ORDER BY track_order ASC"
-        result = db.execute_query(query, (book_id,))
+        if user_id:
+             query = """
+                SELECT p.*, 
+                       CASE WHEN uct.id IS NOT NULL THEN TRUE ELSE FALSE END as is_completed
+                FROM playlist_items p
+                LEFT JOIN user_completed_tracks uct ON p.id = uct.track_id AND uct.user_id = %s
+                WHERE p.book_id = %s 
+                ORDER BY p.track_order ASC
+             """
+             result = db.execute_query(query, (user_id, book_id))
+        else:
+             query = "SELECT *, FALSE as is_completed FROM playlist_items WHERE book_id = %s ORDER BY track_order ASC"
+             result = db.execute_query(query, (book_id,))
+             
         if result:
+            # Normalize boolean (MySQL returns 1/0)
+            for item in result:
+                item['is_completed'] = bool(item.get('is_completed', 0))
             return jsonify(result)
         
         # Fallback for "Single Book" treated as Playlist
@@ -441,13 +458,23 @@ def get_playlist(book_id):
             if audio_path and not audio_path.startswith('http'):
                  audio_path = f"{BASE_URL}static/AudioBooks/{audio_path}"
             
+            # Check if book is "read" if it's a single file?
+            # We can check user_books.is_read
+            is_completed = False
+            if user_id:
+                ub_query = "SELECT is_read FROM user_books WHERE user_id = %s AND book_id = %s"
+                ub_res = db.execute_query(ub_query, (user_id, book_id))
+                if ub_res:
+                    is_completed = bool(ub_res[0]['is_read'])
+
             synthetic_item = {
                 "id": -1, # Virtual ID
                 "book_id": book_id,
                 "file_path": audio_path,
                 "title": book['title'],
                 "duration_seconds": book['duration_seconds'],
-                "track_order": 0
+                "track_order": 0,
+                "is_completed": is_completed
             }
             return jsonify([synthetic_item])
             
@@ -600,6 +627,71 @@ def buy_book():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
+
+@app.route('/complete-track', methods=['POST'])
+def complete_track():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    track_id = data.get('track_id')
+    
+    if not all([user_id, track_id]):
+        return jsonify({"error": "Missing user_id or track_id"}), 400
+        
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+        
+    try:
+        # 1. Mark track as completed
+        query = "INSERT IGNORE INTO user_completed_tracks (user_id, track_id) VALUES (%s, %s)"
+        db.execute_query(query, (user_id, track_id))
+        
+        # 2. Check if ALL tracks for this book are completed
+        # First get book_id
+        book_query = "SELECT book_id FROM playlist_items WHERE id = %s"
+        book_res = db.execute_query(book_query, (track_id,))
+        
+        is_book_completed = False
+        if book_res:
+            book_id = book_res[0]['book_id']
+            
+            # Count total tracks
+            count_query = "SELECT COUNT(*) as total FROM playlist_items WHERE book_id = %s"
+            total_tracks = db.execute_query(count_query, (book_id,))[0]['total']
+            
+            # Count completed tracks for this user & book
+            completed_query = """
+                SELECT COUNT(*) as completed 
+                FROM user_completed_tracks uct
+                JOIN playlist_items pi ON uct.track_id = pi.id
+                WHERE uct.user_id = %s AND pi.book_id = %s
+            """
+            completed_tracks = db.execute_query(completed_query, (user_id, book_id))[0]['completed']
+            
+            if completed_tracks >= total_tracks:
+                is_book_completed = True
+                print(f"User {user_id} completed book {book_id} (All {completed_tracks} tracks)")
+                
+                # Mark book as read
+                update_read = "UPDATE user_books SET is_read = TRUE, last_accessed_at = CURRENT_TIMESTAMP WHERE user_id = %s AND book_id = %s"
+                db.execute_query(update_read, (user_id, book_id))
+                
+                # Check Badges (since book is now read)
+                # Check Badges (since book is now read)
+                try:
+                    badge_service = BadgeService(db.connection)
+                    badge_service.check_badges(user_id)
+                except Exception as b_err:
+                    print(f"Badge check error: {b_err}")
+
+        return jsonify({"message": "Track marked as completed", "is_book_completed": is_book_completed}), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
     finally:
         db.disconnect()
 
@@ -623,21 +715,27 @@ def update_progress():
         existing = db.execute_query(check_query, (user_id, book_id))
         
         if existing:
-            # Sync Duration Logic
-            # Check if we have duration in DB, if not update it from client
+            # Duration Logic
             duration_query = "SELECT duration_seconds FROM books WHERE id = %s"
             duration_result = db.execute_query(duration_query, (book_id,))
             db_duration = duration_result[0]['duration_seconds'] if duration_result else 0
             
             if db_duration == 0 and total_duration and total_duration > 0:
+                # Only update duration if it's NOT a playlist (playlists usually have 0 or sum)
+                # For now we let it update, but we won't use it for is_read if it's a playlist
                 print(f"Updating duration for book {book_id} to {total_duration}")
                 update_book_query = "UPDATE books SET duration_seconds = %s WHERE id = %s"
                 db.execute_query(update_book_query, (total_duration, book_id))
-                db_duration = total_duration # Use the new value for is_read check
-            
-            # Completion Check
+                db_duration = total_duration
+
+            # Check if Playlist
+            count_pl_query = "SELECT COUNT(*) as c FROM playlist_items WHERE book_id = %s"
+            is_playlist = db.execute_query(count_pl_query, (book_id,))[0]['c'] > 0
+
+            # Completion Check (95% rule) - ONLY for non-playlists
+            # Playlists are marked read only via /complete-track when all items are done
             is_read = False
-            if db_duration > 0 and position >= (db_duration * 0.95):
+            if not is_playlist and db_duration > 0 and position >= (db_duration * 0.95):
                 is_read = True
             
             # Update user_books

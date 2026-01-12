@@ -1,0 +1,25 @@
+Checking Schemas...
+Playlist Items Schema: [{'Table': 'playlist_items', 'Create Table': "CREATE TABLE `playlist_items` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `book_id` int NOT NULL,\n  `file_path` varchar(512) COLLATE utf8mb4_general_ci NOT NULL,\n  `title` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,\n  `duration_seconds` int DEFAULT '0',\n  `track_order` int DEFAULT '0',\n  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  KEY `idx_book_id` (`book_id`)\n) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci"}]
+Users Schema: [{'Table': 'users', 'Create Table': "CREATE TABLE `users` (\n  `id` int unsigned NOT NULL AUTO_INCREMENT,\n  `name` varchar(100) NOT NULL,\n  `email` varchar(150) NOT NULL,\n  `password_hash` varchar(255) NOT NULL,\n  `status` enum('active','banned','inactive') NOT NULL DEFAULT 'active',\n  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,\n  `last_login` timestamp NULL DEFAULT NULL,\n  `profile_picture_url` varchar(255) DEFAULT NULL,\n  `verification_code` varchar(6) DEFAULT NULL,\n  `is_verified` tinyint(1) DEFAULT '0',\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `email` (`email`)\n) ENGINE=InnoDB AUTO_INCREMENT=43 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"}]
+
+--- Testing get_playlist query for Book 38 ---
+Executing Query with user_id=1, book_id=38
+Result Count: 2
+Row: {'id': 13, 'book_id': 38, 'file_path': 'https://pseudostigmatic-skeletonlike-coy.ngrok-free.dev/static/AudioBooks/1768250219_f/01_Eminem_-_LoseYourself_mp3.pm.mp3', 'title': 'Eminem_-_LoseYourself_(mp3.pm).mp3', 'duration_seconds': 0, 'track_order': 0, 'created_at': datetime.datetime(2026, 1, 12, 21, 36, 59), 'is_completed': 0}
+Row: {'id': 14, 'book_id': 38, 'file_path': 'https://pseudostigmatic-skeletonlike-coy.ngrok-free.dev/static/AudioBooks/1768250219_f/02_file_example_WAV_1MG.wav', 'title': 'file_example_WAV_1MG.wav', 'duration_seconds': 0, 'track_order': 1, 'created_at': datetime.datetime(2026, 1, 12, 21, 36, 59), 'is_completed': 0}
+
+
+--- Recent Books ---
+ID: 39, Title: hhhh, Real Items: 4
+ID: 38, Title: f, Real Items: 2
+ID: 37, Title: h, Real Items: 2
+
+--- all playlist_items ---
+Item: {'id': 18, 'book_id': 39, 'file_path': 'https://pseudostigmatic-skeletonlike-coy.ngrok-free.dev/static/AudioBooks/1768252870_hhhh/04_file_example_WAV_1MG.wav', 'title': 'file_example_WAV_1MG.wav', 'duration_seconds': 0, 'track_order': 3, 'created_at': datetime.datetime(2026, 1, 12, 22, 21, 10)}
+Item: {'id': 17, 'book_id': 39, 'file_path': 'https://pseudostigmatic-skeletonlike-coy.ngrok-free.dev/static/AudioBooks/1768252870_hhhh/03_Eminem_-_LoseYourself_mp3.pm.mp3', 'title': 'Eminem_-_LoseYourself_(mp3.pm).mp3', 'duration_seconds': 0, 'track_order': 2, 'created_at': datetime.datetime(2026, 1, 12, 22, 21, 10)}
+Item: {'id': 16, 'book_id': 39, 'file_path': 'https://pseudostigmatic-skeletonlike-coy.ngrok-free.dev/static/AudioBooks/1768252870_hhhh/02_Eminem_feat._Rihanna_-_The_Monster_mp3.pm.mp3', 'title': 'Eminem_feat._Rihanna_-_The_Monster_(mp3.pm).mp3', 'duration_seconds': 0, 'track_order': 1, 'created_at': datetime.datetime(2026, 1, 12, 22, 21, 10)}
+Item: {'id': 15, 'book_id': 39, 'file_path': 'https://pseudostigmatic-skeletonlike-coy.ngrok-free.dev/static/AudioBooks/1768252870_hhhh/01_EMINEM_RIHANNA_-_Monster_Dirty_Pop_Deconstruction_KISS_FM_mp3.pm.mp3', 'title': 'EMINEM_RIHANNA_-_Monster_Dirty_Pop_Deconstruction_KISS_FM_(mp3.pm).mp3', 'duration_seconds': 0, 'track_order': 0, 'created_at': datetime.datetime(2026, 1, 12, 22, 21, 10)}
+Item: {'id': 14, 'book_id': 38, 'file_path': 'https://pseudostigmatic-skeletonlike-coy.ngrok-free.dev/static/AudioBooks/1768250219_f/02_file_example_WAV_1MG.wav', 'title': 'file_example_WAV_1MG.wav', 'duration_seconds': 0, 'track_order': 1, 'created_at': datetime.datetime(2026, 1, 12, 21, 36, 59)}
+Item: {'id': 13, 'book_id': 38, 'file_path': 'https://pseudostigmatic-skeletonlike-coy.ngrok-free.dev/static/AudioBooks/1768250219_f/01_Eminem_-_LoseYourself_mp3.pm.mp3', 'title': 'Eminem_-_LoseYourself_(mp3.pm).mp3', 'duration_seconds': 0, 'track_order': 0, 'created_at': datetime.datetime(2026, 1, 12, 21, 36, 59)}
+Item: {'id': 12, 'book_id': 37, 'file_path': 'https://pseudostigmatic-skeletonlike-coy.ngrok-free.dev/static/AudioBooks/1768249686_h/02_file_example_WAV_1MG.wav', 'title': 'file_example_WAV_1MG.wav', 'duration_seconds': 0, 'track_order': 1, 'created_at': datetime.datetime(2026, 1, 12, 21, 28, 6)}
+Item: {'id': 11, 'book_id': 37, 'file_path': 'https://pseudostigmatic-skeletonlike-coy.ngrok-free.dev/static/AudioBooks/1768249686_h/01_Eminem_-_LoseYourself_mp3.pm.mp3', 'title': 'Eminem_-_LoseYourself_(mp3.pm).mp3', 'duration_seconds': 0, 'track_order': 0, 'created_at': datetime.datetime(2026, 1, 12, 21, 28, 6)}

@@ -10,12 +10,25 @@ import '../services/auth_service.dart';
 import 'badge_dialog.dart';
 // import '../models/badge.dart'; // Unused
 import '../services/download_service.dart';
+import '../utils/api_constants.dart';
 
 class PlayerScreen extends StatefulWidget {
   final Book book;
-  final String? uniqueAudioId; // Use this for local file storage if provided
+  final String? uniqueAudioId;
+  final VoidCallback? onPurchaseSuccess;
+  final List<dynamic>? playlist;
+  final int initialIndex;
+  final VoidCallback? onPlaybackComplete;
 
-  const PlayerScreen({super.key, required this.book, this.uniqueAudioId});
+  const PlayerScreen({
+    super.key,
+    required this.book,
+    this.uniqueAudioId,
+    this.onPurchaseSuccess,
+    this.playlist,
+    this.initialIndex = 0,
+    this.onPlaybackComplete,
+  });
 
   @override
   State<PlayerScreen> createState() => _PlayerScreenState();
@@ -23,10 +36,13 @@ class PlayerScreen extends StatefulWidget {
 
 class _PlayerScreenState extends State<PlayerScreen> {
   late AudioPlayer _player;
+  late Book _currentBook;
+  late int _currentIndex;
+
   bool _isSleepTimerActive = false;
   double _playbackSpeed = 1.0;
   double? _originalBrightness;
-
+  // ... brightness methods ...
   Future<void> _resetBrightness() async {
     if (kIsWeb) return; // Skip on web
     if (_originalBrightness != null) {
@@ -84,9 +100,85 @@ class _PlayerScreenState extends State<PlayerScreen> {
   void initState() {
     super.initState();
     _player = AudioPlayer();
+    _currentBook = widget.book;
+    _currentIndex = widget.initialIndex;
     _isFavorite = widget.book.isFavorite;
     _initPlayer();
     _checkOwnership();
+
+    // Listen for completion
+    _player.playerStateStream.listen((state) {
+      if (state.processingState == ProcessingState.completed) {
+        if (widget.onPlaybackComplete != null) {
+          widget.onPlaybackComplete!();
+        }
+        // Auto-advance if playlist
+        if (widget.playlist != null &&
+            _currentIndex < widget.playlist!.length - 1) {
+          _playNext();
+        }
+      }
+    });
+  }
+
+  String _getUniqueAudioId() {
+    if (widget.playlist != null && widget.playlist!.isNotEmpty) {
+      final track = widget.playlist![_currentIndex];
+      return "track_${track['id']}";
+    }
+    return widget.uniqueAudioId ?? widget.book.id;
+  }
+
+  String _getAbsoluteUrl(String path) {
+    if (path.startsWith('http')) return path;
+    return '${ApiConstants.baseUrl}${path.startsWith('/') ? '' : '/'}$path';
+  }
+
+  void _playNext() {
+    if (widget.playlist == null || _currentIndex >= widget.playlist!.length - 1)
+      return;
+    setState(() {
+      _currentIndex++;
+      _loadTrackAtIndex(_currentIndex);
+    });
+  }
+
+  void _playPrevious() {
+    if (widget.playlist == null || _currentIndex <= 0) return;
+    setState(() {
+      _currentIndex--;
+      _loadTrackAtIndex(_currentIndex);
+    });
+  }
+
+  void _loadTrackAtIndex(int index) {
+    final track = widget.playlist![index];
+    final trackUrl = _getAbsoluteUrl(track['file_path']);
+
+    // Create new book object for state
+    _currentBook = Book(
+      id: widget.book.id, // Same parent ID
+      title: track['title'],
+      author: widget.book.author,
+      audioUrl: trackUrl,
+      coverUrl: widget.book.coverUrl,
+      categoryId: widget.book.categoryId,
+      subcategoryIds: const [],
+      postedBy: widget.book.postedBy,
+      description: widget.book.description,
+      price: widget.book.price,
+      postedByUserId: widget.book.postedByUserId,
+      isPlaylist: false,
+      isFavorite:
+          _isFavorite, // Preserve current favorite state (or logic for track fav?)
+      // Actually favorite is on the PARENT usually for audiobooks.
+      // If tracks can be favorite individually, we'd look it up.
+      // Assuming Album-level favorite for now.
+    );
+
+    _initPlayer();
+    // Ownership check shouldn't change for same album, but download status might.
+    // So _initPlayer handles loading local file or URL.
   }
 
   Future<void> _checkOwnership() async {
@@ -101,11 +193,24 @@ class _PlayerScreenState extends State<PlayerScreen> {
       }
 
       _userId = userId;
-      final purchasedIds = await BookRepository().getPurchasedBookIds(userId);
+
+      // Parallel fetch for better performance
+      final results = await Future.wait([
+        BookRepository().getPurchasedBookIds(userId),
+        BookRepository().getFavoriteBookIds(userId),
+      ]);
+
+      final purchasedIds = results[0] as List<String>;
+      final favoriteIds =
+          results[1] as List<int>; // getFavoriteBookIds returns List<int>
+
       final isOwned = purchasedIds.contains(widget.book.id);
+      // Ensure we compare int to int or string to string. widget.book.id is String.
+      final isFav = favoriteIds.contains(int.tryParse(widget.book.id) ?? -1);
 
       setState(() {
         _isPurchased = isOwned;
+        _isFavorite = isFav; // Update favorite status from backend
         _isLoadingOwnership = false;
       });
 
@@ -113,7 +218,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
         _startProgressSync();
       }
     } catch (e) {
-      print("Error checking ownership: $e");
+      print("Error checking ownership/favorites: $e");
       setState(() => _isLoadingOwnership = false);
     }
   }
@@ -131,13 +236,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
       });
       _startProgressSync(); // Start syncing after purchase
 
-      _downloadBook(); // Trigger download
+      if (widget.onPurchaseSuccess != null) {
+        // Delegate download logic to parent (e.g. PlaylistScreen downloads all)
+        widget.onPurchaseSuccess!();
+      } else {
+        _downloadBook(); // Trigger download for single book
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Book Purchased and Unlocked! Downloading...'),
-          ),
+          const SnackBar(content: Text('Book Purchased and Unlocked!')),
         );
 
         for (var badge in newBadges) {
@@ -155,8 +263,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
     setState(() => _isDownloading = true);
     try {
       await DownloadService().downloadBook(
-        widget.uniqueAudioId ?? widget.book.id,
-        widget.book.audioUrl,
+        _getUniqueAudioId(),
+        _currentBook.audioUrl,
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -181,10 +289,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   Future<void> _initPlayer() async {
     try {
-      String url = widget.book.audioUrl;
+      String url = _currentBook.audioUrl;
 
       // Check for local file
-      final storageId = widget.uniqueAudioId ?? widget.book.id;
+      final storageId = _getUniqueAudioId();
       final isDownloaded = await DownloadService().isBookDownloaded(storageId);
 
       if (isDownloaded) {
@@ -482,7 +590,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     const Icon(Icons.category, color: Colors.white54, size: 16),
                     const SizedBox(width: 8),
                     Text(
-                      'Category: ${widget.book.categoryId}',
+                      'Category: ${_currentBook.categoryId}',
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
@@ -582,10 +690,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       ],
                     ),
                     child:
-                        (widget.book.coverUrl != null &&
-                            widget.book.coverUrl!.isNotEmpty)
+                        (_currentBook.coverUrl != null &&
+                            _currentBook.coverUrl!.isNotEmpty)
                         ? Image.network(
-                            widget.book.coverUrl!,
+                            _currentBook.coverUrl!,
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) => Icon(
                               Icons.music_note,
@@ -611,7 +719,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                           height: 40,
                           alignment: Alignment.center,
                           child: _ScrollingText(
-                            text: widget.book.title,
+                            text: _currentBook.title,
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 24,
@@ -621,7 +729,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          widget.book.author,
+                          _currentBook.author,
                           style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 18,
@@ -725,7 +833,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         icon: const Icon(Icons.skip_previous),
                         color: Colors.white,
                         iconSize: 40,
-                        onPressed: () {}, // Implement Prev/Next if playlist
+                        onPressed: _playPrevious,
                       ),
 
                       // Play/Pause Button
@@ -751,8 +859,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                               onTap: () async {
                                 if (_isPurchased) {
                                   // Use storage ID here!
-                                  final storageId =
-                                      widget.uniqueAudioId ?? widget.book.id;
+                                  final storageId = _getUniqueAudioId();
                                   final isDownloaded = await DownloadService()
                                       .isBookDownloaded(storageId);
                                   if (!isDownloaded) {
@@ -812,7 +919,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         icon: const Icon(Icons.skip_next),
                         color: Colors.white,
                         iconSize: 40,
-                        onPressed: () {},
+                        onPressed: _playNext,
                       ),
                       IconButton(
                         icon: const Icon(Icons.forward_30),

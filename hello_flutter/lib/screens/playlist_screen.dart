@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import '../models/book.dart';
 import '../widgets/player_screen.dart';
+import '../widgets/lesson_map_widget.dart'; // Import LessonMap
 import '../utils/api_constants.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../services/download_service.dart';
+import '../services/auth_service.dart';
 
 class PlaylistScreen extends StatefulWidget {
   final Book book;
@@ -18,6 +21,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   List<dynamic> _tracks = [];
   bool _isLoading = true;
   String? _error;
+  int? _userId;
 
   @override
   void initState() {
@@ -27,9 +31,14 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
 
   Future<void> _loadTracks() async {
     try {
-      final uri = Uri.parse(
-        '${ApiConstants.baseUrl}/playlist/${widget.book.id}',
-      );
+      final userId = await AuthService().getCurrentUserId();
+      _userId = userId;
+
+      final String url =
+          '${ApiConstants.baseUrl}/playlist/${widget.book.id}' +
+          (userId != null ? '?user_id=$userId' : '');
+
+      final uri = Uri.parse(url);
       final response = await http.get(uri);
 
       if (response.statusCode == 200) {
@@ -53,86 +62,112 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     }
   }
 
-  void _playTrack(Map<String, dynamic> track) async {
-    // Construct a temporary Book object for the Player
+  String _ensureAbsoluteUrl(String url) {
+    if (url.startsWith('http')) return url;
+    return '${ApiConstants.baseUrl}$url';
+  }
 
-    // 1. Ensure Absolute URL
-    String trackUrl = track['file_path'];
-    if (!trackUrl.startsWith('http')) {
-      // If relative, prepend base URL.
-      // Note: ApiConstants.baseUrl might or might not have trailing slash.
-      // Usually it does. trackUrl usually starts with 'static/'.
-      trackUrl = '${ApiConstants.baseUrl}$trackUrl';
+  Future<void> _handlePurchaseSuccess(Map<String, dynamic> currentTrack) async {
+    // 1. Show message
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Purchase Successful! Downloading playlist...'),
+          duration: Duration(seconds: 4),
+        ),
+      );
     }
 
-    final trackTitle = track['title'];
+    // 2. Download Current Track FIRST (high priority)
+    try {
+      final String trackUrl = _ensureAbsoluteUrl(currentTrack['file_path']);
+      final uniqueTrackId = "track_${currentTrack['id']}";
+      await DownloadService().downloadBook(uniqueTrackId, trackUrl);
+      print("Downloaded current track: ${currentTrack['title']}");
+    } catch (e) {
+      print("Error downloading current track: $e");
+    }
 
-    // 2. Use Track ID as Book ID to prevent collision with main book's progress/downloads
-    // We use a prefix or just the track ID string.
-    final String uniqueTrackId = "track_${track['id']}";
+    // 3. Download ALL tracks in background
+    // _downloadAllTracks(); // Removed feature
+  }
+
+  void _playTrack(Map<String, dynamic> track, int index) async {
+    // Construct a temporary Book object for the Player
+    final String trackUrl = _ensureAbsoluteUrl(track['file_path']);
+    final trackTitle = track['title'];
+    final uniqueTrackId = "track_${track['id']}";
+
+    // If 'is_completed' is not in Book model, we don't pass it there.
+    // It's used for the map UI.
 
     final singleTrackBook = Book(
-      id: widget
-          .book
-          .id, // Use REAL Book ID for backend ownership/progress checks
+      id: widget.book.id, // Use REAL Book ID
       title: trackTitle,
       author: widget.book.author,
       audioUrl: trackUrl,
       coverUrl: widget.book.coverUrl,
       categoryId: widget.book.categoryId,
-      subcategoryIds: const [], // Default empty or pass from widget.book
+      subcategoryIds: const [],
       postedBy: widget.book.postedBy,
       description: widget.book.description,
       price: widget.book.price,
       postedByUserId: widget.book.postedByUserId,
-      isPlaylist: false, // It's a single track context
+      isPlaylist: false,
+      isFavorite: widget.book.isFavorite,
     );
 
+    // Refresh tracks when player closes to update stars
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => PlayerScreen(
         book: singleTrackBook,
-        uniqueAudioId:
-            uniqueTrackId, // Pass unique ID for local storage/playback
+        uniqueAudioId: uniqueTrackId,
+        onPurchaseSuccess: () => _handlePurchaseSuccess(track),
+        playlist: _tracks,
+        initialIndex: index,
+        onPlaybackComplete: () =>
+            _onTrackFinished(track), // Need to implement this in PlayerScreen
       ),
     );
+
+    // Reload tracks to update UI (yellow stars)
+    _loadTracks();
+  }
+
+  Future<void> _onTrackFinished(Map<String, dynamic> track) async {
+    // Call backend to mark complete
+    if (_userId == null) return;
+    try {
+      final uri = Uri.parse('${ApiConstants.baseUrl}/complete-track');
+      await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'user_id': _userId, 'track_id': track['id']}),
+      );
+    } catch (e) {
+      print("Error marking track complete: $e");
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(widget.book.title)),
+      // Use gradient background for map feel
+      backgroundColor: Colors.grey.shade900,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
           ? Center(child: Text('Error: $_error'))
           : _tracks.isEmpty
           ? const Center(child: Text('No tracks found'))
-          : ListView.builder(
-              itemCount: _tracks.length,
-              itemBuilder: (context, index) {
-                final track = _tracks[index];
-                return ListTile(
-                  leading: const Icon(Icons.music_note),
-                  title: Text(track['title'] ?? 'Track ${index + 1}'),
-                  subtitle: Text(
-                    "Duration: ${_formatDuration(track['duration_seconds'] ?? 0)}",
-                  ),
-                  onTap: () => _playTrack(track),
-                );
-              },
+          : LessonMapWidget(
+              tracks: _tracks,
+              onTrackTap: (index) => _playTrack(_tracks[index], index),
             ),
     );
-  }
-
-  String _formatDuration(int seconds) {
-    if (seconds <= 0) return "0:00";
-    final d = Duration(seconds: seconds);
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final minutes = twoDigits(d.inMinutes.remainder(60));
-    final sec = twoDigits(d.inSeconds.remainder(60));
-    return "${d.inHours > 0 ? '${twoDigits(d.inHours)}:' : ''}$minutes:$sec";
   }
 }
