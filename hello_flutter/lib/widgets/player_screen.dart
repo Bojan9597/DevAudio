@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart' hide Badge;
+import 'package:screen_brightness/screen_brightness.dart';
 import '../models/book.dart';
 import 'dart:async';
 import 'package:just_audio/just_audio.dart';
@@ -22,6 +23,45 @@ class _PlayerScreenState extends State<PlayerScreen> {
   late AudioPlayer _player;
   bool _isSleepTimerActive = false;
   double _playbackSpeed = 1.0;
+  double? _originalBrightness;
+
+  Future<void> _resetBrightness() async {
+    if (_originalBrightness != null) {
+      try {
+        await ScreenBrightness().setScreenBrightness(_originalBrightness!);
+      } catch (e) {
+        debugPrint('Failed to reset brightness: $e');
+        await ScreenBrightness().resetScreenBrightness();
+      }
+    } else {
+      try {
+        await ScreenBrightness().resetScreenBrightness();
+      } catch (e) {
+        /* ignore */
+      }
+    }
+  }
+
+  Future<void> _toggleSleepMode() async {
+    setState(() {
+      _isSleepTimerActive = !_isSleepTimerActive;
+    });
+
+    try {
+      if (_isSleepTimerActive) {
+        // Turning ON: Save current and dim
+        _originalBrightness = await ScreenBrightness().current;
+        await ScreenBrightness().setScreenBrightness(
+          0.01,
+        ); // Minimum brightness
+      } else {
+        // Turning OFF: Restore
+        await _resetBrightness();
+      }
+    } catch (e) {
+      debugPrint('Error toggling sleep mode brightness: $e');
+    }
+  }
 
   // Purchase State
   bool _isPurchased = false;
@@ -202,6 +242,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   void dispose() {
+    _resetBrightness(); // Reset brightness on exit
     _progressTimer?.cancel();
     _saveProgress(); // Try to save on exit
     _player.dispose();
@@ -290,13 +331,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
         _moreButtonKey.currentContext!.findRenderObject() as RenderBox;
     final RenderBox overlay =
         Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
+    // Calculate position to spawn menu right above the button
+    // Offsetting by ~110px (approx menu height) to align bottom of menu with top of button
+    final buttonRect =
+        button.localToGlobal(Offset.zero, ancestor: overlay) & button.size;
     final RelativeRect position = RelativeRect.fromRect(
-      Rect.fromPoints(
-        button.localToGlobal(Offset.zero, ancestor: overlay),
-        button.localToGlobal(
-          button.size.bottomRight(Offset.zero),
-          ancestor: overlay,
-        ),
+      Rect.fromLTWH(
+        buttonRect.left,
+        buttonRect.top - 110, // Shift up by approx menu height
+        buttonRect.width,
+        buttonRect.height,
       ),
       Offset.zero & overlay.size,
     );
@@ -793,11 +837,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _isSleepTimerActive = !_isSleepTimerActive;
-                          });
-                        },
+                        onTap: _toggleSleepMode,
                         child: _buildBottomOption(
                           Icons.bedtime,
                           '',
