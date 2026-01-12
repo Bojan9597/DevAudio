@@ -63,7 +63,19 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 
   Future<void> _checkAuth() async {
-    final isLoggedIn = await AuthService().isLoggedIn();
+    final authService = AuthService();
+    final isLoggedIn = await authService.isLoggedIn();
+
+    if (isLoggedIn) {
+      final userId = await authService.getCurrentUserId();
+      if (userId != null) {
+        await globalLayoutState.updateUser(userId.toString());
+      }
+    } else {
+      // Ensure logged out state
+      await globalLayoutState.updateUser(null);
+    }
+
     if (mounted) {
       setState(() {
         _isLoggedIn = isLoggedIn;

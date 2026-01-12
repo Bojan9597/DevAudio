@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../app_layout.dart';
+import '../states/layout_state.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -81,6 +82,10 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       if (mounted) {
+        final userId = await _authService.getCurrentUserId();
+        if (userId != null) {
+          await globalLayoutState.updateUser(userId.toString());
+        }
         Navigator.of(
           context,
         ).pushReplacement(MaterialPageRoute(builder: (_) => const AppLayout()));
@@ -113,6 +118,10 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (mounted) {
+        final userId = await _authService.getCurrentUserId();
+        if (userId != null) {
+          await globalLayoutState.updateUser(userId.toString());
+        }
         Navigator.of(
           context,
         ).pushReplacement(MaterialPageRoute(builder: (_) => const AppLayout()));
@@ -133,6 +142,10 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final success = await _authService.loginWithGoogle();
       if (success && mounted) {
+        final userId = await _authService.getCurrentUserId();
+        if (userId != null) {
+          await globalLayoutState.updateUser(userId.toString());
+        }
         Navigator.of(
           context,
         ).pushReplacement(MaterialPageRoute(builder: (_) => const AppLayout()));
