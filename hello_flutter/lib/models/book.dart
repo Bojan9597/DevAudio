@@ -9,6 +9,10 @@ class Book {
   final DateTime? lastAccessed;
   final int? durationSeconds;
   final bool isFavorite;
+  final String? postedBy;
+  final String? description;
+  final double? price;
+  final String? postedByUserId;
 
   const Book({
     required this.id,
@@ -21,6 +25,10 @@ class Book {
     this.lastAccessed,
     this.durationSeconds,
     this.isFavorite = false,
+    this.postedBy,
+    this.description,
+    this.price,
+    this.postedByUserId,
   });
 
   factory Book.fromJson(Map<String, dynamic> json) {
@@ -41,6 +49,10 @@ class Book {
           : null,
       durationSeconds: json['duration'] as int?,
       isFavorite: json['isFavorite'] as bool? ?? false,
+      postedBy: json['postedBy'] as String?,
+      description: json['description'] as String?,
+      price: (json['price'] as num?)?.toDouble(),
+      postedByUserId: json['postedByUserId'] as String?,
     );
   }
 
@@ -49,6 +61,10 @@ class Book {
     int? lastPosition,
     int? durationSeconds,
     DateTime? lastAccessed,
+    String? postedBy,
+    String? description,
+    double? price,
+    String? postedByUserId,
   }) {
     return Book(
       id: id,
@@ -61,6 +77,10 @@ class Book {
       lastAccessed: lastAccessed ?? this.lastAccessed,
       durationSeconds: durationSeconds ?? this.durationSeconds,
       isFavorite: isFavorite ?? this.isFavorite,
+      postedBy: postedBy ?? this.postedBy,
+      description: description ?? this.description,
+      price: price ?? this.price,
+      postedByUserId: postedByUserId ?? this.postedByUserId,
     );
   }
 }

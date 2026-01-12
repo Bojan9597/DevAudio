@@ -7,9 +7,14 @@ from database import Database
 from badge_service import BadgeService
 
 import re
+import datetime
 
 app = Flask(__name__)
 CORS(app) # Enable CORS for all routes
+
+# Base URL for external access (Ngrok)
+# This matches the URL used in reorganize_audiobooks.py
+BASE_URL = "https://pseudostigmatic-skeletonlike-coy.ngrok-free.dev/"
 
 # ... existing build_category_tree ...
 
@@ -422,21 +427,39 @@ def get_books():
         return jsonify({"error": "Database connection failed"}), 500
     
     try:
-        # Fetch all books with primary category slug
-        # We join with categories to get the slug for primary_category_id
+        page = request.args.get('page', 1, type=int)
+        limit = request.args.get('limit', 5, type=int)
+        search_query = request.args.get('q', '', type=str)
+        
+        offset = (page - 1) * limit
+
+        # Base query
         query = """
-            SELECT b.id, b.title, b.author, b.audio_path, c.slug as category_slug 
+            SELECT b.id, b.title, b.author, b.audio_path, c.slug as category_slug, u.name as posted_by_name
             FROM books b 
             LEFT JOIN categories c ON b.primary_category_id = c.id
+            LEFT JOIN users u ON b.posted_by_user_id = u.id
         """
-        books_result = db.execute_query(query)
+        
+        params = []
+        if search_query:
+            query += " WHERE b.title LIKE %s"
+            params.append(f"%{search_query}%")
+            
+        # Add ordering (optional but good for consistency)
+        query += " ORDER BY b.id DESC" 
+        
+        query += " LIMIT %s OFFSET %s"
+        params.extend([limit, offset])
+        
+        books_result = db.execute_query(query, tuple(params))
         
         books = []
         if books_result:
             for row in books_result:
                 book_id = row['id']
                 
-                # Fetch subcategory slugs
+                # Fetch subcategory slugs (this remains same, though explicit subquery per row is inefficient, but keeping for minimal diff)
                 sub_query = """
                     SELECT c.slug 
                     FROM book_categories bc
@@ -446,13 +469,20 @@ def get_books():
                 sub_result = db.execute_query(sub_query, (book_id,))
                 subcategory_ids = [sub['slug'] for sub in sub_result] if sub_result else []
                 
+                # Construct full Audio URL if relative
+                audio_path = row['audio_path']
+                if audio_path and not audio_path.startswith('http'):
+                    # Use CamelCase AudioBooks to match directory
+                    audio_path = f"{BASE_URL}static/AudioBooks/{audio_path}"
+
                 books.append({
                     "id": str(book_id),
                     "title": row['title'],
                     "author": row['author'],
-                    "audioUrl": row['audio_path'],
-                    "categoryId": row['category_slug'] or "", # Handle None
-                    "subcategoryIds": subcategory_ids
+                    "audioUrl": audio_path,
+                    "categoryId": row['category_slug'] or "", 
+                    "subcategoryIds": subcategory_ids,
+                    "postedBy": row['posted_by_name'] or "Unknown" 
                 })
         
         return jsonify(books)
@@ -766,6 +796,134 @@ def get_favorites(user_id):
         return jsonify({"error": str(e)}), 500
     finally:
         db.disconnect()
+
+@app.route('/upload_book', methods=['POST'])
+def upload_book():
+    try:
+        title = request.form.get('title')
+        author = request.form.get('author')
+        category_id = request.form.get('category_id') 
+        user_id = request.form.get('user_id')
+        description = request.form.get('description', '')
+        price = request.form.get('price', 0.0)
+
+        if not all([title, author, category_id, user_id]):
+             return jsonify({"error": "Missing required fields (title, author, category_id, user_id)"}), 400
+
+        # Lookup numeric Category ID from Slug
+        # category_id from params is actually the slug (e.g. 'programming')
+        cat_query = "SELECT id FROM categories WHERE slug = %s"
+        db = Database()
+        if not db.connect():
+             return jsonify({"error": "Database error"}), 500
+        
+        cats = db.execute_query(cat_query, (category_id,))
+        if not cats:
+             # Try assuming it MIGHT be an ID if integer, or fallback
+             if category_id.isdigit():
+                 numeric_cat_id = int(category_id)
+             else:
+                 return jsonify({"error": f"Invalid category: {category_id}"}), 400
+        else:
+            numeric_cat_id = cats[0]['id']
+
+        if 'audio' not in request.files:
+            db.disconnect()
+            return jsonify({"error": "No audio file provided"}), 400
+        
+        audio_file = request.files['audio']
+        if audio_file.filename == '':
+            db.disconnect()
+            return jsonify({"error": "No audio file selected"}), 400
+
+        # Build paths relative to api.py
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        static_dir = os.path.join(base_dir, 'static')
+        
+        # Handle Audio Save
+        audio_filename = secure_filename(f"{int(datetime.datetime.now().timestamp())}_{audio_file.filename}")
+        # Use AudioBooks (CamelCase)
+        # Save to Server/static/AudioBooks
+        audio_save_path = os.path.join(static_dir, "AudioBooks", audio_filename)
+        os.makedirs(os.path.dirname(audio_save_path), exist_ok=True)
+        audio_file.save(audio_save_path)
+        
+        # Save FULL URL to database
+        db_audio_path = f"{BASE_URL}static/AudioBooks/{audio_filename}"
+
+        # Handle Cover Save (Optional)
+        db_cover_path = None
+        if 'cover' in request.files:
+            cover_file = request.files['cover']
+            if cover_file.filename != '':
+                cover_filename = secure_filename(f"{int(datetime.datetime.now().timestamp())}_{cover_file.filename}")
+                cover_save_path = os.path.join(static_dir, "images", cover_filename) 
+                os.makedirs(os.path.dirname(cover_save_path), exist_ok=True)
+                cover_file.save(cover_save_path)
+                db_cover_path = cover_filename
+
+        # db is already connected from category lookup
+        
+        # Insert Query
+        insert_query = """
+            INSERT INTO books 
+            (title, author, primary_category_id, audio_path, cover_image_path, posted_by_user_id, description, price, duration_seconds)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 0)
+        """
+        
+        cursor = db.connection.cursor()
+        cursor.execute(insert_query, (title, author, numeric_cat_id, db_audio_path, db_cover_path, user_id, description, price))
+        book_id = cursor.lastrowid
+        db.connection.commit()
+        db.disconnect()
+        
+        return jsonify({"message": "Book uploaded successfully", "book_id": book_id}), 201
+
+    except Exception as e:
+        print(f"Upload Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/my_uploads', methods=['GET'])
+def get_my_uploads():
+    user_id = request.args.get('user_id')
+    if not user_id:
+        return jsonify({"error": "User ID required"}), 400
+        
+    db = Database()
+    if not db.connect():
+         return jsonify({"error": "Database error"}), 500
+         
+    query = """
+        SELECT b.id, b.title, b.author, b.audio_path, c.slug as category_slug, 
+               b.description, b.price, b.posted_by_user_id
+        FROM books b 
+        LEFT JOIN categories c ON b.primary_category_id = c.id
+        WHERE b.posted_by_user_id = %s
+        ORDER BY b.id DESC
+    """
+    
+    books_result = db.execute_query(query, (user_id,))
+    
+    books = []
+    if books_result:
+        for row in books_result:
+             # Construct full Audio URL if relative
+             audio_path = row['audio_path']
+             if audio_path and not audio_path.startswith('http'):
+                 audio_path = f"{BASE_URL}static/AudioBooks/{audio_path}"
+
+             books.append({
+                "id": str(row['id']),
+                "title": row['title'],
+                "author": row['author'],
+                "audioUrl": audio_path,
+                "categoryId": row['category_slug'] or "",
+                "description": row['description'],
+                "price": float(row['price']) if row['price'] else 0.0,
+                "postedByUserId": str(row['posted_by_user_id']),
+            })
+            
+    return jsonify(books)
 
 if __name__ == '__main__':
     # Run on 0.0.0.0 to be accessible, port 5000

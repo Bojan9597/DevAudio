@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
+import 'upload_book_screen.dart';
 import '../states/layout_state.dart';
 import '../l10n/generated/app_localizations.dart';
 
@@ -286,6 +287,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   },
                 ),
                 const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.cloud_upload),
+                  title: const Text('Upload Audio Book'),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const UploadBookScreen(),
+                      ),
+                    );
+                  },
+                ),
                 ListTile(
                   leading: const Icon(Icons.lock),
                   title: Text(AppLocalizations.of(context)!.changePassword),

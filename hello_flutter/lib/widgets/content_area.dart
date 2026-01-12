@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import '../states/layout_state.dart';
 import '../models/book.dart';
+import '../models/category.dart'; // Import Category
 import '../repositories/book_repository.dart';
+import '../repositories/category_repository.dart'; // Import CategoryRepository
 import '../services/auth_service.dart';
 import '../l10n/generated/app_localizations.dart';
 import 'player_screen.dart';
 
 import '../screens/profile_screen.dart';
+import '../screens/discover_screen.dart';
 
 class ContentArea extends StatefulWidget {
   const ContentArea({super.key});
@@ -19,12 +22,24 @@ class _ContentAreaState extends State<ContentArea> {
   List<Book> _allBooks = [];
   List<String> _purchasedIds = [];
   List<Book> _historyBooks = [];
+  List<Book> _uploadedBooks = [];
+  List<Category> _categories = []; // State for recursive filtering
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _loadBooks();
+    _loadCategories(); // Load categories for filtering
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final cats = await CategoryRepository().getCategories();
+      if (mounted) setState(() => _categories = cats);
+    } catch (e) {
+      print("Error loading categories in ContentArea: $e");
+    }
   }
 
   Future<void> _loadBooks() async {
@@ -35,11 +50,13 @@ class _ContentAreaState extends State<ContentArea> {
       List<int> favoriteIds = [];
       List<String> purchasedIds = [];
       List<Book> history = [];
+      List<Book> uploaded = [];
 
       if (userId != null) {
         favoriteIds = await BookRepository().getFavoriteBookIds(userId);
         purchasedIds = await BookRepository().getPurchasedBookIds(userId);
         history = await BookRepository().getListenHistory(userId);
+        uploaded = await BookRepository().getMyUploadedBooks(userId.toString());
       }
 
       // Map favorites and merge history progress
@@ -65,6 +82,7 @@ class _ContentAreaState extends State<ContentArea> {
           _allBooks = updatedBooks;
           _purchasedIds = purchasedIds;
           _historyBooks = history;
+          _uploadedBooks = uploaded;
           _isLoading = false;
         });
       }
@@ -93,13 +111,19 @@ class _ContentAreaState extends State<ContentArea> {
           return const Center(child: CircularProgressIndicator());
         }
 
+        if (categoryId == 'discover') {
+          return const DiscoverScreen();
+        }
+
         if (categoryId == 'library') {
           return _buildLibraryView();
         }
 
+        // Filter
         final filteredBooks = BookRepository().filterBooks(
           categoryId,
           _allBooks,
+          allCategories: _categories,
         );
 
         if (filteredBooks.isEmpty) {
@@ -186,7 +210,7 @@ class _ContentAreaState extends State<ContentArea> {
         .toList();
 
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Column(
         children: [
           Container(
@@ -208,6 +232,7 @@ class _ContentAreaState extends State<ContentArea> {
                   icon: const Icon(Icons.menu_book),
                   text: AppLocalizations.of(context)!.myBooks,
                 ),
+                const Tab(icon: Icon(Icons.cloud_upload), text: 'Uploaded'),
               ],
             ),
           ),
@@ -225,13 +250,25 @@ class _ContentAreaState extends State<ContentArea> {
                 myBooks.isEmpty
                     ? const Center(child: Text('No purchased books'))
                     : Padding(
-                        padding: const EdgeInsets.all(
-                          16.0,
-                        ), // Match profile padding
+                        padding: const EdgeInsets.all(16.0),
                         child: ListView.builder(
                           itemCount: myBooks.length,
                           itemBuilder: (context, index) {
                             final book = myBooks[index];
+                            return _buildMyBookTile(book);
+                          },
+                        ),
+                      ),
+                // Uploaded Tab
+                _uploadedBooks.isEmpty
+                    ? const Center(child: Text('No uploaded books'))
+                    : Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: ListView.builder(
+                          itemCount: _uploadedBooks.length,
+                          itemBuilder: (context, index) {
+                            // Reuse MyBookTile style for consistency
+                            final book = _uploadedBooks[index];
                             return _buildMyBookTile(book);
                           },
                         ),
