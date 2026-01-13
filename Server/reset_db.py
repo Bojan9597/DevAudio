@@ -56,6 +56,15 @@ def reset_db():
                 if item == ".gitkeep": continue
                 os.remove(item_path)
              print("ProfilePictures folder cleared.")
+
+        # Clear BookCovers
+        covers_dir = os.path.join(base_dir, 'static', 'BookCovers')
+        if os.path.exists(covers_dir):
+             for item in os.listdir(covers_dir):
+                item_path = os.path.join(covers_dir, item)
+                if item == ".gitkeep": continue
+                os.remove(item_path)
+             print("BookCovers folder cleared.")
              
     except Exception as e:
         print(f"Error: {e}")

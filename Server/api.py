@@ -14,7 +14,7 @@ CORS(app) # Enable CORS for all routes
 
 # Base URL for external access (Ngrok)
 # This matches the URL used in reorganize_audiobooks.py
-BASE_URL = "https://pseudostigmatic-skeletonlike-coy.ngrok-free.dev/"
+BASE_URL = "https://lanny-neaped-chia.ngrok-free.dev/"
 
 # ... existing build_category_tree ...
 
@@ -456,7 +456,9 @@ def get_playlist(book_id):
             audio_path = book['audio_path']
             # Ensure Full URL
             if audio_path and not audio_path.startswith('http'):
-                 audio_path = f"{BASE_URL}static/AudioBooks/{audio_path}"
+                 if not audio_path.startswith('static/'):
+                     audio_path = f"static/AudioBooks/{audio_path}"
+                 audio_path = f"{BASE_URL}{audio_path}"
             
             # Check if book is "read" if it's a single file?
             # We can check user_books.is_read
@@ -540,12 +542,16 @@ def get_books():
                 # Construct full Audio URL if relative
                 audio_path = row['audio_path']
                 if audio_path and not audio_path.startswith('http'):
-                    audio_path = f"{BASE_URL}static/AudioBooks/{audio_path}"
+                     if not audio_path.startswith('static/'):
+                         audio_path = f"static/AudioBooks/{audio_path}"
+                     audio_path = f"{BASE_URL}{audio_path}"
 
                 # Construct full Cover URL if relative
                 cover_path = row['cover_image_path']
                 if cover_path and not cover_path.startswith('http'):
-                     cover_path = f"{BASE_URL}static/BookCovers/{cover_path}"
+                     if not cover_path.startswith('static/'):
+                         cover_path = f"static/BookCovers/{cover_path}"
+                     cover_path = f"{BASE_URL}{cover_path}"
                 
                 books.append({
                     "id": str(book_id),
@@ -829,12 +835,16 @@ def get_listen_history(user_id):
                 # Construct full Cover URL if relative
                 cover_path = row['cover_image_path']
                 if cover_path and not cover_path.startswith('http'):
-                    cover_path = f"{BASE_URL}static/BookCovers/{cover_path}"
+                     if not cover_path.startswith('static/'):
+                         cover_path = f"static/BookCovers/{cover_path}"
+                     cover_path = f"{BASE_URL}{cover_path}"
 
                 # Construct full Audio URL if relative
                 audio_path = row['audio_path']
                 if audio_path and not audio_path.startswith('http'):
-                    audio_path = f"{BASE_URL}static/AudioBooks/{audio_path}"
+                     if not audio_path.startswith('static/'):
+                         audio_path = f"static/AudioBooks/{audio_path}"
+                     audio_path = f"{BASE_URL}{audio_path}"
 
                 history.append({
                     "id": str(row['id']),
@@ -1125,12 +1135,16 @@ def get_my_uploads():
              # Construct full Audio URL if relative
              audio_path = row['audio_path']
              if audio_path and not audio_path.startswith('http'):
-                 audio_path = f"{BASE_URL}static/AudioBooks/{audio_path}"
+                 if not audio_path.startswith('static/'):
+                     audio_path = f"static/AudioBooks/{audio_path}"
+                 audio_path = f"{BASE_URL}{audio_path}"
 
              # Construct full Cover URL if relative
              cover_path = row['cover_image_path']
              if cover_path and not cover_path.startswith('http'):
-                 cover_path = f"{BASE_URL}static/BookCovers/{cover_path}"
+                 if not cover_path.startswith('static/'):
+                     cover_path = f"static/BookCovers/{cover_path}"
+                 cover_path = f"{BASE_URL}{cover_path}"
 
              books.append({
                 "id": str(row['id']),
