@@ -7,8 +7,10 @@ import '../services/auth_service.dart';
 
 class QuizTakerScreen extends StatefulWidget {
   final String bookId;
+  final int? playlistItemId;
 
-  const QuizTakerScreen({Key? key, required this.bookId}) : super(key: key);
+  const QuizTakerScreen({Key? key, required this.bookId, this.playlistItemId})
+    : super(key: key);
 
   @override
   _QuizTakerScreenState createState() => _QuizTakerScreenState();
@@ -34,7 +36,11 @@ class _QuizTakerScreenState extends State<QuizTakerScreen> {
 
   Future<void> _loadQuiz() async {
     try {
-      final url = Uri.parse('${ApiConstants.baseUrl}/quiz/${widget.bookId}');
+      String urlString = '${ApiConstants.baseUrl}/quiz/${widget.bookId}';
+      if (widget.playlistItemId != null) {
+        urlString += '?playlist_item_id=${widget.playlistItemId}';
+      }
+      final url = Uri.parse(urlString);
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
@@ -91,6 +97,7 @@ class _QuizTakerScreenState extends State<QuizTakerScreen> {
         body: json.encode({
           'user_id': userId,
           'book_id': widget.bookId,
+          'playlist_item_id': widget.playlistItemId,
           'score_percentage': percentage,
         }),
       );
@@ -140,13 +147,21 @@ class _QuizTakerScreenState extends State<QuizTakerScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     if (_error != null)
       return Scaffold(
-        appBar: AppBar(title: const Text("Quiz")),
+        appBar: AppBar(
+          title: Text(
+            widget.playlistItemId != null ? "Mini Quiz" : "Start Quiz",
+          ),
+        ),
         body: Center(child: Text("Error: $_error")),
       );
     if (_questions.isEmpty)
       return Scaffold(
-        appBar: AppBar(title: const Text("Quiz")),
-        body: const Center(child: Text("No quiz available for this book.")),
+        appBar: AppBar(
+          title: Text(
+            widget.playlistItemId != null ? "Mini Quiz" : "Book Quiz",
+          ),
+        ),
+        body: const Center(child: Text("No quiz available for this item.")),
       );
 
     return Scaffold(
@@ -225,15 +240,11 @@ class _QuizTakerScreenState extends State<QuizTakerScreen> {
                   );
                 }),
 
-                const SizedBox(
-                  height: 32,
-                ), // Replaced Spacer to move content up
+                const SizedBox(height: 32),
 
                 Container(
                   padding: EdgeInsets.only(
-                    bottom:
-                        MediaQuery.of(context).size.height *
-                        0.1, // Clear bottom 10%
+                    bottom: MediaQuery.of(context).size.height * 0.1,
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,

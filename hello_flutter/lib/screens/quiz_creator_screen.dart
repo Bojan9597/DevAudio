@@ -6,8 +6,10 @@ import '../models/quiz_question.dart';
 
 class QuizCreatorScreen extends StatefulWidget {
   final String bookId;
+  final int? playlistItemId;
 
-  const QuizCreatorScreen({Key? key, required this.bookId}) : super(key: key);
+  const QuizCreatorScreen({Key? key, required this.bookId, this.playlistItemId})
+    : super(key: key);
 
   @override
   _QuizCreatorScreenState createState() => _QuizCreatorScreenState();
@@ -25,7 +27,11 @@ class _QuizCreatorScreenState extends State<QuizCreatorScreen> {
 
   Future<void> _loadExistingQuiz() async {
     try {
-      final url = Uri.parse('${ApiConstants.baseUrl}/quiz/${widget.bookId}');
+      String urlString = '${ApiConstants.baseUrl}/quiz/${widget.bookId}';
+      if (widget.playlistItemId != null) {
+        urlString += '?playlist_item_id=${widget.playlistItemId}';
+      }
+      final url = Uri.parse(urlString);
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
@@ -105,6 +111,7 @@ class _QuizCreatorScreenState extends State<QuizCreatorScreen> {
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'book_id': widget.bookId,
+          'playlist_item_id': widget.playlistItemId,
           'questions': _questions.map((q) => q.toJson()).toList(),
         }),
       );
@@ -134,12 +141,24 @@ class _QuizCreatorScreenState extends State<QuizCreatorScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Create Quiz')),
+        appBar: AppBar(
+          title: Text(
+            widget.playlistItemId != null
+                ? 'Create Lesson Quiz'
+                : 'Create Book Quiz',
+          ),
+        ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Quiz')),
+      appBar: AppBar(
+        title: Text(
+          widget.playlistItemId != null
+              ? 'Create Lesson Quiz'
+              : 'Create Book Quiz',
+        ),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

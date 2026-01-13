@@ -21,6 +21,7 @@ class PlaylistScreen extends StatefulWidget {
 
 class _PlaylistScreenState extends State<PlaylistScreen> {
   List<dynamic> _tracks = [];
+  Map<String, dynamic> _trackQuizzes = {};
   bool _isLoading = true;
   String? _error;
   bool _hasQuiz = false;
@@ -54,6 +55,9 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
           setState(() {
             _tracks = data['tracks'];
             _hasQuiz = data['has_quiz'] ?? false;
+            _trackQuizzes = Map<String, dynamic>.from(
+              data['track_quizzes'] ?? {},
+            );
 
             // Calculate if book is completed (all tracks are marked is_completed)
             if (_tracks.isEmpty) {
@@ -107,6 +111,31 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       ).then(
         (_) => _loadTracks(),
       ); // Reload to update status (e.g. if they passed)
+    }
+  }
+
+  void _onTrackQuizTap(int trackId) {
+    bool isOwner =
+        _userId != null && widget.book.postedByUserId == _userId.toString();
+
+    if (isOwner) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => QuizCreatorScreen(
+            bookId: widget.book.id,
+            playlistItemId: trackId,
+          ),
+        ),
+      ).then((_) => _loadTracks());
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) =>
+              QuizTakerScreen(bookId: widget.book.id, playlistItemId: trackId),
+        ),
+      ).then((_) => _loadTracks());
     }
   }
 
@@ -239,6 +268,11 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
               isBookCompleted: _isBookCompleted,
               isQuizPassed: _isQuizPassed,
               onQuizTap: _onQuizTap,
+              trackQuizzes: _trackQuizzes,
+              onTrackQuizTap: _onTrackQuizTap,
+              isOwner:
+                  _userId != null &&
+                  widget.book.postedByUserId == _userId.toString(),
             ),
     );
   }

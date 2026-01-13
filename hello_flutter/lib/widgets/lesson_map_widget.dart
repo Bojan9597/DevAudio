@@ -10,6 +10,12 @@ class LessonMapWidget extends StatelessWidget {
   final bool isQuizPassed;
   final VoidCallback? onQuizTap;
 
+  // Track Quizzes: Map<String, dynamic> where key is trackId
+  // Value: {'has_quiz': bool, 'is_passed': bool}
+  final Map<String, dynamic> trackQuizzes;
+  final Function(int)? onTrackQuizTap;
+  final bool isOwner;
+
   const LessonMapWidget({
     Key? key,
     required this.tracks,
@@ -19,6 +25,9 @@ class LessonMapWidget extends StatelessWidget {
     this.isBookCompleted = false,
     this.isQuizPassed = false,
     this.onQuizTap,
+    this.trackQuizzes = const {},
+    this.onTrackQuizTap,
+    this.isOwner = false,
   }) : super(key: key);
 
   static const double itemHeight = 160.0;
@@ -26,7 +35,6 @@ class LessonMapWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Generate positions based on width
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
@@ -35,28 +43,19 @@ class LessonMapWidget extends StatelessWidget {
         final totalHeight = max(
           totalItems * itemHeight + padding * 2,
           constraints.maxHeight,
-        ); // Ensure at least screen height
+        );
 
-        // Pre-calculate positions to ensure line matches icons
         final List<Offset> positions = [];
-        final random = Random(42); // Fixed seed for consistency
+        final random = Random(42);
 
         final int itemCount = tracks.length + (hasQuiz ? 1 : 0);
 
         for (int i = 0; i < itemCount; i++) {
           final double y = padding + i * itemHeight;
-          // Sine wave pattern
-          // Center is width / 2
-          // Amplitude is (width - padding) / 2
-
           final double center = width / 2;
           final double amplitude = min(width / 3, 120.0);
-
-          // Use sine + consistent random offset
-          // wiggle: -1 to 1
           final double wiggle = (random.nextDouble() * 2 - 1) * 0.3;
           final double sine = sin(i * 0.8 + wiggle);
-
           final double x = center + (sine * amplitude);
           positions.add(Offset(x, y));
         }
@@ -79,33 +78,75 @@ class LessonMapWidget extends StatelessWidget {
                   final isCompleted = track['is_completed'] == true;
                   final title = track['title'] ?? 'Lesson ${index + 1}';
 
+                  // Check Track Quiz Status
+                  final trackId = track['id'].toString();
+                  final quizData = trackQuizzes[trackId];
+                  final bool hasTrackQuiz =
+                      quizData != null && quizData['has_quiz'] == true;
+                  final bool isTrackQuizPassed =
+                      quizData != null && quizData['is_passed'] == true;
+                  // Locked if track is not completed
+                  final bool isTrackQuizLocked = !isCompleted;
+
                   return Positioned(
-                    left: pos.dx - 40, // Center 80px wide widget
+                    left: pos.dx - 40, // Center 80px wide widget (roughly)
                     top: pos.dy - 40,
                     child: _LessonNode(
                       title: title,
                       isCompleted: isCompleted,
                       onTap: () => onTrackTap(index),
+                      // Track Quiz Args
+                      hasTrackQuiz: hasTrackQuiz,
+                      isTrackQuizLocked: isTrackQuizLocked,
+                      isTrackQuizPassed: isTrackQuizPassed,
+                      isOwner: isOwner,
+                      onTrackQuizTap: () {
+                        // Owner can always tap to Add/Edit
+                        if (isOwner && onTrackQuizTap != null) {
+                          onTrackQuizTap!(track['id']);
+                          return;
+                        }
+
+                        if (onTrackQuizTap != null && hasTrackQuiz) {
+                          if (isTrackQuizLocked) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  "Finish this lesson first to unlock the quiz!",
+                                ),
+                              ),
+                            );
+                          } else {
+                            onTrackQuizTap!(track['id']);
+                          }
+                        }
+                      },
                     ),
                   );
                 }),
 
-                // 3. Draw Quiz Node (Last item if hasQuiz)
+                // 3. Draw Main Quiz Node
                 if (hasQuiz && positions.isNotEmpty)
                   Positioned(
                     left: positions.last.dx - 40,
                     top: positions.last.dy - 40,
                     child: _LessonNode(
                       title: "Final Quiz",
-                      // For Quiz, isCompleted means "Passed" (>50%)
                       isCompleted: isQuizPassed,
                       isQuiz: true,
                       isLocked: !isBookCompleted,
                       onTap: () {
+                        // Owner can edit final quiz via AppBar usually,
+                        // but we could allow tap here too?
+                        // For now keep standard behavior for final quiz.
+                        if (isOwner && onQuizTap != null) {
+                          onQuizTap!();
+                          return;
+                        }
+
                         if (isBookCompleted && onQuizTap != null) {
                           onQuizTap!();
                         } else {
-                          // Show locked message
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text(
@@ -148,7 +189,6 @@ class _MapPathPainter extends CustomPainter {
       final p1 = positions[i];
       final p2 = positions[i + 1];
 
-      // Curvy connection
       final controlPoint1 = Offset(p1.dx, (p1.dy + p2.dy) / 2);
       final controlPoint2 = Offset(p2.dx, (p1.dy + p2.dy) / 2);
 
@@ -161,7 +201,6 @@ class _MapPathPainter extends CustomPainter {
         p2.dy,
       );
     }
-
     canvas.drawPath(path, paint);
   }
 
@@ -173,8 +212,16 @@ class _LessonNode extends StatelessWidget {
   final String title;
   final bool isCompleted;
   final VoidCallback onTap;
+
   final bool isQuiz;
   final bool isLocked;
+
+  // Track Quiz Props
+  final bool hasTrackQuiz;
+  final bool isTrackQuizLocked;
+  final bool isTrackQuizPassed;
+  final VoidCallback? onTrackQuizTap;
+  final bool isOwner;
 
   const _LessonNode({
     required this.title,
@@ -182,10 +229,81 @@ class _LessonNode extends StatelessWidget {
     required this.onTap,
     this.isQuiz = false,
     this.isLocked = false,
+    this.hasTrackQuiz = false,
+    this.isTrackQuizLocked = false,
+    this.isTrackQuizPassed = false,
+    this.onTrackQuizTap,
+    this.isOwner = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    // If it's a MAIN quiz, render simple circle.
+    // If it's a TRACK, render Row of [Star, Quiz] (if quiz exists).
+
+    if (isQuiz) {
+      return _buildMainNode();
+    }
+
+    // Determine if we show a side node
+    bool showSideNode = hasTrackQuiz || isOwner;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // Star Node
+        _buildMainNode(),
+
+        // Optional Quiz Node to the right
+        if (showSideNode) ...[
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: onTrackQuizTap,
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.black54,
+                boxShadow: [
+                  BoxShadow(
+                    color: (isOwner || !isTrackQuizLocked)
+                        ? Colors.orange.withOpacity(0.3)
+                        : Colors.black12,
+                    blurRadius: 5,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: _buildSideIcon(),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildSideIcon() {
+    if (isOwner && !hasTrackQuiz) {
+      return const Icon(Icons.add, color: Colors.white70, size: 24);
+    }
+    if (isOwner && hasTrackQuiz) {
+      return const Icon(Icons.edit, color: Colors.amber, size: 20);
+    }
+
+    // User View
+    return Icon(
+      isTrackQuizLocked ? Icons.lock : Icons.quiz,
+      size: 24,
+      color: isTrackQuizLocked
+          ? Colors.grey
+          : (isTrackQuizPassed ? Colors.amber : Colors.amber.shade200),
+    );
+  }
+
+  Widget _buildMainNode() {
+    // Logic for the main node (Star or Big Quiz)
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -199,7 +317,7 @@ class _LessonNode extends StatelessWidget {
               height: 60,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.black54, // Backing for contrast
+                color: Colors.black54,
                 boxShadow: [
                   BoxShadow(
                     color: (isCompleted || (isQuiz && !isLocked))
@@ -215,9 +333,6 @@ class _LessonNode extends StatelessWidget {
                     ? (isLocked ? Icons.lock : Icons.quiz)
                     : Icons.star_rounded,
                 size: 50,
-                // Color Logic:
-                // Quiz: Passed (isCompleted) -> Amber. Else (regardless of Lock) -> Grey.
-                // Star: Completed -> Amber. Else -> Grey.
                 color: isQuiz
                     ? (isCompleted ? Colors.amber : Colors.grey)
                     : (isCompleted ? Colors.amber : Colors.grey.shade700),
@@ -252,6 +367,9 @@ class _LessonNode extends StatelessWidget {
   }
 
   String displayTitle(String raw) {
+    if (raw.length > 20) {
+      return raw.substring(0, 18) + "...";
+    }
     return raw;
   }
 }

@@ -14,7 +14,7 @@ CORS(app) # Enable CORS for all routes
 
 # Base URL for external access (Ngrok)
 # This matches the URL used in reorganize_audiobooks.py
-BASE_URL = "https://lanny-neaped-chia.ngrok-free.dev/"
+BASE_URL = "http://10.75.60.89:5000/"
 
 # ... existing build_category_tree ...
 
@@ -468,8 +468,42 @@ def get_playlist(book_id):
                    pass_res = db.execute_query(pass_query, (user_id, quiz_id))
                    if pass_res and pass_res[0]['is_passed']:
                        quiz_passed = True
+
+            # Check for Track Quizzes
+            track_quizzes = {}
+            if user_id:
+                # Get all quizzes for this book's tracks
+                # Map playlist_item_id -> {has_quiz, passed}
+                tq_query = """
+                    SELECT q.playlist_item_id, q.id as quiz_id,
+                           (SELECT is_passed FROM user_quiz_results uqr WHERE uqr.quiz_id = q.id AND uqr.user_id = %s ORDER BY completed_at DESC LIMIT 1) as is_passed
+                    FROM quizzes q
+                    WHERE q.book_id = %s AND q.playlist_item_id IS NOT NULL
+                """
+                tq_res = db.execute_query(tq_query, (user_id, book_id))
+                if tq_res:
+                    for row in tq_res:
+                        track_quizzes[str(row['playlist_item_id'])] = {
+                            "has_quiz": True,
+                            "is_passed": bool(row['is_passed'])
+                        }
+            else:
+                # Just check existence
+                tq_query = "SELECT playlist_item_id FROM quizzes WHERE book_id = %s AND playlist_item_id IS NOT NULL"
+                tq_res = db.execute_query(tq_query, (book_id,))
+                if tq_res:
+                    for row in tq_res:
+                        track_quizzes[str(row['playlist_item_id'])] = {
+                           "has_quiz": True,
+                           "is_passed": False
+                        }
                 
-            return jsonify({"tracks": result, "has_quiz": quiz_exists, "quiz_passed": quiz_passed})
+            return jsonify({
+                "tracks": result, 
+                "has_quiz": quiz_exists, 
+                "quiz_passed": quiz_passed,
+                "track_quizzes": track_quizzes 
+            })
         
         # Fallback for "Single Book" treated as Playlist
         book_query = "SELECT title, audio_path, duration_seconds FROM books WHERE id = %s"
@@ -521,6 +555,7 @@ def get_playlist(book_id):
 def save_quiz():
     data = request.get_json()
     book_id = data.get('book_id')
+    playlist_item_id = data.get('playlist_item_id') # Optional
     questions = data.get('questions') # List of dicts
     
     if not all([book_id, questions]):
@@ -539,7 +574,15 @@ def save_quiz():
         cursor = db.connection.cursor()
         
         check_query = "SELECT id FROM quizzes WHERE book_id = %s"
-        cursor.execute(check_query, (book_id,))
+        params = [book_id]
+        
+        if playlist_item_id:
+            check_query += " AND playlist_item_id = %s"
+            params.append(playlist_item_id)
+        else:
+             check_query += " AND playlist_item_id IS NULL"
+             
+        cursor.execute(check_query, tuple(params))
         res = cursor.fetchone()
         
         if res:
@@ -547,8 +590,13 @@ def save_quiz():
             # Clear old questions
             cursor.execute("DELETE FROM quiz_questions WHERE quiz_id = %s", (quiz_id,))
         else:
-            ins_q = "INSERT INTO quizzes (book_id) VALUES (%s)"
-            cursor.execute(ins_q, (book_id,))
+            if playlist_item_id:
+                ins_q = "INSERT INTO quizzes (book_id, playlist_item_id) VALUES (%s, %s)"
+                cursor.execute(ins_q, (book_id, playlist_item_id))
+            else:
+                ins_q = "INSERT INTO quizzes (book_id) VALUES (%s)"
+                cursor.execute(ins_q, (book_id,))
+                
             quiz_id = cursor.lastrowid
             
         # 2. Insert Questions
@@ -588,8 +636,18 @@ def get_quiz(book_id):
         
     try:
         # Get Quiz ID
+        playlist_item_id = request.args.get('playlist_item_id')
+        
         q_query = "SELECT id FROM quizzes WHERE book_id = %s"
-        q_res = db.execute_query(q_query, (book_id,))
+        params = [book_id]
+        
+        if playlist_item_id:
+            q_query += " AND playlist_item_id = %s"
+            params.append(playlist_item_id)
+        else:
+            q_query += " AND playlist_item_id IS NULL"
+            
+        q_res = db.execute_query(q_query, tuple(params))
         
         if not q_res:
             return jsonify([]) # No quiz
@@ -767,8 +825,6 @@ def buy_book():
 
         return jsonify({"message": "Book purchased successfully", "new_badges": new_badges}), 201
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
@@ -1313,8 +1369,24 @@ def save_quiz_result():
         
     try:
         # Get Quiz ID
+        # Logic needs to handle track quizzes
+        # We can either pass quiz_id directly OR (book_id + optional playlist_item_id)
+        
+        # Current frontend sends book_id.
+        # If we add playlist_item_id to payload, we can look up specific quiz.
+        
+        playlist_item_id = data.get('playlist_item_id')
+        
         q_query = "SELECT id FROM quizzes WHERE book_id = %s"
-        q_res = db.execute_query(q_query, (book_id,))
+        params = [book_id]
+        
+        if playlist_item_id:
+            q_query += " AND playlist_item_id = %s"
+            params.append(playlist_item_id)
+        else:
+            q_query += " AND playlist_item_id IS NULL"
+            
+        q_res = db.execute_query(q_query, tuple(params))
         if not q_res:
             return jsonify({"error": "Quiz not found"}), 404
         quiz_id = q_res[0]['id']

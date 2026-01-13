@@ -4,7 +4,7 @@ class ApiConstants {
   // 1. Uncomment the Ngrok URL below when using Ngrok.
   // 2. Run: ngrok http 5000
   // 3. Paste your URL here:
-  static const String baseUrl = 'https://lanny-neaped-chia.ngrok-free.dev';
+  static const String baseUrl = 'http://10.75.60.89:5000';
 
   // Local Development URLs
   static String get localBaseUrl {
