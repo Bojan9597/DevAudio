@@ -5,12 +5,20 @@ class LessonMapWidget extends StatelessWidget {
   final List<dynamic> tracks;
   final Function(int) onTrackTap;
   final ScrollController? scrollController;
+  final bool hasQuiz;
+  final bool isBookCompleted;
+  final bool isQuizPassed;
+  final VoidCallback? onQuizTap;
 
   const LessonMapWidget({
     Key? key,
     required this.tracks,
     required this.onTrackTap,
     this.scrollController,
+    this.hasQuiz = false,
+    this.isBookCompleted = false,
+    this.isQuizPassed = false,
+    this.onQuizTap,
   }) : super(key: key);
 
   static const double itemHeight = 160.0;
@@ -22,8 +30,10 @@ class LessonMapWidget extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
+        final int totalItems = tracks.length + (hasQuiz ? 1 : 0);
+
         final totalHeight = max(
-          tracks.length * itemHeight + padding * 2,
+          totalItems * itemHeight + padding * 2,
           constraints.maxHeight,
         ); // Ensure at least screen height
 
@@ -31,7 +41,9 @@ class LessonMapWidget extends StatelessWidget {
         final List<Offset> positions = [];
         final random = Random(42); // Fixed seed for consistency
 
-        for (int i = 0; i < tracks.length; i++) {
+        final int itemCount = tracks.length + (hasQuiz ? 1 : 0);
+
+        for (int i = 0; i < itemCount; i++) {
           final double y = padding + i * itemHeight;
           // Sine wave pattern
           // Center is width / 2
@@ -77,6 +89,34 @@ class LessonMapWidget extends StatelessWidget {
                     ),
                   );
                 }),
+
+                // 3. Draw Quiz Node (Last item if hasQuiz)
+                if (hasQuiz && positions.isNotEmpty)
+                  Positioned(
+                    left: positions.last.dx - 40,
+                    top: positions.last.dy - 40,
+                    child: _LessonNode(
+                      title: "Final Quiz",
+                      // For Quiz, isCompleted means "Passed" (>50%)
+                      isCompleted: isQuizPassed,
+                      isQuiz: true,
+                      isLocked: !isBookCompleted,
+                      onTap: () {
+                        if (isBookCompleted && onQuizTap != null) {
+                          onQuizTap!();
+                        } else {
+                          // Show locked message
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                "Finish all chapters to unlock the quiz!",
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ),
               ],
             ),
           ),
@@ -133,11 +173,15 @@ class _LessonNode extends StatelessWidget {
   final String title;
   final bool isCompleted;
   final VoidCallback onTap;
+  final bool isQuiz;
+  final bool isLocked;
 
   const _LessonNode({
     required this.title,
     required this.isCompleted,
     required this.onTap,
+    this.isQuiz = false,
+    this.isLocked = false,
   });
 
   @override
@@ -149,7 +193,7 @@ class _LessonNode extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Star Icon
+            // Icon Container
             Container(
               width: 60,
               height: 60,
@@ -158,7 +202,7 @@ class _LessonNode extends StatelessWidget {
                 color: Colors.black54, // Backing for contrast
                 boxShadow: [
                   BoxShadow(
-                    color: isCompleted
+                    color: (isCompleted || (isQuiz && !isLocked))
                         ? Colors.orange.withOpacity(0.4)
                         : Colors.black26,
                     blurRadius: 10,
@@ -167,9 +211,16 @@ class _LessonNode extends StatelessWidget {
                 ],
               ),
               child: Icon(
-                Icons.star_rounded,
+                isQuiz
+                    ? (isLocked ? Icons.lock : Icons.quiz)
+                    : Icons.star_rounded,
                 size: 50,
-                color: isCompleted ? Colors.amber : Colors.grey.shade700,
+                // Color Logic:
+                // Quiz: Passed (isCompleted) -> Amber. Else (regardless of Lock) -> Grey.
+                // Star: Completed -> Amber. Else -> Grey.
+                color: isQuiz
+                    ? (isCompleted ? Colors.amber : Colors.grey)
+                    : (isCompleted ? Colors.amber : Colors.grey.shade700),
               ),
             ),
             const SizedBox(height: 8),
@@ -178,7 +229,9 @@ class _LessonNode extends StatelessWidget {
               displayTitle(title),
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: isCompleted ? Colors.white : Colors.white70,
+                color: isLocked
+                    ? Colors.grey
+                    : ((isCompleted || isQuiz) ? Colors.white : Colors.white70),
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 shadows: const [
@@ -199,8 +252,6 @@ class _LessonNode extends StatelessWidget {
   }
 
   String displayTitle(String raw) {
-    // Assuming titles might have "Track 1 - " etc, can clean up here if needed
-    // For now return raw
     return raw;
   }
 }

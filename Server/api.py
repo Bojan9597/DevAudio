@@ -446,7 +446,30 @@ def get_playlist(book_id):
             # Normalize boolean (MySQL returns 1/0)
             for item in result:
                 item['is_completed'] = bool(item.get('is_completed', 0))
-            return jsonify(result)
+                
+            # Check for quiz
+            quiz_exists = False
+            q_query = "SELECT id FROM quizzes WHERE book_id = %s"
+            # Reuse DB connection? Yes.
+            q_res = db.execute_query(q_query, (book_id,))
+            if q_res:
+                quiz_exists = True
+                
+            # Check if quiz is passed by THIS user
+            quiz_passed = False
+            if quiz_exists and user_id:
+               # We need quiz_id. The previous query just checked existence.
+               # Let's get quiz_id
+               qid_query = "SELECT id FROM quizzes WHERE book_id = %s"
+               qid_res = db.execute_query(qid_query, (book_id,))
+               if qid_res:
+                   quiz_id = qid_res[0]['id']
+                   pass_query = "SELECT is_passed FROM user_quiz_results WHERE user_id = %s AND quiz_id = %s ORDER BY completed_at DESC LIMIT 1"
+                   pass_res = db.execute_query(pass_query, (user_id, quiz_id))
+                   if pass_res and pass_res[0]['is_passed']:
+                       quiz_passed = True
+                
+            return jsonify({"tracks": result, "has_quiz": quiz_exists, "quiz_passed": quiz_passed})
         
         # Fallback for "Single Book" treated as Playlist
         book_query = "SELECT title, audio_path, duration_seconds FROM books WHERE id = %s"
@@ -478,13 +501,126 @@ def get_playlist(book_id):
                 "track_order": 0,
                 "is_completed": is_completed
             }
-            return jsonify([synthetic_item])
             
-        return jsonify([])
+            # Check if quiz exists
+            quiz_exists = False
+            q_query = "SELECT id FROM quizzes WHERE book_id = %s"
+            q_res = db.execute_query(q_query, (book_id,))
+            if q_res:
+                quiz_exists = True
+
+            return jsonify({"tracks": [synthetic_item], "has_quiz": quiz_exists})
+            
+        return jsonify({"tracks": [], "has_quiz": False})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
         db.disconnect()
+
+@app.route('/quiz', methods=['POST'])
+def save_quiz():
+    data = request.get_json()
+    book_id = data.get('book_id')
+    questions = data.get('questions') # List of dicts
+    
+    if not all([book_id, questions]):
+        return jsonify({"error": "Missing book_id or questions"}), 400
+        
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+        
+    try:
+        # Check if quiz exists, if so, we can replace it or append.
+        # Simplest: Delete old, create new.
+        # But we need to handle the quiz_id.
+        
+        # 1. Get or Create Quiz ID
+        cursor = db.connection.cursor()
+        
+        check_query = "SELECT id FROM quizzes WHERE book_id = %s"
+        cursor.execute(check_query, (book_id,))
+        res = cursor.fetchone()
+        
+        if res:
+            quiz_id = res[0]
+            # Clear old questions
+            cursor.execute("DELETE FROM quiz_questions WHERE quiz_id = %s", (quiz_id,))
+        else:
+            ins_q = "INSERT INTO quizzes (book_id) VALUES (%s)"
+            cursor.execute(ins_q, (book_id,))
+            quiz_id = cursor.lastrowid
+            
+        # 2. Insert Questions
+        q_insert = """
+            INSERT INTO quiz_questions 
+            (quiz_id, question_text, option_a, option_b, option_c, option_d, correct_answer, order_index)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """
+        
+        for idx, q in enumerate(questions):
+            cursor.execute(q_insert, (
+                quiz_id,
+                q['question'],
+                q['options'][0],
+                q['options'][1],
+                q['options'][2],
+                q['options'][3],
+                q['correctAnswer'], # Expecting 'A', 'B', 'C', 'D'
+                idx
+            ))
+            
+        db.connection.commit()
+        cursor.close()
+        
+        return jsonify({"message": "Quiz saved successfully"}), 201
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
+        
+@app.route('/quiz/<int:book_id>', methods=['GET'])
+def get_quiz(book_id):
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+        
+    try:
+        # Get Quiz ID
+        q_query = "SELECT id FROM quizzes WHERE book_id = %s"
+        q_res = db.execute_query(q_query, (book_id,))
+        
+        if not q_res:
+            return jsonify([]) # No quiz
+            
+        quiz_id = q_res[0]['id']
+        
+        # Get Questions
+        ques_query = """
+            SELECT question_text, option_a, option_b, option_c, option_d, correct_answer
+            FROM quiz_questions 
+            WHERE quiz_id = %s 
+            ORDER BY order_index ASC
+        """
+        questions = db.execute_query(ques_query, (quiz_id,))
+        
+        # Format for frontend
+        formatted = []
+        for q in questions:
+            formatted.append({
+                "question": q['question_text'],
+                "options": [q['option_a'], q['option_b'], q['option_c'], q['option_d']],
+                "correctAnswer": q['correct_answer']
+            })
+            
+        return jsonify(formatted)
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
+
 
 @app.route('/books', methods=['GET'])
 def get_books():
@@ -1160,6 +1296,46 @@ def get_my_uploads():
             })
             
     return jsonify(books)
+
+@app.route('/quiz/result', methods=['POST'])
+def save_quiz_result():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    book_id = data.get('book_id')
+    score_percentage = data.get('score_percentage')
+    
+    if not all([user_id, book_id, score_percentage is not None]):
+        return jsonify({"error": "Missing data"}), 400
+        
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+        
+    try:
+        # Get Quiz ID
+        q_query = "SELECT id FROM quizzes WHERE book_id = %s"
+        q_res = db.execute_query(q_query, (book_id,))
+        if not q_res:
+            return jsonify({"error": "Quiz not found"}), 404
+        quiz_id = q_res[0]['id']
+        
+        is_passed = float(score_percentage) > 50.0
+        
+        ins_query = """
+            INSERT INTO user_quiz_results (user_id, quiz_id, score_percentage, is_passed)
+            VALUES (%s, %s, %s, %s)
+        """
+        cursor = db.connection.cursor()
+        cursor.execute(ins_query, (user_id, quiz_id, score_percentage, is_passed))
+        db.connection.commit()
+        cursor.close()
+        
+        return jsonify({"message": "Result saved", "passed": is_passed}), 201
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
 
 if __name__ == '__main__':
     # Run on 0.0.0.0 to be accessible, port 5000

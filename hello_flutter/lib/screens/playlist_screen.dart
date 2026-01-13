@@ -7,6 +7,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../services/download_service.dart';
 import '../services/auth_service.dart';
+import 'quiz_creator_screen.dart';
+import 'quiz_taker_screen.dart';
 
 class PlaylistScreen extends StatefulWidget {
   final Book book;
@@ -21,6 +23,9 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   List<dynamic> _tracks = [];
   bool _isLoading = true;
   String? _error;
+  bool _hasQuiz = false;
+  bool _isBookCompleted = false;
+  bool _isQuizPassed = false;
   int? _userId;
 
   @override
@@ -42,10 +47,25 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       final response = await http.get(uri);
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
+        final Map<String, dynamic> data = json.decode(
+          response.body,
+        ); // Changed to Map
         if (mounted) {
           setState(() {
-            _tracks = data;
+            _tracks = data['tracks'];
+            _hasQuiz = data['has_quiz'] ?? false;
+
+            // Calculate if book is completed (all tracks are marked is_completed)
+            if (_tracks.isEmpty) {
+              _isBookCompleted = false;
+            } else {
+              _isBookCompleted = _tracks.every(
+                (track) => track['is_completed'] == true,
+              );
+            }
+
+            _isQuizPassed = data['quiz_passed'] ?? false;
+
             _isLoading = false;
           });
         }
@@ -59,6 +79,34 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  void _onQuizTap() {
+    // Check ownership
+    bool isOwner = false;
+    if (_userId != null && widget.book.postedByUserId == _userId.toString()) {
+      isOwner = true;
+    }
+
+    if (isOwner) {
+      // Navigate to Creator
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => QuizCreatorScreen(bookId: widget.book.id),
+        ),
+      ).then((_) => _loadTracks()); // Reload to update hasQuiz status
+    } else {
+      // Navigate to Taker
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => QuizTakerScreen(bookId: widget.book.id),
+        ),
+      ).then(
+        (_) => _loadTracks(),
+      ); // Reload to update status (e.g. if they passed)
     }
   }
 
@@ -155,7 +203,27 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.book.title)),
+      appBar: AppBar(
+        title: Text(widget.book.title),
+        actions: [
+          Builder(
+            builder: (context) {
+              bool isOwner =
+                  _userId != null &&
+                  widget.book.postedByUserId == _userId.toString();
+              if (isOwner) {
+                return IconButton(
+                  icon: const Icon(Icons.edit_note),
+                  tooltip: "Manage Quiz",
+                  onPressed: _onQuizTap,
+                );
+              }
+              // User quiz access is now via the Map, removed AppBar button for takers
+              return const SizedBox.shrink();
+            },
+          ),
+        ],
+      ),
       // Use gradient background for map feel
       backgroundColor: Colors.grey.shade900,
       body: _isLoading
@@ -167,6 +235,10 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
           : LessonMapWidget(
               tracks: _tracks,
               onTrackTap: (index) => _playTrack(_tracks[index], index),
+              hasQuiz: _hasQuiz,
+              isBookCompleted: _isBookCompleted,
+              isQuizPassed: _isQuizPassed,
+              onQuizTap: _onQuizTap,
             ),
     );
   }
