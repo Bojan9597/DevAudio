@@ -11,6 +11,7 @@ import 'badge_dialog.dart';
 // import '../models/badge.dart'; // Unused
 import '../services/download_service.dart';
 import '../utils/api_constants.dart';
+import '../screens/quiz_taker_screen.dart'; // Import QuizTakerScreen
 
 class PlayerScreen extends StatefulWidget {
   final Book book;
@@ -19,6 +20,7 @@ class PlayerScreen extends StatefulWidget {
   final List<dynamic>? playlist;
   final int initialIndex;
   final void Function(int index)? onPlaybackComplete;
+  final Map<String, dynamic>? trackQuizzes; // Add this
 
   const PlayerScreen({
     super.key,
@@ -28,6 +30,7 @@ class PlayerScreen extends StatefulWidget {
     this.playlist,
     this.initialIndex = 0,
     this.onPlaybackComplete,
+    this.trackQuizzes, // Add this
   });
 
   @override
@@ -110,14 +113,73 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _player.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
         if (widget.onPlaybackComplete != null) {
-          // Pass the index that JUST finished (which is _currentIndex BEFORE incrementing if we haven't auto-advanced yet,
-          // but actually we are inside the listener so _currentIndex hasn't changed yet).
           widget.onPlaybackComplete!(_currentIndex);
         }
-        // Auto-advance if playlist
-        if (widget.playlist != null &&
-            _currentIndex < widget.playlist!.length - 1) {
-          _playNext();
+
+        // Check for Quiz on the track that JUST finished
+        bool hasQuiz = false;
+        bool isPassed = false;
+
+        if (widget.playlist != null && widget.trackQuizzes != null) {
+          final currentTrack = widget.playlist![_currentIndex];
+          final trackId = currentTrack['id'].toString();
+          if (widget.trackQuizzes!.containsKey(trackId)) {
+            hasQuiz = widget.trackQuizzes![trackId]['has_quiz'] ?? false;
+            isPassed = widget.trackQuizzes![trackId]['is_passed'] ?? false;
+          }
+        }
+
+        // If has quiz and NOT passed (or maybe even if passed? User said "it should go to quiz if there is one")
+        // Usually if passed we might skip? But user said "if there is one". Let's assume always if it exists.
+        // But maybe avoid annoyance if already passed.
+        // Let's stick to "If there is one". Maybe prompt?
+        // Let's just go there.
+
+        if (hasQuiz && !isPassed) {
+          // Navigate to Quiz
+          // Pause player just in case (though it's completed)
+          // We need to handle navigation carefully from inside a stream listener.
+
+          // Use a post-frame callback or Future.microtask to navigate
+          Future.microtask(() {
+            if (mounted) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => QuizTakerScreen(
+                    bookId: widget.book.id,
+                    playlistItemId: int.parse(
+                      widget.playlist![_currentIndex]['id'].toString(),
+                    ),
+                  ),
+                ),
+              ).then((result) {
+                // When they come back (e.g. passed or cancelled), what do we do?
+                // Maybe play next?
+                // Result could indicate if they passed.
+                // For now, let's just attempt to play next if there is one.
+                if (result == true) {
+                  // Assuming true means passed/completed or "next"
+                  _playNext();
+                } else {
+                  // If they just backed out? Maybe stay here.
+                  // But if they passed, we probably want to proceed.
+                  // Let's check updated status?
+                  // Doing a simple _playNext is safer UX flow for "continue".
+                  // But only if they didn't manually pause or exit.
+
+                  // Actually, simplest is: Go to quiz -> On return, try play next.
+                  _playNext();
+                }
+              });
+            }
+          });
+        } else {
+          // Auto-advance if playlist
+          if (widget.playlist != null &&
+              _currentIndex < widget.playlist!.length - 1) {
+            _playNext();
+          }
         }
       }
     });

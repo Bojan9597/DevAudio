@@ -207,6 +207,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
         initialIndex: index,
         onPlaybackComplete: (completedIndex) =>
             _onTrackFinished(_tracks[completedIndex]), // Look up track by index
+        trackQuizzes: _trackQuizzes, // Pass all track quizzes
       ),
     );
 
