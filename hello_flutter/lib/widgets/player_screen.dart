@@ -199,8 +199,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   void _playNext() {
-    if (widget.playlist == null || _currentIndex >= widget.playlist!.length - 1)
+    if (widget.playlist == null) return;
+
+    if (_currentIndex >= widget.playlist!.length - 1) {
+      // End of playlist. Close player.
+      Navigator.of(context).pop();
       return;
+    }
+
     setState(() {
       _currentIndex++;
       _loadTrackAtIndex(_currentIndex);
