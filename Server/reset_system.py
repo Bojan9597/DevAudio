@@ -26,7 +26,8 @@ def reset_database():
         "quiz_questions",
         "user_quiz_results",
         "user_badges",
-        "book_categories"
+        "book_categories",
+        "playback_history"
     ]
     
     print("Checking existing tables...")

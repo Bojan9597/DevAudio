@@ -8,13 +8,16 @@ from badge_service import BadgeService
 
 import re
 import datetime
+import update_server_ip # Auto-update DB IP on startup
 
 app = Flask(__name__)
 CORS(app) # Enable CORS for all routes
 
-# Base URL for external access (Ngrok)
-# This matches the URL used in reorganize_audiobooks.py
-BASE_URL = "http://10.75.60.89:5000/"
+# Base URL for external access (Ngrok or Local IP)
+# Dynamically set based on current machine IP
+current_ip = update_server_ip.get_local_ip()
+BASE_URL = f"http://{current_ip}:5000/"
+print(f"Server initialized with BASE_URL: {BASE_URL}")
 
 # ... existing build_category_tree ...
 
