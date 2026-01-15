@@ -1086,16 +1086,28 @@ def get_book_status(user_id, book_id):
         return jsonify({"error": "Database connection failed"}), 500
         
     try:
-        query = "SELECT last_played_position_seconds, current_playlist_item_id FROM user_books WHERE user_id = %s AND book_id = %s"
-        result = db.execute_query(query, (user_id, book_id))
+        playlist_item_id = request.args.get('playlist_item_id')
         
-        if result:
-            return jsonify({
-                "position_seconds": result[0]['last_played_position_seconds'],
-                "current_playlist_item_id": result[0].get('current_playlist_item_id')
-            }), 200
+        if playlist_item_id:
+            # Fetch track specific progress
+            query = "SELECT position_seconds FROM user_track_progress WHERE user_id = %s AND playlist_item_id = %s"
+            result = db.execute_query(query, (user_id, playlist_item_id))
+            if result:
+                 return jsonify({"position_seconds": result[0]['position_seconds']}), 200
+            else:
+                 return jsonify({"position_seconds": 0}), 200
         else:
-            return jsonify({"position_seconds": 0, "current_playlist_item_id": None}), 200 # Not started/owned
+            # Fetch global book progress
+            query = "SELECT last_played_position_seconds, current_playlist_item_id FROM user_books WHERE user_id = %s AND book_id = %s"
+            result = db.execute_query(query, (user_id, book_id))
+            
+            if result:
+                return jsonify({
+                    "position_seconds": result[0]['last_played_position_seconds'],
+                    "current_playlist_item_id": result[0].get('current_playlist_item_id')
+                }), 200
+            else:
+                return jsonify({"position_seconds": 0, "current_playlist_item_id": None}), 200 # Not started/owned
             
     except Exception as e:
         return jsonify({"error": str(e)}), 500

@@ -378,9 +378,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
       // Resume logic
       if (_userId != null) {
+        String? trackId = widget.playlist != null
+            ? widget.playlist![_currentIndex]['id'].toString()
+            : null;
+
         final savedPosition = await BookRepository().getBookStatus(
           _userId!,
           widget.book.id,
+          trackId: trackId,
         );
         if (savedPosition > 0) {
           await _player.seek(Duration(seconds: savedPosition));

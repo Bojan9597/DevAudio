@@ -223,11 +223,18 @@ class BookRepository {
     return [];
   }
 
-  Future<int> getBookStatus(int userId, String bookId) async {
+  Future<int> getBookStatus(
+    int userId,
+    String bookId, {
+    String? trackId,
+  }) async {
     try {
-      final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/book-status/$userId/$bookId'),
-      );
+      String url = '${ApiConstants.baseUrl}/book-status/$userId/$bookId';
+      if (trackId != null) {
+        url += '?playlist_item_id=$trackId';
+      }
+
+      final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
