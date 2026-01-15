@@ -13,6 +13,7 @@ import 'package:video_player/video_player.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:dio/dio.dart';
+import '../services/connectivity_service.dart';
 
 class PlaylistScreen extends StatefulWidget {
   final Book book;
@@ -62,6 +63,8 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       if (await file.exists()) {
         _completionVideoController = VideoPlayerController.file(file);
       } else {
+        if (ConnectivityService().isOffline) return; // Skip if offline
+
         try {
           await Dio().download(videoUrl, filePath);
           _completionVideoController = VideoPlayerController.file(file);
@@ -98,6 +101,12 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       if (await file.exists()) {
         _videoController = VideoPlayerController.file(file);
       } else {
+        // If offline and no file, we can't play video.
+        if (ConnectivityService().isOffline) {
+          if (mounted) setState(() => _isVideoInitialized = false);
+          return;
+        }
+
         try {
           await Dio().download(videoUrl, filePath);
           _videoController = VideoPlayerController.file(file);
@@ -198,6 +207,19 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       final userId = await AuthService().getCurrentUserId();
       _userId = userId;
 
+      // Offline Check
+      if (ConnectivityService().isOffline) {
+        final data = await DownloadService().getPlaylistJson(widget.book.id);
+        if (data != null) {
+          if (mounted)
+            _processPlaylistData(data, skipVideoUpdate: skipVideoUpdate);
+          return;
+        } else {
+          // No offline data
+          throw Exception('No offline data found. Please download book first.');
+        }
+      }
+
       final String url =
           '${ApiConstants.baseUrl}/playlist/${widget.book.id}' +
           (userId != null ? '?user_id=$userId' : '');
@@ -206,47 +228,13 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       final response = await http.get(uri);
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(
-          response.body,
-        ); // Changed to Map
+        final Map<String, dynamic> data = json.decode(response.body);
+
+        // Save for offline
+        await DownloadService().savePlaylistJson(widget.book.id, data);
+
         if (mounted) {
-          final bool wasCompleted = _isBookCompleted;
-
-          setState(() {
-            _tracks = data['tracks'];
-            _hasQuiz = data['has_quiz'] ?? false;
-            _trackQuizzes = Map<String, dynamic>.from(
-              data['track_quizzes'] ?? {},
-            );
-
-            // Calculate if tracks are completed
-            if (_tracks.isEmpty) {
-              _areTracksCompleted = false;
-            } else {
-              _areTracksCompleted = _tracks.every(
-                (track) => track['is_completed'] == true,
-              );
-            }
-
-            // _isBookCompleted determines if we SHOW THE ANIMATION (Everything done)
-            if (_hasQuiz) {
-              _isBookCompleted = _areTracksCompleted && _isQuizPassed;
-            } else {
-              _isBookCompleted = _areTracksCompleted;
-            }
-
-            _isQuizPassed = data['quiz_passed'] ?? false;
-
-            _isLoading = false;
-
-            _isFirstLoad = false;
-          });
-
-          // Update Video Loop Logic OUTSIDE setState to allow async operations
-          // and prevent blocking UI
-          if (!skipVideoUpdate) {
-            _updateBackgroundLoop(_isBookCompleted);
-          }
+          _processPlaylistData(data, skipVideoUpdate: skipVideoUpdate);
         }
       } else {
         throw Exception('Failed to load playlist');
@@ -258,6 +246,42 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  void _processPlaylistData(
+    Map<String, dynamic> data, {
+    bool skipVideoUpdate = false,
+  }) {
+    // If not mounted, do nothing
+    if (!mounted) return;
+
+    setState(() {
+      _tracks = data['tracks'];
+      _hasQuiz = data['has_quiz'] ?? false;
+      _trackQuizzes = Map<String, dynamic>.from(data['track_quizzes'] ?? {});
+
+      if (_tracks.isEmpty) {
+        _areTracksCompleted = false;
+      } else {
+        _areTracksCompleted = _tracks.every(
+          (track) => track['is_completed'] == true,
+        );
+      }
+
+      if (_hasQuiz) {
+        _isBookCompleted = _areTracksCompleted && _isQuizPassed;
+      } else {
+        _isBookCompleted = _areTracksCompleted;
+      }
+
+      _isQuizPassed = data['quiz_passed'] ?? false;
+      _isLoading = false;
+      _isFirstLoad = false;
+    });
+
+    if (!skipVideoUpdate) {
+      _updateBackgroundLoop(_isBookCompleted);
     }
   }
 
@@ -340,8 +364,76 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       print("Error downloading current track: $e");
     }
 
-    // 3. Download ALL tracks in background
-    // _downloadAllTracks(); // Removed feature
+    // 2.5 Download Remaining Tracks (Background)
+    for (var track in _tracks) {
+      // Skip the current one as we just started/awaited it (or tried to)
+      if (track['id'] == currentTrack['id']) continue;
+
+      final String tUrl = _ensureAbsoluteUrl(track['file_path']);
+      final tId = "track_${track['id']}";
+
+      // Fire and forget, or log errors individually to avoid blocking UI
+      DownloadService().downloadBook(tId, tUrl).catchError((err) {
+        print("Failed to background download track ${track['title']}: $err");
+      });
+    }
+
+    // 3. Save Metadata and Download Assets
+    try {
+      // We need updated playlist data to save properly (flags etc)
+      // Current state might be stale if we just purchased?
+      // Safe to assume current state is okay-ish or fetch fresh?
+      // Step 334 logic saved state variables.
+      await DownloadService().savePlaylistJson(widget.book.id, {
+        'tracks': _tracks,
+        'has_quiz': _hasQuiz,
+        'track_quizzes': _trackQuizzes,
+        'quiz_passed': _isQuizPassed,
+      });
+
+      _downloadQuizData();
+      _downloadBackgroundAssets();
+    } catch (e) {
+      print("Error triggering background downloads: $e");
+    }
+  }
+
+  Future<void> _downloadQuizData() async {
+    if (ConnectivityService().isOffline) return;
+    try {
+      final String quizUrl = '${ApiConstants.baseUrl}/quiz/${widget.book.id}';
+      final response = await http.get(Uri.parse(quizUrl));
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        await DownloadService().saveQuizJson(widget.book.id, data);
+      }
+
+      for (var track in _tracks) {
+        final trackId = track['id'].toString();
+        if (_trackQuizzes.containsKey(trackId)) {
+          final String trackQuizUrl =
+              '${ApiConstants.baseUrl}/quiz/${widget.book.id}?playlist_item_id=$trackId';
+          final tResp = await http.get(Uri.parse(trackQuizUrl));
+          if (tResp.statusCode == 200) {
+            final List<dynamic> tData = json.decode(tResp.body);
+            await DownloadService().saveQuizJson(
+              widget.book.id,
+              tData,
+              playlistItemId: track['id'],
+            );
+          }
+        }
+      }
+    } catch (e) {
+      print("Error downloading quiz data: $e");
+    }
+  }
+
+  Future<void> _downloadBackgroundAssets() async {
+    if (ConnectivityService().isOffline) return;
+    final String fileName = 'backgroundAudioBookPlaylist.mp4';
+    final videoUrl = '${ApiConstants.baseUrl}/static/Animations/$fileName';
+    await DownloadService().downloadFile(videoUrl, fileName);
   }
 
   void _playTrack(Map<String, dynamic> track, int index) async {
@@ -451,7 +543,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
         ],
       ),
       // Use gradient background for map feel
-      backgroundColor: Colors.grey.shade900,
+      backgroundColor: const Color(0xFF121212),
       body: Stack(
         children: [
           // Background Video

@@ -4,12 +4,16 @@ import '../models/badge.dart';
 import '../models/book.dart';
 import '../models/category.dart'; // Import Category
 import '../utils/api_constants.dart';
+import '../services/connectivity_service.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
 class BookRepository {
   Future<List<Book>> getBooks() async {
     try {
+      if (ConnectivityService().isOffline) {
+        throw Exception('Offline mode');
+      }
       final response = await http.get(
         Uri.parse(
           '${ApiConstants.baseUrl}/books?limit=1000',
@@ -128,6 +132,9 @@ class BookRepository {
 
   Future<List<String>> getPurchasedBookIds(int userId) async {
     try {
+      if (ConnectivityService().isOffline) {
+        throw Exception('Offline mode');
+      }
       final response = await http.get(
         Uri.parse('${ApiConstants.baseUrl}/user-books/$userId'),
       );
@@ -153,6 +160,9 @@ class BookRepository {
   }
 
   Future<List<Badge>> buyBook(int userId, String bookId) async {
+    if (ConnectivityService().isOffline) {
+      throw Exception('Cannot purchase books while offline.');
+    }
     final response = await http.post(
       Uri.parse('${ApiConstants.baseUrl}/buy-book'),
       headers: {'Content-Type': 'application/json'},
@@ -160,6 +170,28 @@ class BookRepository {
     );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
+      // Update local cache immediately
+      final prefs = await SharedPreferences.getInstance();
+      final String? cachedData = prefs.getString('cached_user_books_$userId');
+      List<dynamic> currentBooks = [];
+      if (cachedData != null) {
+        currentBooks = json.decode(cachedData);
+      }
+
+      // Add if not present (backend might return string or int, ensure consistency)
+      // Usually backend returns IDs. Our getPurchasedBookIds converts to string?
+      // getPurchasedBookIds returns List<String>. The cache stores the raw JSON from backend which is likely [1, 2, 3].
+      // Let's store it as whatever the backend sends, assuming int based on book_id parsing above.
+
+      final intId = int.parse(bookId);
+      if (!currentBooks.contains(intId)) {
+        currentBooks.add(intId);
+        await prefs.setString(
+          'cached_user_books_$userId',
+          json.encode(currentBooks),
+        );
+      }
+
       final data = json.decode(response.body);
       if (data['new_badges'] != null) {
         return (data['new_badges'] as List).map((e) {
@@ -198,6 +230,8 @@ class BookRepository {
     int positionSeconds,
     int? duration,
   ) async {
+    if (ConnectivityService().isOffline) return [];
+
     final response = await http.post(
       Uri.parse('${ApiConstants.baseUrl}/update-progress'),
       headers: {'Content-Type': 'application/json'},
@@ -265,8 +299,10 @@ class BookRepository {
   }
 
   Future<Map<String, dynamic>> getUserStats(int userId) async {
-    // ... existing ...
     try {
+      if (ConnectivityService().isOffline) {
+        throw Exception('Offline mode');
+      }
       final response = await http.get(
         Uri.parse('${ApiConstants.baseUrl}/user-stats/$userId'),
       );
@@ -291,17 +327,28 @@ class BookRepository {
 
   Future<List<int>> getFavoriteBookIds(int userId) async {
     try {
+      if (ConnectivityService().isOffline) throw Exception('Offline mode');
+
       final response = await http.get(
         Uri.parse('${ApiConstants.baseUrl}/favorites/$userId'),
       );
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
+        // Cache favorites
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cached_favorites_$userId', response.body);
         return data.map((e) => e as int).toList();
       }
       return [];
     } catch (e) {
-      print('Error fetching favorites: $e');
+      print('Error fetching favorites (or offline): $e. Trying cache...');
+      final prefs = await SharedPreferences.getInstance();
+      final cachedData = prefs.getString('cached_favorites_$userId');
+      if (cachedData != null) {
+        final List<dynamic> data = json.decode(cachedData);
+        return data.map((e) => e as int).toList();
+      }
       return [];
     }
   }
@@ -358,6 +405,10 @@ class BookRepository {
     String description = '',
     double price = 0.0,
   }) async {
+    if (ConnectivityService().isOffline) {
+      throw Exception("Cannot upload while offline.");
+    }
+
     final uri = Uri.parse('${ApiConstants.baseUrl}/upload_book');
     final request = http.MultipartRequest('POST', uri);
 
@@ -395,6 +446,8 @@ class BookRepository {
 
   Future<List<Book>> getMyUploadedBooks(String userId) async {
     try {
+      if (ConnectivityService().isOffline) throw Exception('Offline mode');
+
       final uri = Uri.parse(
         '${ApiConstants.baseUrl}/my_uploads?user_id=$userId',
       );
@@ -402,12 +455,21 @@ class BookRepository {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
+        // Cache uploads
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cached_my_uploads_$userId', response.body);
         return data.map((json) => Book.fromJson(json)).toList();
       } else {
         throw Exception('Failed to load my uploads');
       }
     } catch (e) {
-      print('Error fetching my uploads: $e');
+      print('Error fetching my uploads (or offline): $e. Trying cache...');
+      final prefs = await SharedPreferences.getInstance();
+      final cachedData = prefs.getString('cached_my_uploads_$userId');
+      if (cachedData != null) {
+        final List<dynamic> data = json.decode(cachedData);
+        return data.map((json) => Book.fromJson(json)).toList();
+      }
       return [];
     }
   }

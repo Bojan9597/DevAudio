@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 import '../utils/api_constants.dart';
 import '../models/quiz_question.dart';
 import '../services/auth_service.dart';
+import '../services/connectivity_service.dart';
+import '../services/download_service.dart';
 
 class QuizTakerScreen extends StatefulWidget {
   final String bookId;
@@ -36,6 +38,28 @@ class _QuizTakerScreenState extends State<QuizTakerScreen> {
 
   Future<void> _loadQuiz() async {
     try {
+      // Offline Check
+      if (ConnectivityService().isOffline) {
+        final cachedData = await DownloadService().getQuizJson(
+          widget.bookId,
+          playlistItemId: widget.playlistItemId,
+        );
+
+        if (cachedData != null) {
+          if (mounted) {
+            setState(() {
+              _questions = cachedData
+                  .map((json) => QuizQuestion.fromJson(json))
+                  .toList();
+              _isLoading = false;
+            });
+          }
+          return;
+        } else {
+          throw Exception('Quiz not available offline.');
+        }
+      }
+
       String urlString = '${ApiConstants.baseUrl}/quiz/${widget.bookId}';
       if (widget.playlistItemId != null) {
         urlString += '?playlist_item_id=${widget.playlistItemId}';
@@ -45,6 +69,14 @@ class _QuizTakerScreenState extends State<QuizTakerScreen> {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
+
+        // Save for offline
+        await DownloadService().saveQuizJson(
+          widget.bookId,
+          data,
+          playlistItemId: widget.playlistItemId,
+        );
+
         if (mounted) {
           setState(() {
             _questions = data
@@ -85,7 +117,12 @@ class _QuizTakerScreenState extends State<QuizTakerScreen> {
     try {
       final userId = await AuthService().getCurrentUserId();
       if (userId == null) {
-        // Just show local result if no user (should rely on playlist screen context)
+        _showResultDialog(percentage, score);
+        return;
+      }
+
+      if (ConnectivityService().isOffline) {
+        // Offline: Just show result, don't submit
         _showResultDialog(percentage, score);
         return;
       }

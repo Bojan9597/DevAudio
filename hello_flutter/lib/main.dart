@@ -8,8 +8,11 @@ import 'screens/login_screen.dart';
 import 'services/auth_service.dart';
 import 'theme/app_theme.dart';
 
+import 'services/connectivity_service.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await ConnectivityService().initialize();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   runApp(const MyApp());
 }

@@ -4,8 +4,45 @@ import 'widgets/content_area.dart';
 import 'states/layout_state.dart';
 import 'l10n/generated/app_localizations.dart';
 
-class AppLayout extends StatelessWidget {
+import 'dart:async';
+import 'services/connectivity_service.dart';
+
+class AppLayout extends StatefulWidget {
   const AppLayout({super.key});
+
+  @override
+  State<AppLayout> createState() => _AppLayoutState();
+}
+
+class _AppLayoutState extends State<AppLayout> {
+  StreamSubscription<bool>? _connectivitySub;
+
+  @override
+  void initState() {
+    super.initState();
+    _connectivitySub = ConnectivityService().onOfflineChanged.listen((
+      isOffline,
+    ) {
+      if (!mounted) return;
+
+      final message = isOffline ? "Entering offline mode" : "Back online";
+      final color = isOffline ? Colors.redAccent : Colors.green;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: color,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _connectivitySub?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

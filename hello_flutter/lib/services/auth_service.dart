@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'connectivity_service.dart';
 
 import '../utils/api_constants.dart';
 
@@ -42,6 +43,8 @@ class AuthService {
   }
 
   Future<Map<String, dynamic>> login(String email, String password) async {
+    if (ConnectivityService().isOffline) throw Exception('Offline mode');
+
     final response = await http.post(
       Uri.parse('$baseUrl/login'),
       headers: {'Content-Type': 'application/json'},
@@ -64,6 +67,8 @@ class AuthService {
     String password,
     String confirmPassword,
   ) async {
+    if (ConnectivityService().isOffline) throw Exception('Offline mode');
+
     final response = await http.post(
       Uri.parse('$baseUrl/register'),
       headers: {'Content-Type': 'application/json'},
@@ -87,6 +92,8 @@ class AuthService {
   }
 
   Future<Map<String, dynamic>> verifyEmail(String email, String code) async {
+    if (ConnectivityService().isOffline) throw Exception('Offline mode');
+
     final response = await http.post(
       Uri.parse('$baseUrl/verify-email'),
       headers: {'Content-Type': 'application/json'},
@@ -105,6 +112,7 @@ class AuthService {
 
   Future<bool> loginWithGoogle() async {
     try {
+      if (ConnectivityService().isOffline) throw Exception('Offline mode');
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
         // User canceled the sign-in
@@ -143,6 +151,8 @@ class AuthService {
     String currentPassword,
     String newPassword,
   ) async {
+    if (ConnectivityService().isOffline) throw Exception('Offline mode');
+
     final response = await http.post(
       Uri.parse('$baseUrl/change-password'),
       headers: {'Content-Type': 'application/json'},
@@ -166,6 +176,8 @@ class AuthService {
   }
 
   Future<String> uploadProfilePicture(File imageFile, int userId) async {
+    if (ConnectivityService().isOffline) throw Exception('Offline mode');
+
     final uri = Uri.parse('$baseUrl/upload-profile-picture');
     final request = http.MultipartRequest('POST', uri);
 
