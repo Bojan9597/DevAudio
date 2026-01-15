@@ -2,6 +2,7 @@ import socket
 import mysql.connector
 from database import Database
 import re
+import os
 
 def get_local_ip():
     try:
