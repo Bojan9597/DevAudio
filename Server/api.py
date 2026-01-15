@@ -455,9 +455,15 @@ def get_playlist(book_id):
             for item in result:
                 item['is_completed'] = bool(item.get('is_completed', 0))
                 
-            # Check for quiz
+            # Check for quiz containing questions
             quiz_exists = False
-            q_query = "SELECT id FROM quizzes WHERE book_id = %s"
+            q_query = """
+                SELECT q.id 
+                FROM quizzes q
+                INNER JOIN quiz_questions qq ON q.id = qq.quiz_id
+                WHERE q.book_id = %s AND q.playlist_item_id IS NULL
+                LIMIT 1
+            """
             # Reuse DB connection? Yes.
             q_res = db.execute_query(q_query, (book_id,))
             if q_res:
