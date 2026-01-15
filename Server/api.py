@@ -18,6 +18,8 @@ CORS(app) # Enable CORS for all routes
 current_ip = update_server_ip.get_local_ip()
 BASE_URL = f"http://{current_ip}:5000/"
 print(f"Server initialized with BASE_URL: {BASE_URL}")
+# Auto-update Flutter Client Configuration
+update_server_ip.update_flutter_client(current_ip)
 
 # ... existing build_category_tree ...
 
@@ -434,13 +436,16 @@ def get_playlist(book_id):
         if user_id:
              query = """
                 SELECT p.*, 
-                       CASE WHEN uct.id IS NOT NULL THEN TRUE ELSE FALSE END as is_completed
+                       CASE WHEN uct.id IS NOT NULL THEN TRUE ELSE FALSE END as is_completed,
+                       COALESCE(utp.position_seconds, 0) as last_position
                 FROM playlist_items p
                 LEFT JOIN user_completed_tracks uct ON p.id = uct.track_id AND uct.user_id = %s
+                LEFT JOIN user_track_progress utp ON p.id = utp.playlist_item_id AND utp.user_id = %s
                 WHERE p.book_id = %s 
                 ORDER BY p.track_order ASC
              """
-             result = db.execute_query(query, (user_id, book_id))
+             result = db.execute_query(query, (user_id, user_id, book_id))
+
         else:
              query = "SELECT *, FALSE as is_completed FROM playlist_items WHERE book_id = %s ORDER BY track_order ASC"
              result = db.execute_query(query, (book_id,))
@@ -903,7 +908,8 @@ def update_progress():
     book_id = data.get('book_id')
     position = data.get('position_seconds')
     total_duration = data.get('duration') # Optional, from player
-    
+    playlist_item_id = data.get('playlist_item_id') # Optional, for track progress
+
     if not all([user_id, book_id, position is not None]):
         return jsonify({"error": "Missing fields"}), 400
         
@@ -946,10 +952,23 @@ def update_progress():
             if is_read:
                 update_sql += ", is_read = TRUE"
             
+            if playlist_item_id:
+                update_sql += ", current_playlist_item_id = %s"
+                params.append(playlist_item_id)
+
             update_sql += " WHERE user_id = %s AND book_id = %s"
             params.extend([user_id, book_id])
             
             db.execute_query(update_sql, tuple(params))
+            
+            # Update user_track_progress if playlist item
+            if playlist_item_id:
+                track_upd_query = """
+                    INSERT INTO user_track_progress (user_id, book_id, playlist_item_id, position_seconds)
+                    VALUES (%s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE position_seconds = VALUES(position_seconds), updated_at = CURRENT_TIMESTAMP
+                """
+                db.execute_query(track_upd_query, (user_id, book_id, playlist_item_id, position))
 
             
             # Log to playback_history (History Log)
@@ -1067,13 +1086,16 @@ def get_book_status(user_id, book_id):
         return jsonify({"error": "Database connection failed"}), 500
         
     try:
-        query = "SELECT last_played_position_seconds FROM user_books WHERE user_id = %s AND book_id = %s"
+        query = "SELECT last_played_position_seconds, current_playlist_item_id FROM user_books WHERE user_id = %s AND book_id = %s"
         result = db.execute_query(query, (user_id, book_id))
         
         if result:
-            return jsonify({"position_seconds": result[0]['last_played_position_seconds']}), 200
+            return jsonify({
+                "position_seconds": result[0]['last_played_position_seconds'],
+                "current_playlist_item_id": result[0].get('current_playlist_item_id')
+            }), 200
         else:
-            return jsonify({"position_seconds": 0}), 200 # Not started/owned
+            return jsonify({"position_seconds": 0, "current_playlist_item_id": None}), 200 # Not started/owned
             
     except Exception as e:
         return jsonify({"error": str(e)}), 500
