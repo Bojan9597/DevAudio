@@ -10,6 +10,9 @@ import '../services/auth_service.dart';
 import 'quiz_creator_screen.dart';
 import 'quiz_taker_screen.dart';
 import 'package:video_player/video_player.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:dio/dio.dart';
 
 class PlaylistScreen extends StatefulWidget {
   final Book book;
@@ -37,6 +40,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   bool _isCompletionVideoInitialized = false;
   bool _showCompletionOverlay = false;
   VoidCallback? _backgroundLoopListener;
+  bool _isSeeking = false;
 
   @override
   void initState() {
@@ -47,17 +51,31 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   }
 
   Future<void> _initCompletionVideo() async {
-    final videoUrl =
-        '${ApiConstants.baseUrl}/static/Animations/bookFinished.mp4';
-    _completionVideoController = VideoPlayerController.networkUrl(
-      Uri.parse(videoUrl),
-    );
+    final String fileName = 'bookFinished.mp4';
+    final videoUrl = '${ApiConstants.baseUrl}/static/Animations/$fileName';
+
     try {
+      final directory = await getApplicationDocumentsDirectory();
+      final filePath = '${directory.path}/$fileName';
+      final file = File(filePath);
+
+      if (await file.exists()) {
+        _completionVideoController = VideoPlayerController.file(file);
+      } else {
+        try {
+          await Dio().download(videoUrl, filePath);
+          _completionVideoController = VideoPlayerController.file(file);
+        } catch (e) {
+          print("Download completion video failed, fallback to network: $e");
+          _completionVideoController = VideoPlayerController.networkUrl(
+            Uri.parse(videoUrl),
+          );
+        }
+      }
+
       await _completionVideoController.initialize();
-      // await _completionVideoController.setLooping(false); // Play once
-      _completionVideoController.setVolume(
-        1.0,
-      ); // Sound on? Assuming yes for effect
+      _completionVideoController.setVolume(1.0);
+
       if (mounted) {
         setState(() {
           _isCompletionVideoInitialized = true;
@@ -69,11 +87,28 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   }
 
   Future<void> _initVideoPlayer() async {
-    final videoUrl =
-        '${ApiConstants.baseUrl}/static/Animations/backgroundAudioBookPlaylist.mp4';
-    _videoController = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
+    final String fileName = 'backgroundAudioBookPlaylist.mp4';
+    final videoUrl = '${ApiConstants.baseUrl}/static/Animations/$fileName';
 
     try {
+      final directory = await getApplicationDocumentsDirectory();
+      final filePath = '${directory.path}/$fileName';
+      final file = File(filePath);
+
+      if (await file.exists()) {
+        _videoController = VideoPlayerController.file(file);
+      } else {
+        try {
+          await Dio().download(videoUrl, filePath);
+          _videoController = VideoPlayerController.file(file);
+        } catch (e) {
+          print("Download bg video failed, fallback to network: $e");
+          _videoController = VideoPlayerController.networkUrl(
+            Uri.parse(videoUrl),
+          );
+        }
+      }
+
       await _videoController.initialize();
       await _videoController.setVolume(0.0); // Mute background video
       await _videoController.play();
@@ -82,8 +117,6 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
         setState(() {
           _isVideoInitialized = true;
         });
-        // Initial loop check will happen in _loadTracks or default to loop if unknown
-        // For safety, start with 2s loop until we know otherwise
         _updateBackgroundLoop(false);
       }
     } catch (e) {
@@ -102,8 +135,17 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     if (!isBookCompleted) {
       // Loop 0-2s
       _backgroundLoopListener = () {
-        if (_videoController.value.position >= const Duration(seconds: 2)) {
-          _videoController.seekTo(Duration.zero);
+        final position = _videoController.value.position;
+        if (!_isSeeking && position >= const Duration(seconds: 2)) {
+          _isSeeking = true;
+          _videoController.seekTo(Duration.zero).then((_) {
+            // Optional: Ensure it plays if it stopped?
+            // _videoController.play();
+            // Small delay to let position update reflect 0 safely?
+            Future.delayed(const Duration(milliseconds: 50), () {
+              if (mounted) _isSeeking = false;
+            });
+          });
         }
       };
       _videoController.addListener(_backgroundLoopListener!);

@@ -95,6 +95,25 @@ class _QuizCreatorScreenState extends State<QuizCreatorScreen> {
   }
 
   Future<void> _saveQuiz() async {
+    // Check if there is a pending question filled in
+    if (_questionController.text.isNotEmpty) {
+      // Try to add it automatically
+      if (_formKey.currentState!.validate()) {
+        _questions.add(
+          QuizQuestion(
+            question: _questionController.text,
+            options: [
+              _optionAController.text,
+              _optionBController.text,
+              _optionCController.text,
+              _optionDController.text,
+            ],
+            correctAnswer: _selectedCorrectAnswer,
+          ),
+        );
+      }
+    }
+
     if (_questions.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Add at least one question.')),
