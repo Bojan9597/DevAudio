@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'widgets/side_menu.dart';
 import 'widgets/content_area.dart';
+import 'widgets/mini_player.dart';
 import 'states/layout_state.dart';
 import 'l10n/generated/app_localizations.dart';
 
@@ -91,43 +92,52 @@ class _AppLayoutState extends State<AppLayout> {
               const Positioned(left: 0, top: 0, bottom: 0, child: SideMenu()),
             ],
           ),
-          bottomNavigationBar: BottomNavigationBar(
-            type: BottomNavigationBarType.fixed,
-            currentIndex: _selectedIndex,
-            selectedItemColor: Theme.of(context).colorScheme.primary,
-            unselectedItemColor: Colors.grey,
-            onTap: (index) {
-              switch (index) {
-                case 0:
-                  globalLayoutState.toggleMenu();
-                  break;
-                case 1:
-                  globalLayoutState.setCategoryId('library');
-                  break;
-                case 2:
-                  globalLayoutState.setCategoryId('discover');
-                  break;
-                case 3:
-                  globalLayoutState.setCategoryId('profile');
-                  break;
-              }
-            },
-            items: [
-              BottomNavigationBarItem(
-                icon: const Icon(Icons.menu),
-                label: AppLocalizations.of(context)!.categories,
-              ),
-              BottomNavigationBarItem(
-                icon: const Icon(Icons.library_books),
-                label: AppLocalizations.of(context)!.library,
-              ),
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.explore),
-                label: 'Discover',
-              ),
-              BottomNavigationBarItem(
-                icon: const Icon(Icons.person),
-                label: AppLocalizations.of(context)!.profile,
+          bottomNavigationBar: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Mini Player (above navigation bar)
+              const MiniPlayer(),
+
+              // Bottom Navigation Bar
+              BottomNavigationBar(
+                type: BottomNavigationBarType.fixed,
+                currentIndex: _selectedIndex,
+                selectedItemColor: Theme.of(context).colorScheme.primary,
+                unselectedItemColor: Colors.grey,
+                onTap: (index) {
+                  switch (index) {
+                    case 0:
+                      globalLayoutState.toggleMenu();
+                      break;
+                    case 1:
+                      globalLayoutState.setCategoryId('library');
+                      break;
+                    case 2:
+                      globalLayoutState.setCategoryId('discover');
+                      break;
+                    case 3:
+                      globalLayoutState.setCategoryId('profile');
+                      break;
+                  }
+                },
+                items: [
+                  BottomNavigationBarItem(
+                    icon: const Icon(Icons.menu),
+                    label: AppLocalizations.of(context)!.categories,
+                  ),
+                  BottomNavigationBarItem(
+                    icon: const Icon(Icons.library_books),
+                    label: AppLocalizations.of(context)!.library,
+                  ),
+                  const BottomNavigationBarItem(
+                    icon: Icon(Icons.explore),
+                    label: 'Discover',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: const Icon(Icons.person),
+                    label: AppLocalizations.of(context)!.profile,
+                  ),
+                ],
               ),
             ],
           ),

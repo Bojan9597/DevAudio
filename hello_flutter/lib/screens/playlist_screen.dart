@@ -14,6 +14,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:dio/dio.dart';
 import '../services/connectivity_service.dart';
+import '../widgets/mini_player.dart';
 
 class PlaylistScreen extends StatefulWidget {
   final Book book;
@@ -472,7 +473,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
         book: singleTrackBook,
         uniqueAudioId: uniqueTrackId,
         onPurchaseSuccess: () => _handlePurchaseSuccess(track),
-        playlist: _tracks,
+        playlist: _tracks.cast<Map<String, dynamic>>(),
         initialIndex: index,
         onPlaybackComplete: (completedIndex) async {
           await _onTrackFinished(_tracks[completedIndex]);
@@ -617,6 +618,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
             )
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endTop,
+      bottomNavigationBar: const MiniPlayer(),
     );
   }
 }

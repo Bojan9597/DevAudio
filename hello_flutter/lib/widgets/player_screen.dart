@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import '../models/book.dart';
 import 'dart:async';
 import 'package:just_audio/just_audio.dart';
+import 'package:audio_service/audio_service.dart';
 import 'dart:ui'; // For BackdropFilter
 import '../repositories/book_repository.dart';
 import '../services/auth_service.dart';
@@ -13,14 +14,16 @@ import '../services/download_service.dart';
 import '../utils/api_constants.dart';
 import '../screens/quiz_taker_screen.dart'; // Import QuizTakerScreen
 
+import '../main.dart'; // Import for audioHandler
+
 class PlayerScreen extends StatefulWidget {
   final Book book;
   final String? uniqueAudioId;
   final VoidCallback? onPurchaseSuccess;
-  final List<dynamic>? playlist;
+  final List<Map<String, dynamic>>? playlist;
   final int initialIndex;
-  final void Function(int index)? onPlaybackComplete;
-  final Map<String, dynamic>? trackQuizzes; // Add this
+  final Function(int)? onPlaybackComplete;
+  final Map<String, dynamic>? trackQuizzes;
 
   const PlayerScreen({
     super.key,
@@ -30,7 +33,7 @@ class PlayerScreen extends StatefulWidget {
     this.playlist,
     this.initialIndex = 0,
     this.onPlaybackComplete,
-    this.trackQuizzes, // Add this
+    this.trackQuizzes,
   });
 
   @override
@@ -38,7 +41,8 @@ class PlayerScreen extends StatefulWidget {
 }
 
 class _PlayerScreenState extends State<PlayerScreen> {
-  late AudioPlayer _player;
+  // Use global audio handler
+  AudioPlayer get _player => audioHandler.player;
   late Book _currentBook;
   late int _currentIndex;
 
@@ -102,7 +106,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void initState() {
     super.initState();
-    _player = AudioPlayer();
     _currentBook = widget.book;
     _currentIndex = widget.initialIndex;
     _isFavorite = widget.book.isFavorite;
@@ -361,6 +364,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
     try {
       String url = _currentBook.audioUrl;
 
+      // Create MediaItem for notification
+      final mediaItem = MediaItem(
+        id: _getUniqueAudioId(),
+        album: widget.book.title,
+        title: _currentBook.title,
+        artist: widget.book.author,
+        artUri: Uri.parse(widget.book.coverUrl ?? ''),
+      );
+
       // Check for local file
       final storageId = _getUniqueAudioId();
       final isDownloaded = await DownloadService().isBookDownloaded(storageId);
@@ -368,13 +380,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
       if (isDownloaded) {
         final localPath = await DownloadService().getLocalBookPath(storageId);
         print("Playing from local file: $localPath");
-        await _player.setFilePath(localPath);
+        await audioHandler.loadLocalFile(localPath, mediaItem);
       } else {
         if (url == 'placeholder.mp3' || url.isEmpty) {
           url = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
         }
-        await _player.setUrl(url);
+        await audioHandler.loadAudio(url, mediaItem);
       }
+
+      // Auto-play
+      await audioHandler.play();
 
       // Resume logic
       if (_userId != null) {
@@ -437,7 +452,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _resetBrightness(); // Reset brightness on exit
     _progressTimer?.cancel();
     _saveProgress(); // Try to save on exit
-    _player.dispose();
+    // Don't dispose handler player - it's global
     super.dispose();
   }
 

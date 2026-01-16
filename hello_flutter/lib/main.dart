@@ -9,9 +9,35 @@ import 'services/auth_service.dart';
 import 'theme/app_theme.dart';
 
 import 'services/connectivity_service.dart';
+import 'package:audio_service/audio_service.dart';
+import 'services/audio_handler.dart';
+
+// Global audio handler instance
+late MyAudioHandler audioHandler;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize audio service with timeout
+  try {
+    print("Initializing AudioService...");
+    audioHandler = await AudioService.init(
+      builder: () => MyAudioHandler(),
+      config: const AudioServiceConfig(
+        androidNotificationChannelId: 'com.example.dev_audio.channel.audio',
+        androidNotificationChannelName: 'Audio playback',
+        androidNotificationOngoing: true,
+      ),
+    ).timeout(const Duration(seconds: 5));
+    print("AudioService initialized successfully");
+  } catch (e) {
+    print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+    print("!!! ERROR/TIMEOUT INITIALIZING AUDIO SERVICE !!!");
+    print("Error: $e");
+    print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+    // Create a fallback handler without the service
+    audioHandler = MyAudioHandler();
+  }
   await ConnectivityService().initialize();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   runApp(const MyApp());
