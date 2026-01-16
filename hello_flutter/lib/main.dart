@@ -16,30 +16,50 @@ import 'services/audio_handler.dart';
 late MyAudioHandler audioHandler;
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  print("=== 1. APP STARTING ===");
 
-  // Initialize audio service with timeout
   try {
-    print("Initializing AudioService...");
+    print("=== 2. Initializing Flutter binding ===");
+    WidgetsFlutterBinding.ensureInitialized();
+    print("=== 3. Flutter binding initialized ===");
+
+    print("=== 4. Starting AudioService initialization ===");
     audioHandler = await AudioService.init(
-      builder: () => MyAudioHandler(),
+      builder: () {
+        print("=== 5. Creating MyAudioHandler instance ===");
+        final handler = MyAudioHandler();
+        print("=== 6. MyAudioHandler created ===");
+        return handler;
+      },
       config: const AudioServiceConfig(
         androidNotificationChannelId: 'com.example.dev_audio.channel.audio',
         androidNotificationChannelName: 'Audio playback',
         androidNotificationOngoing: true,
       ),
-    ).timeout(const Duration(seconds: 5));
-    print("AudioService initialized successfully");
-  } catch (e) {
+    );
+    print("=== 7. AudioService initialized successfully! ===");
+  } catch (e, stackTrace) {
     print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-    print("!!! ERROR/TIMEOUT INITIALIZING AUDIO SERVICE !!!");
-    print("Error: $e");
+    print("!!! FATAL ERROR DURING INITIALIZATION !!!");
+    print("!!! Error: $e");
+    print("!!! Stack trace:");
+    print(stackTrace);
     print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
     // Create a fallback handler without the service
+    print("=== Creating fallback handler without AudioService ===");
     audioHandler = MyAudioHandler();
+    print("=== Fallback handler created ===");
   }
+
+  print("=== 8. Initializing ConnectivityService ===");
   await ConnectivityService().initialize();
+  print("=== 9. ConnectivityService initialized ===");
+
+  print("=== 10. Setting screen orientation ===");
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  print("=== 11. Screen orientation set ===");
+
+  print("=== 12. Running app ===");
   runApp(const MyApp());
 }
 

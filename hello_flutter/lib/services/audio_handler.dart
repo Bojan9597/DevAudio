@@ -45,6 +45,14 @@ class MyAudioHandler extends BaseAudioHandler {
         ),
       );
     });
+
+    // Listen for track completion to auto-advance
+    _player.playerStateStream.listen((state) {
+      if (state.processingState == ProcessingState.completed) {
+        // Track finished - try to play next track
+        playNextTrack();
+      }
+    });
   }
 
   // Play the current audio source
@@ -86,5 +94,72 @@ class MyAudioHandler extends BaseAudioHandler {
 
     // Load the local file
     await _player.setFilePath(filePath);
+  }
+
+  // Navigate to next track in playlist
+  Future<bool> playNextTrack() async {
+    if (currentPlaylist == null ||
+        currentIndex >= currentPlaylist!.length - 1) {
+      return false; // No next track
+    }
+
+    currentIndex++;
+    await _loadAndPlayTrack(currentIndex);
+    return true;
+  }
+
+  // Navigate to previous track in playlist
+  Future<bool> playPreviousTrack() async {
+    if (currentPlaylist == null || currentIndex <= 0) {
+      return false; // No previous track
+    }
+
+    currentIndex--;
+    await _loadAndPlayTrack(currentIndex);
+    return true;
+  }
+
+  // Helper to load and play a track from the playlist
+  Future<void> _loadAndPlayTrack(int index) async {
+    if (currentPlaylist == null || currentBook == null) return;
+
+    final track = currentPlaylist![index];
+    final trackUrl = track['file_path'];
+    final trackTitle = track['title'];
+
+    // Create updated Book for this track
+    final trackBook = Book(
+      id: currentBook!.id,
+      title: trackTitle,
+      author: currentBook!.author,
+      audioUrl: trackUrl,
+      coverUrl: currentBook!.coverUrl,
+      categoryId: currentBook!.categoryId,
+      subcategoryIds: const [],
+      postedBy: currentBook!.postedBy,
+      description: currentBook!.description,
+      price: currentBook!.price,
+      postedByUserId: currentBook!.postedByUserId,
+      isPlaylist: false,
+      isFavorite: currentBook!.isFavorite,
+    );
+
+    currentBook = trackBook;
+
+    // Create MediaItem
+    final mediaItem = MediaItem(
+      id: 'track_${track['id']}',
+      album: currentBook!.title,
+      title: trackTitle,
+      artist: currentBook!.author,
+      artUri: Uri.parse(currentBook!.coverUrl ?? ''),
+    );
+
+    // Load and play
+    final cleanUrl = trackUrl.startsWith('http')
+        ? trackUrl
+        : 'http://10.54.45.89:5000$trackUrl';
+    await loadAudio(cleanUrl, mediaItem);
+    await play();
   }
 }
