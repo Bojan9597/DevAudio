@@ -42,7 +42,7 @@ class MiniPlayer extends StatelessWidget {
                 }
               },
               child: Container(
-                height: 70,
+                height: 90,
                 decoration: BoxDecoration(
                   color: Theme.of(context).cardColor,
                   boxShadow: [
@@ -81,7 +81,7 @@ class MiniPlayer extends StatelessWidget {
                         ),
                       ),
 
-                    // Title and Artist
+                    // Title and Artist (clickable area)
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -113,27 +113,138 @@ class MiniPlayer extends StatelessWidget {
                       ),
                     ),
 
-                    // Play/Pause Button
-                    IconButton(
-                      icon: Icon(
-                        playing ? Icons.pause : Icons.play_arrow,
-                        size: 32,
-                      ),
-                      onPressed: () {
-                        if (playing) {
-                          audioHandler.pause();
-                        } else {
-                          audioHandler.play();
-                        }
-                      },
-                    ),
+                    // Controls Column
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Top row: Previous, Play/Pause, Next
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Previous Track
+                            IconButton(
+                              icon: const Icon(Icons.skip_previous, size: 24),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () {
+                                // Navigate to previous track if in playlist
+                                if (audioHandler.currentPlaylist != null &&
+                                    audioHandler.currentIndex > 0) {
+                                  // TODO: Implement previous track navigation
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Previous track - coming soon',
+                                      ),
+                                      duration: Duration(seconds: 1),
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                            const SizedBox(width: 8),
 
-                    // Stop Button
-                    IconButton(
-                      icon: const Icon(Icons.stop, size: 28),
-                      onPressed: () {
-                        audioHandler.stop();
-                      },
+                            // Play/Pause
+                            IconButton(
+                              icon: Icon(
+                                playing ? Icons.pause : Icons.play_arrow,
+                                size: 32,
+                              ),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () {
+                                if (playing) {
+                                  audioHandler.pause();
+                                } else {
+                                  audioHandler.play();
+                                }
+                              },
+                            ),
+                            const SizedBox(width: 8),
+
+                            // Next Track
+                            IconButton(
+                              icon: const Icon(Icons.skip_next, size: 24),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () {
+                                // Navigate to next track if in playlist
+                                if (audioHandler.currentPlaylist != null &&
+                                    audioHandler.currentIndex <
+                                        audioHandler.currentPlaylist!.length -
+                                            1) {
+                                  // TODO: Implement next track navigation
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Next track - coming soon'),
+                                      duration: Duration(seconds: 1),
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+
+                        // Bottom row: Skip Back, Stop, Skip Forward
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Skip backward 10s
+                            IconButton(
+                              icon: const Icon(Icons.replay_10, size: 20),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () async {
+                                final currentPosition =
+                                    audioHandler.player.position;
+                                final newPosition =
+                                    currentPosition -
+                                    const Duration(seconds: 10);
+                                await audioHandler.seek(
+                                  newPosition < Duration.zero
+                                      ? Duration.zero
+                                      : newPosition,
+                                );
+                              },
+                            ),
+                            const SizedBox(width: 12),
+
+                            // Stop
+                            IconButton(
+                              icon: const Icon(Icons.stop, size: 22),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () {
+                                audioHandler.stop();
+                              },
+                            ),
+                            const SizedBox(width: 12),
+
+                            // Skip forward 30s
+                            IconButton(
+                              icon: const Icon(Icons.forward_30, size: 20),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () async {
+                                final currentPosition =
+                                    audioHandler.player.position;
+                                final duration =
+                                    audioHandler.player.duration ??
+                                    Duration.zero;
+                                final newPosition =
+                                    currentPosition +
+                                    const Duration(seconds: 30);
+                                await audioHandler.seek(
+                                  newPosition > duration
+                                      ? duration
+                                      : newPosition,
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
 
                     const SizedBox(width: 8),

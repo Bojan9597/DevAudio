@@ -384,7 +384,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       );
 
       // Store context in audioHandler for mini player
-      audioHandler.currentBook = widget.book;
+      audioHandler.currentBook = _currentBook;
       audioHandler.currentPlaylist = widget.playlist;
       audioHandler.currentIndex = _currentIndex;
       audioHandler.currentUniqueAudioId = widget.uniqueAudioId;
