@@ -74,6 +74,12 @@ class MyAudioHandler extends BaseAudioHandler {
   @override
   Future<void> seek(Duration position) => _player.seek(position);
 
+  @override
+  Future<void> skipToNext() => playNextTrack();
+
+  @override
+  Future<void> skipToPrevious() => playPreviousTrack();
+
   // Set playback speed
   @override
   Future<void> setSpeed(double speed) => _player.setSpeed(speed);
