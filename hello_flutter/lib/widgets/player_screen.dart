@@ -363,15 +363,31 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Future<void> _initPlayer() async {
     try {
       String url = _currentBook.audioUrl;
+      final uniqueAudioId = _getUniqueAudioId();
+
+      // Check if this exact track is already loaded - if so, don't reload
+      if (audioHandler.currentUniqueAudioId == widget.uniqueAudioId &&
+          audioHandler.currentIndex == _currentIndex &&
+          _player.processingState != ProcessingState.idle) {
+        // Same track is already loaded, don't reload
+        print("Same track already loaded, skipping reload");
+        return;
+      }
 
       // Create MediaItem for notification
       final mediaItem = MediaItem(
-        id: _getUniqueAudioId(),
+        id: uniqueAudioId,
         album: widget.book.title,
         title: _currentBook.title,
         artist: widget.book.author,
         artUri: Uri.parse(widget.book.coverUrl ?? ''),
       );
+
+      // Store context in audioHandler for mini player
+      audioHandler.currentBook = widget.book;
+      audioHandler.currentPlaylist = widget.playlist;
+      audioHandler.currentIndex = _currentIndex;
+      audioHandler.currentUniqueAudioId = widget.uniqueAudioId;
 
       // Check for local file
       final storageId = _getUniqueAudioId();

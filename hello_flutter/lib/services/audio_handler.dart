@@ -1,10 +1,17 @@
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
+import '../models/book.dart';
 
 class MyAudioHandler extends BaseAudioHandler {
   final AudioPlayer _player = AudioPlayer();
 
   AudioPlayer get player => _player;
+
+  // Track the current book and playlist for mini player tap
+  Book? currentBook;
+  List<Map<String, dynamic>>? currentPlaylist;
+  int currentIndex = 0;
+  String? currentUniqueAudioId;
 
   MyAudioHandler() {
     // Listen to player state and update audio service

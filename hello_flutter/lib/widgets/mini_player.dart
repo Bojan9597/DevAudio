@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:audio_service/audio_service.dart';
 import '../main.dart';
+import 'player_screen.dart';
 
 class MiniPlayer extends StatelessWidget {
   const MiniPlayer({super.key});
@@ -25,17 +26,20 @@ class MiniPlayer extends StatelessWidget {
 
             return GestureDetector(
               onTap: () {
-                // Open the full player screen as a bottom sheet
-                // We'll reopen PlayerScreen, but we need the Book object
-                // For now, just show a message - full implementation needs Book reference
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Tap on the book in your library to see full player',
+                // Reopen the full player if we have book context
+                if (audioHandler.currentBook != null) {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) => PlayerScreen(
+                      book: audioHandler.currentBook!,
+                      uniqueAudioId: audioHandler.currentUniqueAudioId,
+                      playlist: audioHandler.currentPlaylist,
+                      initialIndex: audioHandler.currentIndex,
                     ),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
+                  );
+                }
               },
               child: Container(
                 height: 70,
