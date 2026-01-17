@@ -26,19 +26,16 @@ def restore_badges():
             db.disconnect()
             return True
         
-        # Define the standard badges
+        # Define the original badges (from backup)
         badges = [
-            # Reading badges
-            ("Reading", "First Book", "Complete your first audiobook", "read_1", 1),
-            ("Reading", "Bookworm", "Complete 5 audiobooks", "read_5", 5),
-            ("Reading", "Scholar", "Complete 10 audiobooks", "read_10", 10),
-            ("Reading", "Master Reader", "Complete 25 audiobooks", "read_25", 25),
-            ("Reading", "Library Champion", "Complete 50 audiobooks", "read_50", 50),
-            
-            # Purchasing badges
-            ("Collection", "Book Collector", "Purchase 5 audiobooks", "buy_5", 5),
-            ("Collection", "Library Builder", "Purchase 10 audiobooks", "buy_10", 10),
-            ("Collection", "Audiobook Enthusiast", "Purchase 25 audiobooks", "buy_25", 25),
+            ('read', 'Read 1 Book', 'Finished your first book', 'read_1', 1),
+            ('read', 'Read 2 Books', 'Finished 2 books', 'read_2', 2),
+            ('read', 'Read 5 Books', 'Finished 5 books', 'read_5', 5),
+            ('read', 'Read 10 Books', 'Finished 10 books', 'read_10', 10),
+            ('buy', 'Collector I', 'Bought your first book', 'buy_1', 1),
+            ('buy', 'Collector II', 'Bought 2 books', 'buy_2', 2),
+            ('buy', 'Collector III', 'Bought 5 books', 'buy_5', 5),
+            ('buy', 'Collector IV', 'Bought 10 books', 'buy_10', 10),
         ]
         
         # Insert badges
