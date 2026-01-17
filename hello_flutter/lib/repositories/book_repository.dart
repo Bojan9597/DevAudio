@@ -228,19 +228,27 @@ class BookRepository {
     int userId,
     String bookId,
     int positionSeconds,
-    int? duration,
-  ) async {
+    int? duration, {
+    String? playlistItemId,
+  }) async {
     if (ConnectivityService().isOffline) return [];
+
+    final Map<String, dynamic> requestBody = {
+      'user_id': userId,
+      'book_id': int.parse(bookId),
+      'position_seconds': positionSeconds,
+      'duration': duration,
+    };
+
+    // Add playlist_item_id if provided
+    if (playlistItemId != null) {
+      requestBody['playlist_item_id'] = int.parse(playlistItemId);
+    }
 
     final response = await http.post(
       Uri.parse('${ApiConstants.baseUrl}/update-progress'),
       headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'user_id': userId,
-        'book_id': int.parse(bookId),
-        'position_seconds': positionSeconds,
-        'duration': duration,
-      }),
+      body: json.encode(requestBody),
     );
 
     if (response.statusCode == 200) {

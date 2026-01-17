@@ -380,7 +380,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
         album: widget.book.title,
         title: _currentBook.title,
         artist: widget.book.author,
-        artUri: Uri.parse(widget.book.coverUrl ?? ''),
+        artUri:
+            (widget.book.coverUrl != null && widget.book.coverUrl!.isNotEmpty)
+            ? Uri.parse(widget.book.coverUrl!)
+            : null,
       );
 
       // Store context in audioHandler for mini player
@@ -445,11 +448,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
       final position = _player.position.inSeconds;
       final duration = _player.duration?.inSeconds;
       if (position > 0) {
+        // Get playlist_item_id if this is a playlist track
+        String? playlistItemId;
+        if (widget.playlist != null && widget.playlist!.isNotEmpty) {
+          final currentTrack = widget.playlist![_currentIndex];
+          playlistItemId = currentTrack['id'].toString();
+        }
+
         final newBadges = await BookRepository().updateProgress(
           _userId!,
           widget.book.id,
           position,
           duration,
+          playlistItemId: playlistItemId,
         );
 
         if (newBadges.isNotEmpty && mounted) {

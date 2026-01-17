@@ -2,3 +2,4 @@ mysql-connector-python
 flask
 flask-cors
 werkzeug
+mutagen>=1.47.0

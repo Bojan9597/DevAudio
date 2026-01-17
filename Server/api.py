@@ -5,6 +5,7 @@ import os
 from werkzeug.security import generate_password_hash, check_password_hash
 from database import Database
 from badge_service import BadgeService
+from mutagen import File as MutagenFile
 
 import re
 import datetime
@@ -694,6 +695,60 @@ def get_quiz(book_id):
         db.disconnect()
 
 
+def calculate_listen_percentage(db, user_id, book_id, is_playlist, total_duration):
+    """
+    Calculate the listen percentage for a book.
+    For completed tracks, uses full duration. For in-progress tracks, uses last position.
+    """
+    if total_duration <= 0:
+        return 0.0
+    
+    total_listened_seconds = 0
+    
+    if is_playlist:
+        # For playlists: sum up progress across all tracks
+        playlist_progress_query = """
+            SELECT 
+                pi.id as playlist_item_id,
+                pi.duration_seconds,
+                COALESCE(MAX(ph.played_seconds), 0) as last_position,
+                (SELECT COUNT(*) FROM user_completed_tracks WHERE user_id = %s AND track_id = pi.id) as is_completed
+            FROM playlist_items pi
+            LEFT JOIN playback_history ph ON ph.playlist_item_id = pi.id AND ph.user_id = %s
+            WHERE pi.book_id = %s
+            GROUP BY pi.id, pi.duration_seconds
+        """
+        tracks_result = db.execute_query(playlist_progress_query, (user_id, user_id, book_id))
+        
+        if tracks_result:
+            for track in tracks_result:
+                track_duration = track['duration_seconds'] or 0
+                is_completed = track['is_completed'] > 0
+                
+                if is_completed and track_duration > 0:
+                    # Track is completed - use full duration
+                    listened = track_duration
+                else:
+                    # Track not completed - use last recorded position
+                    last_pos = track['last_position'] or 0
+                    listened = min(last_pos, track_duration) if track_duration > 0 else last_pos
+                
+                total_listened_seconds += listened
+    else:
+        # For single files: get the MAX position from playback_history
+        single_progress_query = """
+            SELECT COALESCE(MAX(played_seconds), 0) as last_position
+            FROM playback_history
+            WHERE user_id = %s AND book_id = %s
+        """
+        single_result = db.execute_query(single_progress_query, (user_id, book_id))
+        if single_result:
+            total_listened_seconds = single_result[0]['last_position'] or 0
+    
+    # Calculate percentage
+    percentage = (total_listened_seconds / total_duration * 100) if total_duration > 0 else 0
+    return round(percentage, 2)
+
 @app.route('/books', methods=['GET'])
 def get_books():
     db = Database()
@@ -704,14 +759,15 @@ def get_books():
         page = request.args.get('page', 1, type=int)
         limit = request.args.get('limit', 5, type=int)
         search_query = request.args.get('q', '', type=str)
+        user_id = request.args.get('user_id', None, type=int)  # Optional user_id for progress
         
         offset = (page - 1) * limit
 
         params = []
-        # Updated query to check for playlist items existence
+        # Updated query to check for playlist items existence and get duration
         base_select = """
             SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug, 
-                   u.name as posted_by_name, b.description, b.price, b.posted_by_user_id,
+                   u.name as posted_by_name, b.description, b.price, b.posted_by_user_id, b.duration_seconds,
                    (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count
             FROM books b 
             LEFT JOIN categories c ON b.primary_category_id = c.id
@@ -761,7 +817,14 @@ def get_books():
                          cover_path = f"static/BookCovers/{cover_path}"
                      cover_path = f"{BASE_URL}{cover_path}"
                 
-                books.append({
+                # Calculate listen percentage if user_id is provided
+                percentage = None
+                if user_id:
+                    is_playlist = row['playlist_count'] > 0
+                    total_duration = row['duration_seconds'] or 0
+                    percentage = calculate_listen_percentage(db, user_id, book_id, is_playlist, total_duration)
+                
+                book_data = {
                     "id": str(book_id),
                     "title": row['title'],
                     "author": row['author'],
@@ -774,7 +837,13 @@ def get_books():
                     "price": float(row['price']) if row['price'] else 0.0,
                     "postedByUserId": str(row['posted_by_user_id']),
                     "isPlaylist": row['playlist_count'] > 0
-                })
+                }
+                
+                # Add percentage if calculated
+                if percentage is not None:
+                    book_data["percentage"] = percentage
+                
+                books.append(book_data)
         
         return jsonify(books)
         
@@ -893,7 +962,6 @@ def complete_track():
                 db.execute_query(update_read, (user_id, book_id))
                 
                 # Check Badges (since book is now read)
-                # Check Badges (since book is now read)
                 try:
                     badge_service = BadgeService(db.connection)
                     badge_service.check_badges(user_id)
@@ -978,13 +1046,29 @@ def update_progress():
 
             
             # Log to playback_history (History Log)
-            # We record a checkpoint. 'played_seconds' here represents the position reached.
-            # Ideally this table would track sessions (start/end/duration), but for now we log checkpoints.
-            history_query = """
-                INSERT INTO playback_history (user_id, book_id, start_time, end_time, played_seconds)
-                VALUES (%s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, %s)
-            """
-            db.execute_query(history_query, (user_id, book_id, position))
+            # Use INSERT ON DUPLICATE KEY UPDATE to ensure only one record per user/book/playlist_item
+            # Skip updating if track is completed (optimization)
+            
+            # First check if this track/book is already completed
+            should_update = True
+            if playlist_item_id:
+                # Check if track is completed
+                completed_check = "SELECT id FROM user_completed_tracks WHERE user_id = %s AND track_id = %s"
+                completed_res = db.execute_query(completed_check, (user_id, playlist_item_id))
+                if completed_res:
+                    should_update = False
+                    print(f"Track {playlist_item_id} already completed, skipping playback_history update")
+            
+            if should_update:
+                # Use INSERT ON DUPLICATE KEY UPDATE to maintain only one record per combination
+                history_query = """
+                    INSERT INTO playback_history (user_id, book_id, playlist_item_id, start_time, end_time, played_seconds)
+                    VALUES (%s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, %s)
+                    ON DUPLICATE KEY UPDATE 
+                        end_time = CURRENT_TIMESTAMP,
+                        played_seconds = VALUES(played_seconds)
+                """
+                db.execute_query(history_query, (user_id, book_id, playlist_item_id, position))
             
             # Check for new badges
             badge_service = BadgeService(db.connection)
@@ -1037,45 +1121,101 @@ def get_listen_history(user_id):
         return jsonify({"error": "Database connection failed"}), 500
         
     try:
-        # Fetch books that have been started (position > 0) ordered by recent access
-        query = """
-            SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug, 
-                   ub.last_played_position_seconds, b.duration_seconds, ub.last_accessed_at
+        # Get all books the user has accessed
+        books_query = """
+            SELECT DISTINCT b.id, b.title, b.author, b.audio_path, b.cover_image_path, 
+                   c.slug as category_slug, b.duration_seconds, ub.last_accessed_at,
+                   (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count
             FROM user_books ub
             JOIN books b ON ub.book_id = b.id
             LEFT JOIN categories c ON b.primary_category_id = c.id
             WHERE ub.user_id = %s AND ub.last_played_position_seconds > 0
             ORDER BY ub.last_accessed_at DESC
         """
-        result = db.execute_query(query, (user_id,))
+        books_result = db.execute_query(books_query, (user_id,))
         
         history = []
-        if result:
-            for row in result:
+        if books_result:
+            for book in books_result:
+                book_id = book['id']
+                is_playlist = book['playlist_count'] > 0
+                
+                # Calculate total listen time based on playback_history
+                total_listened_seconds = 0
+                
+                if is_playlist:
+                    # For playlists: get the last (MAX) position for each track
+                    # For completed tracks, use full duration instead
+                    playlist_progress_query = """
+                        SELECT 
+                            pi.id as playlist_item_id,
+                            pi.duration_seconds,
+                            COALESCE(MAX(ph.played_seconds), 0) as last_position,
+                            (SELECT COUNT(*) FROM user_completed_tracks WHERE user_id = %s AND track_id = pi.id) as is_completed
+                        FROM playlist_items pi
+                        LEFT JOIN playback_history ph ON ph.playlist_item_id = pi.id AND ph.user_id = %s
+                        WHERE pi.book_id = %s
+                        GROUP BY pi.id, pi.duration_seconds
+                    """
+                    tracks_result = db.execute_query(playlist_progress_query, (user_id, user_id, book_id))
+                    
+                    if tracks_result:
+                        # Sum the last position of each track to get total listen time
+                        # For completed tracks, use full duration
+                        for track in tracks_result:
+                            track_duration = track['duration_seconds'] or 0
+                            is_completed = track['is_completed'] > 0
+                            
+                            if is_completed and track_duration > 0:
+                                # Track is completed - use full duration
+                                listened = track_duration
+                            else:
+                                # Track not completed - use last recorded position
+                                last_pos = track['last_position'] or 0
+                                # Use the minimum of last_position and duration to avoid over-counting
+                                listened = min(last_pos, track_duration) if track_duration > 0 else last_pos
+                            
+                            total_listened_seconds += listened
+                else:
+                    # For single files: get the MAX position from playback_history
+                    single_progress_query = """
+                        SELECT COALESCE(MAX(played_seconds), 0) as last_position
+                        FROM playback_history
+                        WHERE user_id = %s AND book_id = %s
+                    """
+                    single_result = db.execute_query(single_progress_query, (user_id, book_id))
+                    if single_result:
+                        total_listened_seconds = single_result[0]['last_position'] or 0
+                
                 # Construct full Cover URL if relative
-                cover_path = row['cover_image_path']
+                cover_path = book['cover_image_path']
                 if cover_path and not cover_path.startswith('http'):
                      if not cover_path.startswith('static/'):
                          cover_path = f"static/BookCovers/{cover_path}"
                      cover_path = f"{BASE_URL}{cover_path}"
 
                 # Construct full Audio URL if relative
-                audio_path = row['audio_path']
+                audio_path = book['audio_path']
                 if audio_path and not audio_path.startswith('http'):
                      if not audio_path.startswith('static/'):
                          audio_path = f"static/AudioBooks/{audio_path}"
                      audio_path = f"{BASE_URL}{audio_path}"
+                
+                # Calculate percentage
+                total_duration = book['duration_seconds'] or 0
+                percentage = (total_listened_seconds / total_duration * 100) if total_duration > 0 else 0
 
                 history.append({
-                    "id": str(row['id']),
-                    "title": row['title'],
-                    "author": row['author'],
+                    "id": str(book_id),
+                    "title": book['title'],
+                    "author": book['author'],
                     "audioUrl": audio_path,
                     "coverUrl": cover_path,
-                    "categoryId": row['category_slug'] or "",
-                    "lastPosition": row['last_played_position_seconds'],
-                    "duration": row['duration_seconds'],
-                    "lastAccessed": str(row['last_accessed_at'])
+                    "categoryId": book['category_slug'] or "",
+                    "lastPosition": int(total_listened_seconds),
+                    "duration": total_duration,
+                    "percentage": round(percentage, 2),
+                    "lastAccessed": str(book['last_accessed_at'])
                 })
                 
         return jsonify(history)
@@ -1269,6 +1409,16 @@ def upload_book():
                 save_path = os.path.join(book_folder_path, safe_fname)
                 file.save(save_path)
                 
+                # Extract duration using mutagen
+                duration_seconds = 0
+                try:
+                    audio_info = MutagenFile(save_path)
+                    if audio_info and hasattr(audio_info.info, 'length'):
+                        duration_seconds = int(audio_info.info.length)
+                        print(f"Extracted duration for {safe_fname}: {duration_seconds}s")
+                except Exception as e:
+                    print(f"Could not extract duration for {safe_fname}: {e}")
+                
                 # DB Path: static/AudioBooks/folder/file
                 # Full URL constructed in getter usually, but we store relative/semi-relative
                 # Current logic stores FULL URL often.
@@ -1279,7 +1429,8 @@ def upload_book():
                 saved_files_info.append({
                     "path": full_url,
                     "title": file.filename, # Or metadata
-                    "order": index
+                    "order": index,
+                    "duration": duration_seconds
                 })
                 
             main_audio_path = saved_files_info[0]["path"] if saved_files_info else ""
@@ -1292,8 +1443,18 @@ def upload_book():
             os.makedirs(os.path.dirname(audio_save_path), exist_ok=True)
             audio_file.save(audio_save_path)
             
+            # Extract duration for single file
+            duration_seconds = 0
+            try:
+                audio_info = MutagenFile(audio_save_path)
+                if audio_info and hasattr(audio_info.info, 'length'):
+                    duration_seconds = int(audio_info.info.length)
+                    print(f"Extracted duration for single file: {duration_seconds}s")
+            except Exception as e:
+                print(f"Could not extract duration for single file: {e}")
+            
             main_audio_path = f"{BASE_URL}static/AudioBooks/{audio_filename}"
-            saved_files_info.append({"path": main_audio_path, "title": audio_file.filename, "order": 0})
+            saved_files_info.append({"path": main_audio_path, "title": audio_file.filename, "order": 0, "duration": duration_seconds})
 
         # Handle Cover (Standard)
         db_cover_path = None
@@ -1307,13 +1468,15 @@ def upload_book():
                 db_cover_path = f"{BASE_URL}static/BookCovers/{cover_filename}"
 
         # Insert Book
-        # We can add an 'is_playlist' column later, or infer it from playlist_items existence
+        # Calculate total duration for playlists
+        total_duration = sum(item.get('duration', 0) for item in saved_files_info)
+        
         insert_query = """
             INSERT INTO books 
             (title, author, primary_category_id, audio_path, cover_image_path, posted_by_user_id, description, price, duration_seconds)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 0)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
-        params = (title, author, numeric_cat_id, main_audio_path, db_cover_path, user_id, description, price)
+        params = (title, author, numeric_cat_id, main_audio_path, db_cover_path, user_id, description, price, total_duration)
         
         cursor = db.connection.cursor()
         cursor.execute(insert_query, params)
@@ -1322,11 +1485,11 @@ def upload_book():
         # Insert Playlist Items if Playlist
         if is_playlist:
             pl_query = """
-                INSERT INTO playlist_items (book_id, file_path, title, track_order)
-                VALUES (%s, %s, %s, %s)
+                INSERT INTO playlist_items (book_id, file_path, title, track_order, duration_seconds)
+                VALUES (%s, %s, %s, %s, %s)
             """
             for item in saved_files_info:
-                cursor.execute(pl_query, (book_id, item['path'], item['title'], item['order']))
+                cursor.execute(pl_query, (book_id, item['path'], item['title'], item['order'], item.get('duration', 0)))
 
         # Auto-Buy
         own_query = "INSERT INTO user_books (user_id, book_id) VALUES (%s, %s)"

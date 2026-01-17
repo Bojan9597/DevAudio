@@ -158,7 +158,10 @@ class MyAudioHandler extends BaseAudioHandler {
       album: currentBook!.title,
       title: trackTitle,
       artist: currentBook!.author,
-      artUri: Uri.parse(currentBook!.coverUrl ?? ''),
+      artUri:
+          (currentBook!.coverUrl != null && currentBook!.coverUrl!.isNotEmpty)
+          ? Uri.parse(currentBook!.coverUrl!)
+          : null,
     );
 
     // Load and play
