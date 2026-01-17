@@ -6,7 +6,7 @@ import '../services/auth_service.dart';
 import '../repositories/book_repository.dart';
 import '../models/book.dart';
 import '../models/badge.dart';
-import '../widgets/player_screen.dart';
+import '../screens/playlist_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -367,7 +367,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onTap: () {
               Navigator.of(context)
                   .push(
-                    MaterialPageRoute(builder: (_) => PlayerScreen(book: book)),
+                    MaterialPageRoute(
+                      builder: (_) => PlaylistScreen(book: book),
+                    ),
                   )
                   .then((_) => _loadHistory()); // Reload history when returning
             },
