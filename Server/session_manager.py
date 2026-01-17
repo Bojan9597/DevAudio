@@ -6,10 +6,10 @@ class SessionManager:
     def __init__(self):
         self.db = Database()
 
-    def store_session(self, user_id, refresh_token, device_info=None):
+    def store_session(self, user_id, session_id, refresh_token, device_info=None):
         """
         Stores a new session. 
-        Enforces SINGLE SESSION by deleting any existing session for this user first.
+        Enforces SINGLE SESSION by replacing the entry.
         """
         if not self.db.connect():
             print("SessionManager: DB Connection failed")
@@ -21,9 +21,10 @@ class SessionManager:
 
             # 2. Insert new session
             query = """
-            INSERT INTO user_sessions (user_id, refresh_token, expires_at, device_info)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO user_sessions (user_id, session_id, refresh_token, expires_at, device_info)
+            VALUES (%s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE 
+                session_id = VALUES(session_id),
                 refresh_token = VALUES(refresh_token),
                 expires_at = VALUES(expires_at),
                 created_at = CURRENT_TIMESTAMP
@@ -31,13 +32,25 @@ class SessionManager:
             # Expires in 30 days
             expires_at = datetime.datetime.utcnow() + datetime.timedelta(days=30)
             
-            self.db.execute_query(query, (user_id, refresh_token, expires_at, device_info))
+            self.db.execute_query(query, (user_id, session_id, refresh_token, expires_at, device_info))
             self.db.connection.commit()
             print(f"Session stored for user {user_id}")
             return True
         except Exception as e:
             print(f"SessionManager Error: {e}")
             return False
+        finally:
+            self.db.disconnect()
+
+    def check_access_validity(self, user_id, session_id):
+        """Check if user_id + session_id match the active session in DB."""
+        if not self.db.connect():
+            return False
+        
+        try:
+            query = "SELECT id FROM user_sessions WHERE user_id = %s AND session_id = %s"
+            res = self.db.execute_query(query, (user_id, session_id))
+            return len(res) > 0
         finally:
             self.db.disconnect()
 

@@ -9,6 +9,7 @@ from mutagen import File as MutagenFile
 
 import re
 import datetime
+import uuid
 import jwt as pyjwt
 from jwt_config import generate_access_token, generate_refresh_token
 from jwt_middleware import jwt_required, blacklist_token
@@ -27,6 +28,28 @@ print(f"Server initialized with BASE_URL: {BASE_URL}")
 update_server_ip.update_flutter_client(current_ip)
 
 session_manager = SessionManager()
+
+@app.before_request
+def log_request_info():
+    print("="*50, flush=True)
+    print(f"[DEBUG] Request: {request.method} {request.url}", flush=True)
+    # print(f"[DEBUG] Headers: {request.headers}", flush=True) 
+    if request.content_type == 'application/json':
+        print(f"[DEBUG] JSON Body: {request.get_json(silent=True)}", flush=True)
+    elif request.content_type and 'multipart/form-data' in request.content_type:
+         print(f"[DEBUG] Form Data: {request.form}", flush=True)
+         print(f"[DEBUG] Files: {request.files}", flush=True)
+
+@app.after_request
+def log_response_info(response):
+    print(f"[DEBUG] Response Status: {response.status}", flush=True)
+    print("="*50, flush=True)
+    return response
+
+print("--------------------------------------------------")
+print("   DEBUG LOGGING MIDDLEWARE IS ACTIVE")
+print("   Requests will be printed here...")
+print("--------------------------------------------------")
 
 # ... existing build_category_tree ...
 
@@ -132,11 +155,12 @@ def verify_email():
             cursor.close()
             
             # Generate JWT tokens
-            access_token = generate_access_token(user_id)
-            refresh_token = generate_refresh_token(user_id)
+            session_id = str(uuid.uuid4())
+            access_token = generate_access_token(user_id, session_id)
+            refresh_token = generate_refresh_token(user_id, session_id)
             
             # Store session (Single Session Policy)
-            session_manager.store_session(user_id, refresh_token)
+            session_manager.store_session(user_id, session_id, refresh_token)
             
             # Return login data
             return jsonify({
@@ -190,11 +214,12 @@ def login():
         # Verify password
         if check_password_hash(user['password_hash'], password):
             # Generate JWT tokens
-            access_token = generate_access_token(user['id'])
-            refresh_token = generate_refresh_token(user['id'])
+            session_id = str(uuid.uuid4())
+            access_token = generate_access_token(user['id'], session_id)
+            refresh_token = generate_refresh_token(user['id'], session_id)
             
             # Store session (Single Session Policy)
-            session_manager.store_session(user['id'], refresh_token)
+            session_manager.store_session(user['id'], session_id, refresh_token)
             
             return jsonify({
                 "message": "Login successful",
@@ -284,11 +309,12 @@ def google_login():
         if users:
             # Login existing
             user = users[0]
-            access_token = generate_access_token(user['id'])
-            refresh_token = generate_refresh_token(user['id'])
+            session_id = str(uuid.uuid4())
+            access_token = generate_access_token(user['id'], session_id)
+            refresh_token = generate_refresh_token(user['id'], session_id)
             
             # Store session
-            session_manager.store_session(user['id'], refresh_token)
+            session_manager.store_session(user['id'], session_id, refresh_token)
             
             return jsonify({
                 "message": "Login successful",
@@ -314,11 +340,12 @@ def google_login():
             cursor.close()
 
             # Generate JWT tokens
-            access_token = generate_access_token(user_id)
-            refresh_token = generate_refresh_token(user_id)
+            session_id = str(uuid.uuid4())
+            access_token = generate_access_token(user_id, session_id)
+            refresh_token = generate_refresh_token(user_id, session_id)
             
             # Store session
-            session_manager.store_session(user_id, refresh_token)
+            session_manager.store_session(user_id, session_id, refresh_token)
             
             return jsonify({
                 "message": "User registered via Google",
@@ -375,7 +402,8 @@ def refresh_token():
             return jsonify({"error": "Invalid token type"}), 401
             
         user_id = payload.get('user_id')
-        new_access_token = generate_access_token(user_id)
+        session_id = payload.get('session_id')
+        new_access_token = generate_access_token(user_id, session_id)
         # Optionally rotate refresh token? For now, keep it simple.
         
         return jsonify({

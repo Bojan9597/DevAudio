@@ -63,6 +63,32 @@ def jwt_required(f):
             if payload['type'] != 'access':
                  return jsonify({"error": "Invalid token type"}), 401
 
+            # Strict Single Session Enforcement
+            # Check if session_id in token matches the one in DB
+            session_id = payload.get('session_id')
+            user_id = payload.get('user_id')
+            
+            if not session_id:
+                # Old token or invalid generation - Reject for strictness
+                return jsonify({"error": "Invalid session (legacy token)"}), 401
+                
+            # Verify against DB
+            db = Database()
+            if db.connect():
+                try:
+                    # Check if this specific session is the active one
+                    query = "SELECT id FROM user_sessions WHERE user_id = %s AND session_id = %s"
+                    res = db.execute_query(query, (user_id, session_id))
+                    if not res:
+                        # Session replaced or invalid
+                        return jsonify({"error": "Session expired (logged in elsewhere)"}), 401
+                except Exception as e:
+                    print(f"Session check error: {e}")
+                    # Fail open or closed? Closed for security.
+                    return jsonify({"error": "Session verification failed"}), 401
+                finally:
+                    db.disconnect()
+
             # Determine behavior: 
             # Ideally, we pass user_id to the route, but Flask routes expect specific args.
             # We can attach it to request config or verify user_id match if provided in args.
