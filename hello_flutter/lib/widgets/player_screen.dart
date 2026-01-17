@@ -113,8 +113,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _checkOwnership();
 
     // Listen for completion
-    _player.playerStateStream.listen((state) {
+    _playerStateSubscription = _player.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
+        if (!mounted) return;
+
         if (widget.onPlaybackComplete != null) {
           widget.onPlaybackComplete!(_currentIndex);
         }
@@ -132,17 +134,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
           }
         }
 
-        // If has quiz and NOT passed (or maybe even if passed? User said "it should go to quiz if there is one")
-        // Usually if passed we might skip? But user said "if there is one". Let's assume always if it exists.
-        // But maybe avoid annoyance if already passed.
-        // Let's stick to "If there is one". Maybe prompt?
-        // Let's just go there.
-
         if (hasQuiz && !isPassed) {
           // Navigate to Quiz
-          // Pause player just in case (though it's completed)
-          // We need to handle navigation carefully from inside a stream listener.
-
           // Use a post-frame callback or Future.microtask to navigate
           Future.microtask(() {
             if (mounted) {
@@ -157,23 +150,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   ),
                 ),
               ).then((result) {
-                // When they come back (e.g. passed or cancelled), what do we do?
-                // Maybe play next?
-                // Result could indicate if they passed.
-                // For now, let's just attempt to play next if there is one.
-                if (result == true) {
-                  // Assuming true means passed/completed or "next"
-                  _playNext();
-                } else {
-                  // If they just backed out? Maybe stay here.
-                  // But if they passed, we probably want to proceed.
-                  // Let's check updated status?
-                  // Doing a simple _playNext is safer UX flow for "continue".
-                  // But only if they didn't manually pause or exit.
-
-                  // Actually, simplest is: Go to quiz -> On return, try play next.
-                  _playNext();
-                }
+                if (mounted) _playNext();
               });
             }
           });
@@ -187,6 +164,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
       }
     });
   }
+
+  StreamSubscription<PlayerState>? _playerStateSubscription;
 
   String _getUniqueAudioId() {
     if (widget.playlist != null && widget.playlist!.isNotEmpty) {
@@ -478,6 +457,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   void dispose() {
     _resetBrightness(); // Reset brightness on exit
     _progressTimer?.cancel();
+    _playerStateSubscription?.cancel();
     _saveProgress(); // Try to save on exit
     // Don't dispose handler player - it's global
     super.dispose();
