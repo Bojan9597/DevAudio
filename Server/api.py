@@ -1090,17 +1090,74 @@ def get_user_stats(user_id):
         return jsonify({"error": "Database connection failed"}), 500
         
     try:
-        # Total time listening (sum of last positions)
-        # Note: This is an approximation. Ideally we sum logic from playback_history sessions, 
-        # but user likely wants "total progress" across books.
-        time_query = "SELECT SUM(last_played_position_seconds) as total_seconds FROM user_books WHERE user_id = %s"
-        time_result = db.execute_query(time_query, (user_id,))
-        total_seconds = int(time_result[0]['total_seconds'] or 0)
+        # Get all user's books
+        books_query = """
+            SELECT b.id, b.duration_seconds,
+                   (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count
+            FROM user_books ub
+            JOIN books b ON ub.book_id = b.id
+            WHERE ub.user_id = %s
+        """
+        books_result = db.execute_query(books_query, (user_id,))
         
-        # Books completed
-        read_query = "SELECT COUNT(*) as completed_count FROM user_books WHERE user_id = %s AND is_read = TRUE"
-        read_result = db.execute_query(read_query, (user_id,))
-        completed_count = read_result[0]['completed_count']
+        total_seconds = 0
+        completed_count = 0
+        
+        if books_result:
+            for book in books_result:
+                book_id = book['id']
+                is_playlist = book['playlist_count'] > 0
+                total_duration = book['duration_seconds'] or 0
+                
+                # Calculate listen time using same logic as listen_history
+                if is_playlist:
+                    playlist_progress_query = """
+                        SELECT 
+                            pi.id as playlist_item_id,
+                            pi.duration_seconds,
+                            COALESCE(MAX(ph.played_seconds), 0) as last_position,
+                            (SELECT COUNT(*) FROM user_completed_tracks WHERE user_id = %s AND track_id = pi.id) as is_completed
+                        FROM playlist_items pi
+                        LEFT JOIN playback_history ph ON ph.playlist_item_id = pi.id AND ph.user_id = %s
+                        WHERE pi.book_id = %s
+                        GROUP BY pi.id, pi.duration_seconds
+                    """
+                    tracks_result = db.execute_query(playlist_progress_query, (user_id, user_id, book_id))
+                    
+                    book_listened_seconds = 0
+                    if tracks_result:
+                        for track in tracks_result:
+                            track_duration = track['duration_seconds'] or 0
+                            is_completed = track['is_completed'] > 0
+                            
+                            if is_completed and track_duration > 0:
+                                listened = track_duration
+                            else:
+                                last_pos = track['last_position'] or 0
+                                listened = min(last_pos, track_duration) if track_duration > 0 else last_pos
+                            
+                            book_listened_seconds += listened
+                    
+                    total_seconds += book_listened_seconds
+                    
+                    # Check if book is completed (all tracks at 100%)
+                    if total_duration > 0 and book_listened_seconds >= total_duration:
+                        completed_count += 1
+                else:
+                    # Single file
+                    single_progress_query = """
+                        SELECT COALESCE(MAX(played_seconds), 0) as last_position
+                        FROM playback_history
+                        WHERE user_id = %s AND book_id = %s
+                    """
+                    single_result = db.execute_query(single_progress_query, (user_id, book_id))
+                    if single_result:
+                        listened = single_result[0]['last_position'] or 0
+                        total_seconds += listened
+                        
+                        # Check if completed (95% threshold)
+                        if total_duration > 0 and listened >= (total_duration * 0.95):
+                            completed_count += 1
         
         return jsonify({
             "total_listening_time_seconds": total_seconds,
