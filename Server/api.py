@@ -13,6 +13,7 @@ import jwt as pyjwt
 from jwt_config import generate_access_token, generate_refresh_token
 from jwt_middleware import jwt_required, blacklist_token
 import update_server_ip # Auto-update DB IP on startup
+from session_manager import SessionManager
 
 app = Flask(__name__)
 CORS(app) # Enable CORS for all routes
@@ -24,6 +25,8 @@ BASE_URL = f"http://{current_ip}:5000/"
 print(f"Server initialized with BASE_URL: {BASE_URL}")
 # Auto-update Flutter Client Configuration
 update_server_ip.update_flutter_client(current_ip)
+
+session_manager = SessionManager()
 
 # ... existing build_category_tree ...
 
@@ -132,6 +135,9 @@ def verify_email():
             access_token = generate_access_token(user_id)
             refresh_token = generate_refresh_token(user_id)
             
+            # Store session (Single Session Policy)
+            session_manager.store_session(user_id, refresh_token)
+            
             # Return login data
             return jsonify({
                 "message": "Verification successful",
@@ -186,6 +192,9 @@ def login():
             # Generate JWT tokens
             access_token = generate_access_token(user['id'])
             refresh_token = generate_refresh_token(user['id'])
+            
+            # Store session (Single Session Policy)
+            session_manager.store_session(user['id'], refresh_token)
             
             return jsonify({
                 "message": "Login successful",
@@ -278,6 +287,9 @@ def google_login():
             access_token = generate_access_token(user['id'])
             refresh_token = generate_refresh_token(user['id'])
             
+            # Store session
+            session_manager.store_session(user['id'], refresh_token)
+            
             return jsonify({
                 "message": "Login successful",
                 "access_token": access_token,
@@ -304,6 +316,9 @@ def google_login():
             # Generate JWT tokens
             access_token = generate_access_token(user_id)
             refresh_token = generate_refresh_token(user_id)
+            
+            # Store session
+            session_manager.store_session(user_id, refresh_token)
             
             return jsonify({
                 "message": "User registered via Google",
@@ -346,6 +361,11 @@ def refresh_token():
         
         if is_token_blacklisted(refresh_tok):
             return jsonify({"error": "Refresh token has been revoked"}), 401
+            
+        # Check if session is active in DB (Single Session Enforcement)
+        # If user logged in elsewhere, this record would be gone/replaced.
+        if not session_manager.check_session_validity(refresh_tok):
+             return jsonify({"error": "Session expired or logged in on another device"}), 401
             
         # Verify decode
         payload = pyjwt.decode(refresh_tok, options={"verify_signature": True}, key=os.getenv('JWT_SECRET_KEY'), algorithms=['HS256'])
@@ -394,6 +414,9 @@ def logout():
                 blacklist_token(refresh_tok, refresh_exp)
             except:
                 pass # Ignore invalid refresh token during logout
+                
+            # Remove from session DB to keep it clean
+            session_manager.remove_session(refresh_tok)
         
         return jsonify({"message": "Logout successful"}), 200
     except Exception as e:
