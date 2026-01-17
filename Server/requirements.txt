@@ -3,3 +3,5 @@ flask
 flask-cors
 werkzeug
 mutagen>=1.47.0
+PyJWT==2.8.0
+python-dotenv==1.0.1

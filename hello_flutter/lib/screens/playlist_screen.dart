@@ -226,7 +226,12 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
           (userId != null ? '?user_id=$userId' : '');
 
       final uri = Uri.parse(url);
-      final response = await http.get(uri);
+      final token = await AuthService().getAccessToken();
+      final headers = {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
+      final response = await http.get(uri, headers: headers);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
@@ -403,7 +408,13 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     if (ConnectivityService().isOffline) return;
     try {
       final String quizUrl = '${ApiConstants.baseUrl}/quiz/${widget.book.id}';
-      final response = await http.get(Uri.parse(quizUrl));
+      final token = await AuthService().getAccessToken();
+      final headers = {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
+
+      final response = await http.get(Uri.parse(quizUrl), headers: headers);
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         await DownloadService().saveQuizJson(widget.book.id, data);
@@ -414,7 +425,10 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
         if (_trackQuizzes.containsKey(trackId)) {
           final String trackQuizUrl =
               '${ApiConstants.baseUrl}/quiz/${widget.book.id}?playlist_item_id=$trackId';
-          final tResp = await http.get(Uri.parse(trackQuizUrl));
+          final tResp = await http.get(
+            Uri.parse(trackQuizUrl),
+            headers: headers,
+          );
           if (tResp.statusCode == 200) {
             final List<dynamic> tData = json.decode(tResp.body);
             await DownloadService().saveQuizJson(
@@ -509,9 +523,13 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     if (_userId == null) return;
     try {
       final uri = Uri.parse('${ApiConstants.baseUrl}/complete-track');
+      final token = await AuthService().getAccessToken();
       await http.post(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
         body: json.encode({'user_id': _userId, 'track_id': track['id']}),
       );
     } catch (e) {

@@ -10,13 +10,11 @@ import '../utils/api_constants.dart';
 
 class AuthService {
   static const String _userKey = 'user_data';
+  static const String _accessTokenKey = 'access_token';
+  static const String _refreshTokenKey = 'refresh_token';
 
   // Google Sign In instance
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    // Optional clientId
-    // clientId: 'YOUR_CLIENT_ID.apps.googleusercontent.com',
-    scopes: ['email'],
-  );
+  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
 
   String get baseUrl => ApiConstants.baseUrl;
 
@@ -30,7 +28,7 @@ class AuthService {
 
   Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.containsKey(_userKey);
+    return prefs.containsKey(_userKey) && prefs.containsKey(_accessTokenKey);
   }
 
   Future<Map<String, dynamic>?> getUser() async {
@@ -40,6 +38,11 @@ class AuthService {
       return json.decode(userStr);
     }
     return null;
+  }
+
+  Future<String?> getAccessToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_accessTokenKey);
   }
 
   Future<Map<String, dynamic>> login(String email, String password) async {
@@ -54,6 +57,7 @@ class AuthService {
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       await _saveUser(data['user']);
+      await _saveTokens(data['access_token'], data['refresh_token']);
       return data;
     } else {
       final error = json.decode(response.body);
@@ -81,7 +85,13 @@ class AuthService {
     );
 
     if (response.statusCode == 201) {
-      return json.decode(response.body);
+      final data = json.decode(response.body);
+      // Backend might return tokens if no verification is needed (unlikely based on current logic, but good to handle)
+      if (data.containsKey('access_token')) {
+        await _saveUser(data['user']);
+        await _saveTokens(data['access_token'], data['refresh_token']);
+      }
+      return data;
     } else if (response.statusCode == 202) {
       // Verification required
       return json.decode(response.body);
@@ -103,6 +113,7 @@ class AuthService {
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       await _saveUser(data['user']);
+      await _saveTokens(data['access_token'], data['refresh_token']);
       return data;
     } else {
       final error = json.decode(response.body);
@@ -115,27 +126,22 @@ class AuthService {
       if (ConnectivityService().isOffline) throw Exception('Offline mode');
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
-        // User canceled the sign-in
         return false;
       }
 
-      // Obtain the auth details from the request
-      // final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
-      // Send to backend to create user or login
       final response = await http.post(
         Uri.parse('$baseUrl/google-login'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'email': googleUser.email,
           'name': googleUser.displayName,
-          // 'google_id': googleUser.id,
         }),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = json.decode(response.body);
         await _saveUser(data['user']);
+        await _saveTokens(data['access_token'], data['refresh_token']);
         return true;
       } else {
         throw Exception('Google backend login failed');
@@ -153,9 +159,13 @@ class AuthService {
   ) async {
     if (ConnectivityService().isOffline) throw Exception('Offline mode');
 
+    final token = await getAccessToken();
     final response = await http.post(
       Uri.parse('$baseUrl/change-password'),
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
       body: json.encode({
         'user_id': userId,
         'current_password': currentPassword,
@@ -171,22 +181,42 @@ class AuthService {
 
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(_accessTokenKey);
+    final refreshToken = prefs.getString(_refreshTokenKey);
+
+    // Call backend logout to blacklist tokens
+    if (token != null && !ConnectivityService().isOffline) {
+      try {
+        await http.post(
+          Uri.parse('$baseUrl/logout'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+          body: json.encode({'refresh_token': refreshToken}),
+        );
+      } catch (e) {
+        print("Logout api call failed: $e");
+      }
+    }
+
     await prefs.remove(_userKey);
+    await prefs.remove(_accessTokenKey);
+    await prefs.remove(_refreshTokenKey);
     await _googleSignIn.signOut();
   }
 
   Future<String> uploadProfilePicture(File imageFile, int userId) async {
     if (ConnectivityService().isOffline) throw Exception('Offline mode');
 
+    final token = await getAccessToken();
     final uri = Uri.parse('$baseUrl/upload-profile-picture');
     final request = http.MultipartRequest('POST', uri);
 
+    request.headers['Authorization'] = 'Bearer $token';
     request.fields['user_id'] = userId.toString();
 
-    // Determine mime type (default to jpeg if unknown)
     final mimeType = 'image/jpeg';
-    // You could use mime package to look it up from extension,
-    // but simplified for now as backend checks extension.
 
     request.files.add(
       await http.MultipartFile.fromPath(
@@ -201,15 +231,11 @@ class AuthService {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      // Update local user data with new URL
       final user = await getUser();
       if (user != null) {
-        // Use relative path ('path') if available to allow dynamic base URL (e.g. if Ngrok changes)
-        // Fallback to 'url' only if 'path' is missing.
         user['profile_picture_url'] = data['path'] ?? data['url'];
         await _saveUser(user);
       }
-      // Return the full URL for immediate display
       return data['url'] ?? data['path'];
     } else {
       final error = json.decode(response.body);
@@ -220,5 +246,11 @@ class AuthService {
   Future<void> _saveUser(Map<String, dynamic> user) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_userKey, json.encode(user));
+  }
+
+  Future<void> _saveTokens(String accessToken, String refreshToken) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_accessTokenKey, accessToken);
+    await prefs.setString(_refreshTokenKey, refreshToken);
   }
 }

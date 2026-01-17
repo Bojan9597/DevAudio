@@ -9,6 +9,9 @@ from mutagen import File as MutagenFile
 
 import re
 import datetime
+import jwt as pyjwt
+from jwt_config import generate_access_token, generate_refresh_token
+from jwt_middleware import jwt_required, blacklist_token
 import update_server_ip # Auto-update DB IP on startup
 
 app = Flask(__name__)
@@ -125,9 +128,15 @@ def verify_email():
             db.connection.commit()
             cursor.close()
             
+            # Generate JWT tokens
+            access_token = generate_access_token(user_id)
+            refresh_token = generate_refresh_token(user_id)
+            
             # Return login data
             return jsonify({
                 "message": "Verification successful",
+                "access_token": access_token,
+                "refresh_token": refresh_token,
                 "user": {
                     "id": user_id,
                     "name": pending_user['name'],
@@ -174,8 +183,14 @@ def login():
         
         # Verify password
         if check_password_hash(user['password_hash'], password):
+            # Generate JWT tokens
+            access_token = generate_access_token(user['id'])
+            refresh_token = generate_refresh_token(user['id'])
+            
             return jsonify({
                 "message": "Login successful",
+                "access_token": access_token,
+                "refresh_token": refresh_token,
                 "user": {
                     "id": user['id'],
                     "name": user['name'],
@@ -192,6 +207,7 @@ def login():
         db.disconnect()
 
 @app.route('/change-password', methods=['POST'])
+@jwt_required
 def change_password():
     data = request.get_json()
     user_id = data.get('user_id')
@@ -259,8 +275,13 @@ def google_login():
         if users:
             # Login existing
             user = users[0]
+            access_token = generate_access_token(user['id'])
+            refresh_token = generate_refresh_token(user['id'])
+            
             return jsonify({
                 "message": "Login successful",
+                "access_token": access_token,
+                "refresh_token": refresh_token,
                 "user": {
                     "id": user['id'],
                     "name": user['name'],
@@ -280,8 +301,14 @@ def google_login():
             user_id = cursor.lastrowid
             cursor.close()
 
+            # Generate JWT tokens
+            access_token = generate_access_token(user_id)
+            refresh_token = generate_refresh_token(user_id)
+            
             return jsonify({
                 "message": "User registered via Google",
+                "access_token": access_token,
+                "refresh_token": refresh_token,
                 "user": {
                     "id": user_id,
                     "name": name,
@@ -294,6 +321,84 @@ def google_login():
         return jsonify({"error": str(e)}), 500
     finally:
         db.disconnect()
+
+
+@app.route('/refresh-token', methods=['POST'])
+def refresh_token():
+    """Refresh access token using a valid refresh token."""
+    data = request.get_json()
+    refresh_tok = data.get('refresh_token')
+    
+    if not refresh_tok:
+        return jsonify({"error": "Refresh token is required"}), 400
+    
+    try:
+        from jwt_config import verify_refresh_token
+        from jwt_middleware import is_token_blacklisted
+        
+        # Verify without assuming 'verify_token' from import scope (handled by jwt_config? no, raw verify)
+        # We need verify_token (generic) or specific logic. jwt_config has 'verify_token'.
+        # But for refresh token we might want to check type.
+        
+        # Let's import inside function or use accessible one.
+        # Actually jwt_config.verify_token decodes any token.
+        # We need to check if it's blacklisted first.
+        
+        if is_token_blacklisted(refresh_tok):
+            return jsonify({"error": "Refresh token has been revoked"}), 401
+            
+        # Verify decode
+        payload = pyjwt.decode(refresh_tok, options={"verify_signature": True}, key=os.getenv('JWT_SECRET_KEY'), algorithms=['HS256'])
+        
+        # Check type
+        if payload.get('type') != 'refresh':
+            return jsonify({"error": "Invalid token type"}), 401
+            
+        user_id = payload.get('user_id')
+        new_access_token = generate_access_token(user_id)
+        # Optionally rotate refresh token? For now, keep it simple.
+        
+        return jsonify({
+            "access_token": new_access_token
+        }), 200
+        
+    except pyjwt.ExpiredSignatureError:
+        return jsonify({"error": "Refresh token has expired. Please log in again."}), 401
+    except Exception as e:
+        return jsonify({"error": f"Invalid refresh token: {str(e)}"}), 401
+
+
+@app.route('/logout', methods=['POST'])
+@jwt_required
+def logout():
+    """Logout by blacklisting tokens."""
+    try:
+        auth_header = request.headers.get('Authorization')
+        access_token = auth_header.split()[1] if auth_header else None
+        
+        data = request.get_json() or {}
+        refresh_tok = data.get('refresh_token')
+        
+        # Decode exp for blacklist expiry
+        # We already verified access_token in decorator, but need payload for exp.
+        # Just allow pyjwt decode without verify to get exp quickly
+        access_payload = pyjwt.decode(access_token, options={"verify_signature": False})
+        access_exp = datetime.datetime.fromtimestamp(access_payload['exp'])
+        
+        blacklist_token(access_token, access_exp)
+        
+        if refresh_tok:
+            try:
+                refresh_payload = pyjwt.decode(refresh_tok, options={"verify_signature": False})
+                refresh_exp = datetime.datetime.fromtimestamp(refresh_payload['exp'])
+                blacklist_token(refresh_tok, refresh_exp)
+            except:
+                pass # Ignore invalid refresh token during logout
+        
+        return jsonify({"message": "Logout successful"}), 200
+    except Exception as e:
+        return jsonify({"error": f"Logout failed: {str(e)}"}), 500
+
 
 # Configure upload folder
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -314,6 +419,7 @@ def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 @app.route('/upload-profile-picture', methods=['POST'])
+@jwt_required
 def upload_profile_picture():
     user_id = request.form.get('user_id')
     if not user_id:
@@ -427,6 +533,7 @@ def get_categories():
         db.disconnect()
 
 @app.route('/playlist/<int:book_id>', methods=['GET'])
+@jwt_required
 def get_playlist(book_id):
     user_id = request.args.get('user_id')
     
@@ -853,6 +960,7 @@ def get_books():
         db.disconnect()
 
 @app.route('/user-books/<int:user_id>', methods=['GET'])
+@jwt_required
 def get_user_books(user_id):
     db = Database()
     if not db.connect():
@@ -872,6 +980,7 @@ def get_user_books(user_id):
         db.disconnect()
 
 @app.route('/buy-book', methods=['POST'])
+@jwt_required
 def buy_book():
     data = request.get_json()
     user_id = data.get('user_id')
@@ -914,6 +1023,7 @@ def buy_book():
         db.disconnect()
 
 @app.route('/complete-track', methods=['POST'])
+@jwt_required
 def complete_track():
     data = request.get_json()
     user_id = data.get('user_id')
@@ -976,6 +1086,7 @@ def complete_track():
         db.disconnect()
 
 @app.route('/update-progress', methods=['POST'])
+@jwt_required
 def update_progress():
     data = request.get_json()
     user_id = data.get('user_id')
@@ -1084,6 +1195,7 @@ def update_progress():
         db.disconnect()
 
 @app.route('/user-stats/<int:user_id>', methods=['GET'])
+@jwt_required
 def get_user_stats(user_id):
     db = Database()
     if not db.connect():
@@ -1172,6 +1284,7 @@ def get_user_stats(user_id):
 
 
 @app.route('/listen-history/<int:user_id>', methods=['GET'])
+@jwt_required
 def get_listen_history(user_id):
     db = Database()
     if not db.connect():
@@ -1283,6 +1396,7 @@ def get_listen_history(user_id):
         db.disconnect()
 
 @app.route('/book-status/<int:user_id>/<int:book_id>', methods=['GET'])
+@jwt_required
 def get_book_status(user_id, book_id):
     db = Database()
     if not db.connect():
@@ -1322,6 +1436,7 @@ def health_check():
     return jsonify({"status": "ok", "message": "Audiobooks API is running"})
 
 @app.route('/badges/<int:user_id>', methods=['GET'])
+@jwt_required
 def get_user_badges(user_id):
     db = Database()
     if not db.connect():
@@ -1382,6 +1497,7 @@ def remove_favorite():
         db.disconnect()
 
 @app.route('/favorites/<int:user_id>', methods=['GET'])
+@jwt_required
 def get_favorites(user_id):
     db = Database()
     if not db.connect():
@@ -1399,6 +1515,7 @@ def get_favorites(user_id):
         db.disconnect()
 
 @app.route('/upload_book', methods=['POST'])
+@jwt_required
 def upload_book():
     try:
         title = request.form.get('title')
@@ -1563,6 +1680,7 @@ def upload_book():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/my_uploads', methods=['GET'])
+@jwt_required
 def get_my_uploads():
     user_id = request.args.get('user_id')
     if not user_id:

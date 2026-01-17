@@ -2,27 +2,35 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/badge.dart';
 import '../models/book.dart';
-import '../models/category.dart'; // Import Category
+import '../models/category.dart';
 import '../utils/api_constants.dart';
 import '../services/connectivity_service.dart';
+import '../services/auth_service.dart'; // Import AuthService
 
 import 'package:shared_preferences/shared_preferences.dart';
 
 class BookRepository {
+  final AuthService _authService = AuthService();
+
+  Future<Map<String, String>> _getHeaders() async {
+    final token = await _authService.getAccessToken();
+    return {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
+
   Future<List<Book>> getBooks() async {
     try {
       if (ConnectivityService().isOffline) {
         throw Exception('Offline mode');
       }
       final response = await http.get(
-        Uri.parse(
-          '${ApiConstants.baseUrl}/books?limit=1000',
-        ), // Fetch all for legacy/offline
+        Uri.parse('${ApiConstants.baseUrl}/books?limit=1000'),
       );
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        // Cache data
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('cached_books', response.body);
         return data.map((json) => Book.fromJson(json)).toList();
@@ -37,7 +45,7 @@ class BookRepository {
         final List<dynamic> data = json.decode(cachedData);
         return data.map((json) => Book.fromJson(json)).toList();
       }
-      return []; // Return empty list only if both network and cache fail
+      return [];
     }
   }
 
@@ -69,8 +77,6 @@ class BookRepository {
     }
   }
 
-  /// Returns all books whose [categoryId] or any [subcategoryIds] match [clickedCategoryId]
-  /// or match any [allCategoryIds] which represents the clicked category and its descendants.
   List<Book> filterBooks(
     String clickedCategoryId,
     List<Book> allBooks, {
@@ -78,14 +84,9 @@ class BookRepository {
   }) {
     if (clickedCategoryId.isEmpty) return allBooks;
 
-    // 1. Gather all IDs that represent this category (including itself and descendants)
     final Set<String> targetIds = {clickedCategoryId};
 
     if (allCategories.isNotEmpty) {
-      // Find the clicked category object
-      // Note: This only finds top-level. If clicked is nested, we need recursive search.
-      // But typically filtering is only enabled for categories visible in sidebar.
-      // Better: Recursively collecting descendants.
       final descendants = _getDescendantIds(clickedCategoryId, allCategories);
       targetIds.addAll(descendants);
     }
@@ -99,18 +100,14 @@ class BookRepository {
     }).toList();
   }
 
-  /// Recursively finds all descendant category IDs for a given [parentId].
   List<String> _getDescendantIds(String parentId, List<Category> categories) {
     List<String> descendants = [];
-
     for (var cat in categories) {
       if (cat.id == parentId) {
-        // Found (top level), collect all children recursively
         if (cat.children != null) {
           descendants.addAll(_getAllIds(cat.children!));
         }
       } else {
-        // Not found at this level, recurse down
         if (cat.children != null) {
           descendants.addAll(_getDescendantIds(parentId, cat.children!));
         }
@@ -135,13 +132,15 @@ class BookRepository {
       if (ConnectivityService().isOffline) {
         throw Exception('Offline mode');
       }
+
+      final headers = await _getHeaders();
       final response = await http.get(
         Uri.parse('${ApiConstants.baseUrl}/user-books/$userId'),
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        // Cache data
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('cached_user_books_$userId', response.body);
         return data.map((e) => e.toString()).toList();
@@ -163,25 +162,21 @@ class BookRepository {
     if (ConnectivityService().isOffline) {
       throw Exception('Cannot purchase books while offline.');
     }
+
+    final headers = await _getHeaders();
     final response = await http.post(
       Uri.parse('${ApiConstants.baseUrl}/buy-book'),
-      headers: {'Content-Type': 'application/json'},
+      headers: headers,
       body: json.encode({'user_id': userId, 'book_id': int.parse(bookId)}),
     );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
-      // Update local cache immediately
       final prefs = await SharedPreferences.getInstance();
-      final String? cachedData = prefs.getString('cached_user_books_$userId');
+      var cachedData = prefs.getString('cached_user_books_$userId');
       List<dynamic> currentBooks = [];
       if (cachedData != null) {
         currentBooks = json.decode(cachedData);
       }
-
-      // Add if not present (backend might return string or int, ensure consistency)
-      // Usually backend returns IDs. Our getPurchasedBookIds converts to string?
-      // getPurchasedBookIds returns List<String>. The cache stores the raw JSON from backend which is likely [1, 2, 3].
-      // Let's store it as whatever the backend sends, assuming int based on book_id parsing above.
 
       final intId = int.parse(bookId);
       if (!currentBooks.contains(intId)) {
@@ -208,8 +203,10 @@ class BookRepository {
 
   Future<List<Badge>> getBadges(int userId) async {
     try {
+      final headers = await _getHeaders();
       final response = await http.get(
         Uri.parse('${ApiConstants.baseUrl}/badges/$userId'),
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
@@ -240,14 +237,14 @@ class BookRepository {
       'duration': duration,
     };
 
-    // Add playlist_item_id if provided
     if (playlistItemId != null) {
       requestBody['playlist_item_id'] = int.parse(playlistItemId);
     }
 
+    final headers = await _getHeaders();
     final response = await http.post(
       Uri.parse('${ApiConstants.baseUrl}/update-progress'),
-      headers: {'Content-Type': 'application/json'},
+      headers: headers,
       body: json.encode(requestBody),
     );
 
@@ -276,7 +273,8 @@ class BookRepository {
         url += '?playlist_item_id=$trackId';
       }
 
-      final response = await http.get(Uri.parse(url));
+      final headers = await _getHeaders();
+      final response = await http.get(Uri.parse(url), headers: headers);
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -291,8 +289,10 @@ class BookRepository {
 
   Future<List<Book>> getListenHistory(int userId) async {
     try {
+      final headers = await _getHeaders();
       final response = await http.get(
         Uri.parse('${ApiConstants.baseUrl}/listen-history/$userId'),
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
@@ -311,12 +311,14 @@ class BookRepository {
       if (ConnectivityService().isOffline) {
         throw Exception('Offline mode');
       }
+
+      final headers = await _getHeaders();
       final response = await http.get(
         Uri.parse('${ApiConstants.baseUrl}/user-stats/$userId'),
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
-        // Cache data
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('cached_stats_$userId', response.body);
         return json.decode(response.body);
@@ -337,13 +339,14 @@ class BookRepository {
     try {
       if (ConnectivityService().isOffline) throw Exception('Offline mode');
 
+      final headers = await _getHeaders();
       final response = await http.get(
         Uri.parse('${ApiConstants.baseUrl}/favorites/$userId'),
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        // Cache favorites
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('cached_favorites_$userId', response.body);
         return data.map((e) => e as int).toList();
@@ -366,12 +369,6 @@ class BookRepository {
     String bookId,
     bool isFavorite,
   ) async {
-    // if currently isFavorite, we want to remove it (delete)
-    // if currently!isFavorite, we want to add it (post)
-    // WAIT: logic usually is 'setFavorite(bool)'.
-    // If I pass 'isFavorite' as 'the desired state' -> No, usually toggle takes current state
-    // Let's assume argument `isFavorite` means "Is it currently favorite?".
-
     try {
       final url = Uri.parse('${ApiConstants.baseUrl}/favorites');
       final body = json.encode({
@@ -379,21 +376,12 @@ class BookRepository {
         'book_id': int.parse(bookId),
       });
 
+      final headers = await _getHeaders();
       http.Response response;
       if (isFavorite) {
-        // Remove
-        response = await http.delete(
-          url,
-          headers: {'Content-Type': 'application/json'},
-          body: body,
-        );
+        response = await http.delete(url, headers: headers, body: body);
       } else {
-        // Add
-        response = await http.post(
-          url,
-          headers: {'Content-Type': 'application/json'},
-          body: body,
-        );
+        response = await http.post(url, headers: headers, body: body);
       }
 
       return response.statusCode == 200;
@@ -417,8 +405,13 @@ class BookRepository {
       throw Exception("Cannot upload while offline.");
     }
 
+    final token = await _authService.getAccessToken();
     final uri = Uri.parse('${ApiConstants.baseUrl}/upload_book');
     final request = http.MultipartRequest('POST', uri);
+
+    if (token != null) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
 
     request.fields['title'] = title;
     request.fields['author'] = author;
@@ -440,10 +433,9 @@ class BookRepository {
     final response = await request.send();
 
     if (response.statusCode == 200 || response.statusCode == 201) {
-      // Clear cache on successful upload so user sees new book/ownership immediately
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('cached_books');
-      await prefs.remove('cached_categories'); // Clear categories too
+      await prefs.remove('cached_categories');
       await prefs.remove('cached_my_uploads_$userId');
       await prefs.remove('cached_user_books_$userId');
     } else {
@@ -459,11 +451,11 @@ class BookRepository {
       final uri = Uri.parse(
         '${ApiConstants.baseUrl}/my_uploads?user_id=$userId',
       );
-      final response = await http.get(uri);
+      final headers = await _getHeaders();
+      final response = await http.get(uri, headers: headers);
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        // Cache uploads
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('cached_my_uploads_$userId', response.body);
         return data.map((json) => Book.fromJson(json)).toList();
