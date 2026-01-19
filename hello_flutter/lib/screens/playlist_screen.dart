@@ -542,6 +542,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       postedByUserId: widget.book.postedByUserId,
       isPlaylist: false,
       isFavorite: widget.book.isFavorite,
+      isEncrypted: widget.book.isEncrypted,
     );
 
     bool justFinishedLastTrack = false;

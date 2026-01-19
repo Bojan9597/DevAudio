@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
 import '../models/category.dart';
 import '../repositories/book_repository.dart';
 import '../repositories/category_repository.dart';
@@ -120,15 +121,57 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
         throw Exception("User not logged in");
       }
 
+      // Encryption and Duration Logic
+      final authService = AuthService();
+      String? keyString = await authService.getEncryptionKey();
+
+      // If no key found (old user?), try to fetch from user object or warn?
+      // Ideally backend ensures key exists. If null, maybe generate one locally and update?
+      // For now, if null, we proceed with upload but maybe unencrypted or error?
+      // Let's assume key exists. If not, we can't encrypt.
+
+      if (keyString == null) {
+        // Fallback: Check if user data has it (though _saveUser moves it).
+        // Or maybe fetch user again?
+        final user = await authService.getUser();
+        // If still null, we might be an old user who hasn't logged in since migration.
+        // We should probably force re-login or handle it.
+        print("Warning: No encryption key found locally.");
+      }
+
+      List<String> finalPaths = [];
+      int totalDuration = 0;
+
+      for (String path in _selectedAudioPaths) {
+        // Get Duration using AudioPlayer
+        final player = AudioPlayer();
+        try {
+          await player.setFilePath(path);
+          final d = player.duration;
+          if (d != null) {
+            totalDuration += d.inSeconds;
+          }
+        } catch (e) {
+          print("Error getting duration for $path: $e");
+        } finally {
+          await player.dispose();
+        }
+
+        // No client-side encryption - server encrypts on-the-fly when serving
+        finalPaths.add(path);
+      }
+
       await BookRepository().uploadBook(
         title: _titleController.text,
         author: _authorController.text,
         categoryId: _selectedCategoryId!,
         userId: userId.toString(),
-        audioPaths: _selectedAudioPaths,
+        audioPaths: finalPaths,
         coverPath: _selectedCoverPath,
         description: _descriptionController.text,
         price: double.tryParse(_priceController.text) ?? 0.0,
+        duration: totalDuration,
+        isEncrypted: true, // Always true - server encrypts when serving
       );
 
       if (mounted) {

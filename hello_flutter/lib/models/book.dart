@@ -15,6 +15,7 @@ class Book {
   final String? postedByUserId;
   final String? coverUrl;
   final bool isPlaylist;
+  final bool isEncrypted; // Added isEncrypted field
 
   const Book({
     required this.id,
@@ -33,6 +34,7 @@ class Book {
     this.postedByUserId,
     this.coverUrl,
     this.isPlaylist = false,
+    this.isEncrypted = false, // Added to constructor
   });
 
   factory Book.fromJson(Map<String, dynamic> json) {
@@ -58,6 +60,8 @@ class Book {
       price: (json['price'] as num?)?.toDouble(),
       postedByUserId: json['postedByUserId'] as String?,
       coverUrl: json['coverUrl'] as String?,
+      isPlaylist: json['isPlaylist'] as bool? ?? false,
+      isEncrypted: json['isEncrypted'] as bool? ?? false, // Added to fromJson
     );
   }
 
@@ -71,6 +75,7 @@ class Book {
     double? price,
     String? postedByUserId,
     String? coverUrl,
+    bool? isEncrypted,
   }) {
     return Book(
       id: id,
@@ -88,6 +93,7 @@ class Book {
       price: price ?? this.price,
       postedByUserId: postedByUserId ?? this.postedByUserId,
       coverUrl: coverUrl ?? this.coverUrl,
+      isEncrypted: isEncrypted ?? this.isEncrypted,
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'connectivity_service.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../utils/api_constants.dart';
 
@@ -12,6 +13,9 @@ class AuthService {
   static const String _userKey = 'user_data';
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
+  static const String _encryptionKeyStorageKey = 'user_encryption_key';
+
+  final _storage = const FlutterSecureStorage();
 
   // Admin email for upload functionality (preparation for Google Play subscription)
   static const String adminEmail = 'bojanpejic97@gmail.com';
@@ -55,6 +59,10 @@ class AuthService {
   Future<String?> getAccessToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_accessTokenKey);
+  }
+
+  Future<String?> getEncryptionKey() async {
+    return await _storage.read(key: _encryptionKeyStorageKey);
   }
 
   Future<Map<String, dynamic>> login(String email, String password) async {
@@ -212,10 +220,11 @@ class AuthService {
       }
     }
 
-    await prefs.remove(_userKey);
-    await prefs.remove(_accessTokenKey);
-    await prefs.remove(_refreshTokenKey);
     await _googleSignIn.signOut();
+
+    // Clear all shared preferences (tokens, user data, AND caches like books/categories)
+    await prefs.clear();
+    await _storage.delete(key: _encryptionKeyStorageKey);
   }
 
   Future<String> uploadProfilePicture(File imageFile, int userId) async {
@@ -257,6 +266,16 @@ class AuthService {
 
   Future<void> _saveUser(Map<String, dynamic> user) async {
     final prefs = await SharedPreferences.getInstance();
+
+    // Extract and store AES key securely
+    if (user.containsKey('aes_key')) {
+      final key = user['aes_key'];
+      if (key != null) {
+        await _storage.write(key: _encryptionKeyStorageKey, value: key);
+      }
+      user.remove('aes_key'); // Don't save in shared prefs
+    }
+
     await prefs.setString(_userKey, json.encode(user));
   }
 

@@ -402,15 +402,49 @@ class _PlayerScreenState extends State<PlayerScreen> {
       final storageId = _getUniqueAudioId();
       final isDownloaded = await DownloadService().isBookDownloaded(storageId);
 
-      if (isDownloaded) {
-        final localPath = await DownloadService().getLocalBookPath(storageId);
-        print("Playing from local file: $localPath");
-        await audioHandler.loadLocalFile(localPath, mediaItem);
-      } else {
-        if (url == 'placeholder.mp3' || url.isEmpty) {
-          url = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
+      final authService = AuthService(); // Helper for key
+
+      print(
+        "[DEBUG][PlayerScreen] isEncrypted=${_currentBook.isEncrypted}, url=$url",
+      );
+
+      if (_currentBook.isEncrypted) {
+        final key = await authService.getEncryptionKey();
+        print(
+          "[DEBUG][PlayerScreen] Encryption key=${key != null ? '${key.substring(0, 10)}...' : 'NULL'}",
+        );
+        if (key == null) {
+          throw Exception("Encryption key not found");
         }
-        await audioHandler.loadAudio(url, mediaItem);
+
+        if (isDownloaded) {
+          final localPath = await DownloadService().getLocalBookPath(storageId);
+          print("Playing encrypted from local file: $localPath");
+          await audioHandler.loadEncryptedLocalFile(localPath, mediaItem, key);
+        } else {
+          if (url == 'placeholder.mp3' || url.isEmpty) {
+            // Placeholder logic (unlikely for encrypted)
+            url =
+                'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
+          }
+          print(
+            "[DEBUG][PlayerScreen] Calling loadEncryptedAudio with URL: $url",
+          );
+          await audioHandler.loadEncryptedAudio(url, mediaItem, key);
+        }
+      } else {
+        // Unencrypted / Legacy
+        if (isDownloaded) {
+          final localPath = await DownloadService().getLocalBookPath(storageId);
+          print("Playing from local file: $localPath");
+          await audioHandler.loadLocalFile(localPath, mediaItem);
+        } else {
+          if (url == 'placeholder.mp3' || url.isEmpty) {
+            url =
+                'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
+          }
+          await audioHandler.loadAudio(url, mediaItem);
+        }
       }
 
       // Auto-play
@@ -1116,9 +1150,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   // Blur Effect
                   BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: Container(
-                      color: Colors.black.withOpacity(0.6),
-                    ),
+                    child: Container(color: Colors.black.withOpacity(0.6)),
                   ),
                   // Subscribe Content
                   Center(
@@ -1142,10 +1174,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         const SizedBox(height: 8),
                         const Text(
                           'Get unlimited access to all audiobooks',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.white70,
-                          ),
+                          style: TextStyle(fontSize: 14, color: Colors.white70),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 24),
