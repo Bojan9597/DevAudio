@@ -15,6 +15,20 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _authService = AuthService();
   bool _isLoading = false;
+  bool _isAdmin = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAdminStatus();
+  }
+
+  Future<void> _checkAdminStatus() async {
+    final isAdmin = await _authService.isAdmin();
+    if (mounted) {
+      setState(() => _isAdmin = isAdmin);
+    }
+  }
 
   void _showChangePasswordDialog() {
     final currentPasswordController = TextEditingController();
@@ -293,28 +307,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   },
                 ),
                 const Divider(),
-                ListTile(
-                  leading: const Icon(Icons.cloud_upload),
-                  title: const Text('Upload Audio Book'),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () async {
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const UploadBookScreen(),
-                      ),
-                    );
+                // Only show upload option for admin user
+                if (_isAdmin)
+                  ListTile(
+                    leading: const Icon(Icons.cloud_upload),
+                    title: const Text('Upload Audio Book'),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () async {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const UploadBookScreen(),
+                        ),
+                      );
 
-                    if (result == true) {
-                      // Wait a bit to ensure backend consistency and UI readiness
-                      await Future.delayed(const Duration(milliseconds: 500));
-                      // Trigger app-wide refresh
-                      globalLayoutState.triggerRefresh();
-                      // Optional: Navigate to My Uploads?
-                      // globalLayoutState.setCategoryId('library');
-                    }
-                  },
-                ),
+                      if (result == true) {
+                        // Wait a bit to ensure backend consistency and UI readiness
+                        await Future.delayed(const Duration(milliseconds: 500));
+                        // Trigger app-wide refresh
+                        globalLayoutState.triggerRefresh();
+                        // Optional: Navigate to My Uploads?
+                        // globalLayoutState.setCategoryId('library');
+                      }
+                    },
+                  ),
                 ListTile(
                   leading: const Icon(Icons.lock),
                   title: Text(AppLocalizations.of(context)!.changePassword),

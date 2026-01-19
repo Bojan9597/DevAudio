@@ -9,6 +9,7 @@ import 'dart:ui'; // For BackdropFilter
 import '../repositories/book_repository.dart';
 import '../services/auth_service.dart';
 import 'badge_dialog.dart';
+import 'subscription_bottom_sheet.dart';
 // import '../models/badge.dart'; // Unused
 import '../services/download_service.dart';
 import '../utils/api_constants.dart';
@@ -91,9 +92,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
   }
 
-  // Purchase State
+  // Purchase/Subscription State
   bool _isPurchased = false;
   bool _isLoadingOwnership = true;
+  bool _isAdmin = false;
   int? _userId;
   bool _isFavorite = false;
   bool _isDownloading = false;
@@ -246,6 +248,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
       _userId = userId;
 
+      // Check if user is admin - admin always has access
+      final isAdmin = await AuthService().isAdmin();
+
       // Parallel fetch for better performance
       final results = await Future.wait([
         BookRepository().getPurchasedBookIds(userId),
@@ -261,12 +266,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
       final isFav = favoriteIds.contains(int.tryParse(widget.book.id) ?? -1);
 
       setState(() {
-        _isPurchased = isOwned;
+        _isAdmin = isAdmin;
+        // Admin always has access, otherwise check ownership/subscription
+        _isPurchased = isAdmin || isOwned;
         _isFavorite = isFav; // Update favorite status from backend
         _isLoadingOwnership = false;
       });
 
-      if (isOwned) {
+      if (_isPurchased) {
         _startProgressSync();
       }
     } catch (e) {
@@ -275,39 +282,59 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
   }
 
-  Future<void> _buyBook() async {
-    if (_userId == null) return;
-    try {
-      final newBadges = await BookRepository().buyBook(
-        _userId!,
-        widget.book.id,
-      );
+  void _showSubscriptionSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => SubscriptionBottomSheet(
+        onSubscribed: () {
+          Navigator.pop(context); // Close bottom sheet
+          _onSubscriptionSuccess();
+        },
+      ),
+    );
+  }
 
-      setState(() {
-        _isPurchased = true;
-      });
-      _startProgressSync(); // Start syncing after purchase
+  Future<void> _onSubscriptionSuccess() async {
+    // Refresh subscription status and unlock content
+    setState(() {
+      _isPurchased = true;
+    });
+    _startProgressSync();
 
-      if (widget.onPurchaseSuccess != null) {
-        // Delegate download logic to parent (e.g. PlaylistScreen downloads all)
-        widget.onPurchaseSuccess!();
-      } else {
-        _downloadBook(); // Trigger download for single book
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Book Purchased and Unlocked!')),
+    // Add book to user's library for tracking
+    if (_userId != null) {
+      try {
+        final newBadges = await BookRepository().buyBook(
+          _userId!,
+          widget.book.id,
         );
 
-        for (var badge in newBadges) {
-          BadgeDialog.show(context, badge);
+        if (mounted) {
+          for (var badge in newBadges) {
+            BadgeDialog.show(context, badge);
+          }
         }
+      } catch (e) {
+        // Ignore errors - subscription is active, book access is granted
+        print('Error adding book to library: $e');
       }
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Purchase failed: $e')));
+    }
+
+    if (widget.onPurchaseSuccess != null) {
+      widget.onPurchaseSuccess!();
+    } else {
+      _downloadBook();
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Subscription activated! Enjoy unlimited access.'),
+          backgroundColor: Colors.green,
+        ),
+      );
     }
   }
 
@@ -1081,7 +1108,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
               ),
             ),
           ),
-          // Purchase Overlay
+          // Subscription Overlay (replaces Purchase Overlay)
           if (!_isLoadingOwnership && !_isPurchased)
             Positioned.fill(
               child: Stack(
@@ -1090,28 +1117,67 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                     child: Container(
-                      color: Colors.white.withOpacity(
-                        0.5,
-                      ), // White 50:50 transparent
+                      color: Colors.black.withOpacity(0.6),
                     ),
                   ),
-                  // Buy Button
+                  // Subscribe Content
                   Center(
-                    child: ElevatedButton(
-                      onPressed: _buyBook,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueAccent,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 40,
-                          vertical: 20,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.lock_rounded,
+                          size: 48,
+                          color: Colors.white70,
                         ),
-                        textStyle: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Subscribe to Listen',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                      child: const Text('Buy Book'),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Get unlimited access to all audiobooks',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.white70,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: _showSubscriptionSheet,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.amber.shade600,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 40,
+                              vertical: 16,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.star_rounded, size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                'Subscribe Now',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

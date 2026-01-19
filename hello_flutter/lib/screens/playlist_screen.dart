@@ -14,7 +14,9 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:dio/dio.dart';
 import '../services/connectivity_service.dart';
+import '../services/subscription_service.dart';
 import '../widgets/mini_player.dart';
+import '../widgets/subscription_bottom_sheet.dart';
 
 class PlaylistScreen extends StatefulWidget {
   final Book book;
@@ -36,6 +38,9 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   bool _isFirstLoad = true; // Flag to prevent overlay on startup
   bool _isQuizPassed = false;
   int? _userId;
+  bool _isAdmin = false;
+  bool _hasAccess = false;
+  bool _isCheckingAccess = true;
   late VideoPlayerController _videoController;
   late VideoPlayerController _completionVideoController; // New controller
   bool _isVideoInitialized = false;
@@ -47,9 +52,50 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   @override
   void initState() {
     super.initState();
+    _checkAccess();
     _loadTracks();
     _initVideoPlayer();
     _initCompletionVideo(); // Init completion video
+  }
+
+  Future<void> _checkAccess() async {
+    try {
+      final isAdmin = await AuthService().isAdmin();
+      final isSubscribed = await SubscriptionService().isSubscribed();
+
+      print('[PlaylistScreen] Access check: isAdmin=$isAdmin, isSubscribed=$isSubscribed');
+
+      if (mounted) {
+        setState(() {
+          _isAdmin = isAdmin;
+          _hasAccess = isAdmin || isSubscribed;
+          _isCheckingAccess = false;
+        });
+      }
+    } catch (e) {
+      print("[PlaylistScreen] Error checking access: $e");
+      if (mounted) {
+        setState(() {
+          _isCheckingAccess = false;
+          // On error, don't block access - let server handle it
+          _hasAccess = true;
+        });
+      }
+    }
+  }
+
+  void _showSubscriptionSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => SubscriptionBottomSheet(
+        onSubscribed: () {
+          Navigator.pop(context);
+          _checkAccess(); // Refresh access status
+        },
+      ),
+    );
   }
 
   Future<void> _initCompletionVideo() async {
@@ -452,6 +498,24 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   }
 
   void _playTrack(Map<String, dynamic> track, int index) async {
+    // Wait for access check to complete if still checking
+    if (_isCheckingAccess) {
+      // Show a brief loading indicator or just wait
+      await Future.delayed(const Duration(milliseconds: 500));
+      // Re-check after delay
+      if (_isCheckingAccess) {
+        print('[PlaylistScreen] Still checking access, please wait...');
+        return;
+      }
+    }
+
+    // Check subscription access before playing
+    if (!_hasAccess) {
+      print('[PlaylistScreen] No access, showing subscription sheet');
+      _showSubscriptionSheet();
+      return;
+    }
+
     // Construct a temporary Book object for the Player
     final String trackUrl = _ensureAbsoluteUrl(track['file_path']);
     final trackTitle = track['title'];

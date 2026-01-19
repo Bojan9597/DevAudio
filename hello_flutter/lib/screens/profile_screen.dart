@@ -3,10 +3,13 @@ import 'settings_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../services/auth_service.dart';
+import '../services/subscription_service.dart';
 import '../repositories/book_repository.dart';
 import '../models/book.dart';
 import '../models/badge.dart';
+import '../models/subscription.dart';
 import '../screens/playlist_screen.dart';
+import '../widgets/subscription_bottom_sheet.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -18,8 +21,10 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   Map<String, dynamic>? _user;
   bool _isLoading = true;
+  bool _isAdmin = false;
   List<Book> _history = [];
   List<Badge> _badges = [];
+  Subscription? _subscription;
   Map<String, dynamic> _stats = {
     'total_listening_time_seconds': 0,
     'books_completed': 0,
@@ -33,6 +38,78 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadHistory();
     _loadStats();
     _loadBadges();
+    _loadSubscription();
+    _checkAdminStatus();
+  }
+
+  Future<void> _checkAdminStatus() async {
+    final isAdmin = await AuthService().isAdmin();
+    if (mounted) {
+      setState(() => _isAdmin = isAdmin);
+    }
+  }
+
+  Future<void> _loadSubscription() async {
+    try {
+      final sub = await SubscriptionService().getSubscriptionStatus();
+      if (mounted) {
+        setState(() {
+          _subscription = sub;
+        });
+      }
+    } catch (e) {
+      print("Error loading subscription: $e");
+    }
+  }
+
+  void _showSubscriptionSheet({VoidCallback? onSubscribed}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => SubscriptionBottomSheet(
+        onSubscribed: () {
+          Navigator.pop(context);
+          _loadSubscription(); // Refresh subscription status
+          if (onSubscribed != null) {
+            onSubscribed();
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Subscription activated!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _openBookWithSubscriptionCheck(Book book) async {
+    // Admin always has access
+    if (_isAdmin) {
+      _navigateToBook(book);
+      return;
+    }
+
+    // Check subscription
+    final isSubscribed = await SubscriptionService().isSubscribed();
+    if (isSubscribed) {
+      _navigateToBook(book);
+    } else {
+      // Show subscription sheet, navigate after subscribing
+      _showSubscriptionSheet(onSubscribed: () => _navigateToBook(book));
+    }
+  }
+
+  void _navigateToBook(Book book) {
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => PlaylistScreen(book: book),
+          ),
+        )
+        .then((_) => _loadHistory());
   }
 
   Future<void> _loadUser() async {
@@ -132,6 +209,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
       } finally {
         if (mounted) setState(() => _isLoading = false);
       }
+    }
+  }
+
+  String _formatSubscriptionDate(DateTime date) {
+    // Server sends UTC time, convert to local for display
+    final localDate = date.toLocal();
+    final now = DateTime.now();
+    final difference = localDate.difference(now);
+
+    if (difference.inHours < 24) {
+      // Show date and time for short subscriptions
+      return '${localDate.day}/${localDate.month}/${localDate.year} ${localDate.hour.toString().padLeft(2, '0')}:${localDate.minute.toString().padLeft(2, '0')}';
+    } else {
+      // Show just date for longer subscriptions
+      return '${localDate.day}/${localDate.month}/${localDate.year}';
     }
   }
 
@@ -241,23 +333,119 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 8),
                         Text(
                           userName,
                           style: const TextStyle(
-                            fontSize: 24,
+                            fontSize: 22,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         Text(
                           userEmail,
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             color: Theme.of(
                               context,
                             ).colorScheme.onSurface.withOpacity(0.7),
                           ),
                         ),
+                        const SizedBox(height: 6),
+                        // Subscription Status Badge (not shown for admin)
+                        if (_isAdmin)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.purple.shade600,
+                                  Colors.deepPurple.shade600,
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.admin_panel_settings,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Admin',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else if (_subscription?.isActive == true)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.amber.shade600,
+                                  Colors.orange.shade600,
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.star_rounded,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  _subscription!.endDate != null
+                                      ? 'Premium until ${_formatSubscriptionDate(_subscription!.endDate!)}'
+                                      : 'Lifetime Premium',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          TextButton.icon(
+                            onPressed: _showSubscriptionSheet,
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            icon: Icon(
+                              Icons.star_border_rounded,
+                              color: Colors.amber.shade600,
+                              size: 18,
+                            ),
+                            label: Text(
+                              'Upgrade to Premium',
+                              style: TextStyle(
+                                color: Colors.amber.shade600,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -364,15 +552,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               'Last listened: ${book.lastAccessed?.toString().split('.')[0] ?? '?'}\nProgress: ${_formatDuration(position)} / ${_formatDuration(duration)}',
             ),
             trailing: Text('$percent%'),
-            onTap: () {
-              Navigator.of(context)
-                  .push(
-                    MaterialPageRoute(
-                      builder: (_) => PlaylistScreen(book: book),
-                    ),
-                  )
-                  .then((_) => _loadHistory()); // Reload history when returning
-            },
+            onTap: () => _openBookWithSubscriptionCheck(book),
           ),
         );
       },

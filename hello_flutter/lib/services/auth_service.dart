@@ -13,8 +13,20 @@ class AuthService {
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
 
+  // Admin email for upload functionality (preparation for Google Play subscription)
+  static const String adminEmail = 'bojanpejic97@gmail.com';
+
   // Google Sign In instance
   final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
+
+  /// Check if current user is admin (can upload books)
+  Future<bool> isAdmin() async {
+    final user = await getUser();
+    if (user != null && user['email'] != null) {
+      return user['email'].toString().toLowerCase() == adminEmail.toLowerCase();
+    }
+    return false;
+  }
 
   String get baseUrl => ApiConstants.baseUrl;
 

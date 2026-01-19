@@ -27,18 +27,27 @@ class _ContentAreaState extends State<ContentArea> {
   List<Book> _uploadedBooks = [];
   List<Category> _categories = []; // State for recursive filtering
   bool _isLoading = true;
+  bool _isAdmin = false;
 
   int _lastRefreshVersion = 0;
 
   @override
   void initState() {
     super.initState();
+    _checkAdminStatus();
     _loadBooks();
     _loadCategories(); // Load categories for filtering
 
     // Listen for refresh triggers
     globalLayoutState.addListener(_handleLayoutChange);
     _lastRefreshVersion = globalLayoutState.refreshVersion;
+  }
+
+  Future<void> _checkAdminStatus() async {
+    final isAdmin = await AuthService().isAdmin();
+    if (mounted) {
+      setState(() => _isAdmin = isAdmin);
+    }
   }
 
   @override
@@ -228,16 +237,8 @@ class _ContentAreaState extends State<ContentArea> {
   Widget _buildLibraryView() {
     final favoriteBooks = _allBooks.where((b) => b.isFavorite == true).toList();
 
-    // "My Books" = Purchased Books EXCLUDING my own uploads
-    // (Uploads have their own tab)
-    // We need current userId for this.
-    // Since _loadBooks fetches it locally, we should store it in state or fetch again?
-    // Better: _loadBooks stored _uploadedBooks.
-    // Logic: If a book is in _uploadedBooks, exclude it from My Books.
-    // Or check b.postedByUserId == currentUserId (if we had it).
-    // We have _uploadedBooks. Let's use that.
-
-    final uploadedIds = _uploadedBooks.map((b) => b.id).toSet();
+    // "My Books" = Purchased Books EXCLUDING my own uploads (if admin)
+    final uploadedIds = _isAdmin ? _uploadedBooks.map((b) => b.id).toSet() : <String>{};
 
     final myBooks = _allBooks
         .where(
@@ -245,8 +246,99 @@ class _ContentAreaState extends State<ContentArea> {
         )
         .toList();
 
+    // Build tabs list - only include Uploaded tab for admin
+    final tabs = <Tab>[
+      Tab(
+        icon: const Icon(Icons.favorite),
+        text: AppLocalizations.of(context)!.favorites,
+      ),
+      Tab(
+        icon: const Icon(Icons.menu_book),
+        text: AppLocalizations.of(context)!.myBooks,
+      ),
+      if (_isAdmin)
+        const Tab(icon: Icon(Icons.cloud_upload), text: 'Uploaded'),
+    ];
+
+    // Build tab views - only include Uploaded view for admin
+    final tabViews = <Widget>[
+      // Favorites Tab
+      favoriteBooks.isEmpty
+          ? const Center(child: Text('No favorite books yet'))
+          : Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: _buildBookGridOrList(favoriteBooks),
+            ),
+      // My Books Tab
+      myBooks.isEmpty
+          ? const Center(child: Text('No purchased books'))
+          : Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: ListView.builder(
+                itemCount: myBooks.length,
+                itemBuilder: (context, index) {
+                  final book = myBooks[index];
+                  return _buildMyBookTile(book);
+                },
+              ),
+            ),
+      // Uploaded Tab with FAB (only for admin)
+      if (_isAdmin)
+        Stack(
+          children: [
+            _uploadedBooks.isEmpty
+                ? const Center(child: Text('No uploaded books'))
+                : Padding(
+                    padding: const EdgeInsets.only(
+                      top: 16.0,
+                      left: 16.0,
+                      right: 16.0,
+                      bottom: 130,
+                    ),
+                    child: ListView.builder(
+                      itemCount: _uploadedBooks.length,
+                      itemBuilder: (context, index) {
+                        final book = _uploadedBooks[index];
+                        return _buildMyBookTile(book);
+                      },
+                    ),
+                  ),
+            Positioned(
+              bottom: 24,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: FloatingActionButton.extended(
+                  onPressed: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const UploadBookScreen(),
+                      ),
+                    );
+
+                    if (result == true) {
+                      await Future.delayed(
+                        const Duration(milliseconds: 500),
+                      );
+                      globalLayoutState.triggerRefresh();
+                    }
+                  },
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  icon: const Icon(Icons.cloud_upload),
+                  label: const Text(
+                    'Upload Audio Book',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+    ];
+
     return DefaultTabController(
-      length: 3,
+      length: tabs.length,
       child: Column(
         children: [
           Container(
@@ -259,99 +351,12 @@ class _ContentAreaState extends State<ContentArea> {
                 context,
               ).colorScheme.onSurface.withOpacity(0.6),
               indicatorColor: Theme.of(context).colorScheme.primary,
-              tabs: [
-                Tab(
-                  icon: const Icon(Icons.favorite),
-                  text: AppLocalizations.of(context)!.favorites,
-                ),
-                Tab(
-                  icon: const Icon(Icons.menu_book),
-                  text: AppLocalizations.of(context)!.myBooks,
-                ),
-                const Tab(icon: Icon(Icons.cloud_upload), text: 'Uploaded'),
-              ],
+              tabs: tabs,
             ),
           ),
           Expanded(
             child: TabBarView(
-              children: [
-                // Favorites Tab
-                favoriteBooks.isEmpty
-                    ? const Center(child: Text('No favorite books yet'))
-                    : Padding(
-                        padding: const EdgeInsets.all(20.0),
-                        child: _buildBookGridOrList(favoriteBooks),
-                      ),
-                // My Books Tab
-                myBooks.isEmpty
-                    ? const Center(child: Text('No purchased books'))
-                    : Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: ListView.builder(
-                          itemCount: myBooks.length,
-                          itemBuilder: (context, index) {
-                            final book = myBooks[index];
-                            return _buildMyBookTile(book);
-                          },
-                        ),
-                      ),
-                // Uploaded Tab with FAB
-                Stack(
-                  children: [
-                    _uploadedBooks.isEmpty
-                        ? const Center(child: Text('No uploaded books'))
-                        : Padding(
-                            padding: const EdgeInsets.only(
-                              top: 16.0,
-                              left: 16.0,
-                              right: 16.0,
-                              bottom: 130, // Increased padding
-                            ), // Extra padding for FAB
-                            child: ListView.builder(
-                              itemCount: _uploadedBooks.length,
-                              itemBuilder: (context, index) {
-                                final book = _uploadedBooks[index];
-                                return _buildMyBookTile(book);
-                              },
-                            ),
-                          ),
-                    Positioned(
-                      bottom: 24,
-                      left: 0,
-                      right: 0,
-                      child: Center(
-                        child: FloatingActionButton.extended(
-                          onPressed: () async {
-                            final result = await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const UploadBookScreen(),
-                              ),
-                            );
-
-                            if (result == true) {
-                              // Wait a bit to ensure backend consistency and UI readiness
-                              await Future.delayed(
-                                const Duration(milliseconds: 500),
-                              );
-                              // Trigger app-wide refresh
-                              globalLayoutState.triggerRefresh();
-                            }
-                          },
-                          backgroundColor: Theme.of(
-                            context,
-                          ).colorScheme.primary,
-                          icon: const Icon(Icons.cloud_upload),
-                          label: const Text(
-                            'Upload Audio Book',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              children: tabViews,
             ),
           ),
         ],

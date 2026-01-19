@@ -29,6 +29,37 @@ update_server_ip.update_flutter_client(current_ip)
 
 session_manager = SessionManager()
 
+# Admin email for upload functionality (preparation for Google Play subscription)
+ADMIN_EMAIL = "bojanpejic97@gmail.com"
+
+def is_admin_user(user_id, db):
+    """Check if user is admin by email"""
+    query = "SELECT email FROM users WHERE id = %s"
+    result = db.execute_query(query, (user_id,))
+    if result and result[0]['email'].lower() == ADMIN_EMAIL.lower():
+        return True
+    return False
+
+def is_subscriber(user_id, db):
+    """Check if user has active subscription."""
+    query = "SELECT status, end_date FROM subscriptions WHERE user_id = %s"
+    result = db.execute_query(query, (user_id,))
+    if result and result[0]['status'] == 'active':
+        end_date = result[0]['end_date']
+        if end_date is None:  # Lifetime subscription
+            return True
+        return end_date > datetime.datetime.utcnow()
+    return False
+
+def has_book_access(user_id, book_id, db):
+    """Check if user can access a specific book (via subscription or legacy purchase)."""
+    if is_subscriber(user_id, db):
+        return True
+    # Fallback: check legacy purchase in user_books
+    query = "SELECT id FROM user_books WHERE user_id = %s AND book_id = %s"
+    result = db.execute_query(query, (user_id, book_id))
+    return len(result) > 0 if result else False
+
 @app.before_request
 def log_request_info():
     print("="*50, flush=True)
@@ -1016,15 +1047,23 @@ def get_user_books(user_id):
     db = Database()
     if not db.connect():
         return jsonify({"error": "Database connection failed"}), 500
-    
+
     try:
-        # Fetch purchased book IDs
+        # Check if user has active subscription
+        if is_subscriber(user_id, db):
+            # Subscriber gets access to ALL books
+            all_books_query = "SELECT id FROM books"
+            all_books = db.execute_query(all_books_query)
+            book_ids = [row['id'] for row in all_books] if all_books else []
+            return jsonify(book_ids)
+
+        # Non-subscriber: return only legacy purchased books
         query = "SELECT book_id FROM user_books WHERE user_id = %s"
         result = db.execute_query(query, (user_id,))
-        
+
         book_ids = [row['book_id'] for row in result] if result else []
         return jsonify(book_ids)
-        
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
@@ -1033,6 +1072,11 @@ def get_user_books(user_id):
 @app.route('/buy-book', methods=['POST'])
 @jwt_required
 def buy_book():
+    """
+    Now used for adding book to user's library (for progress tracking).
+    For subscribers: Creates tracking entry without payment.
+    For non-subscribers: Returns error suggesting subscription.
+    """
     data = request.get_json()
     user_id = data.get('user_id')
     book_id = data.get('book_id')
@@ -1045,14 +1089,21 @@ def buy_book():
         return jsonify({"error": "Database connection failed"}), 500
 
     try:
-        # Check if already owned
+        # Check if user has active subscription
+        if not is_subscriber(user_id, db):
+            return jsonify({
+                "error": "subscription_required",
+                "message": "Please subscribe to access books"
+            }), 403
+
+        # Check if already in library
         check_query = "SELECT id FROM user_books WHERE user_id = %s AND book_id = %s"
         existing = db.execute_query(check_query, (user_id, book_id))
-        
-        if existing:
-            return jsonify({"message": "Book already purchased"}), 200
 
-        # Insert purchase
+        if existing:
+            return jsonify({"message": "Book already in library"}), 200
+
+        # Insert tracking entry (no payment since subscribed)
         insert_query = "INSERT INTO user_books (user_id, book_id) VALUES (%s, %s)"
         db.execute_query(insert_query, (user_id, book_id))
 
@@ -1066,7 +1117,7 @@ def buy_book():
             import traceback
             traceback.print_exc()
 
-        return jsonify({"message": "Book purchased successfully", "new_badges": new_badges}), 201
+        return jsonify({"message": "Book added to library", "new_badges": new_badges}), 201
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -1571,7 +1622,7 @@ def upload_book():
     try:
         title = request.form.get('title')
         author = request.form.get('author')
-        category_id = request.form.get('category_id') 
+        category_id = request.form.get('category_id')
         user_id = request.form.get('user_id')
         description = request.form.get('description', '')
         price = request.form.get('price', 0.0)
@@ -1584,6 +1635,11 @@ def upload_book():
         db = Database()
         if not db.connect():
              return jsonify({"error": "Database error"}), 500
+
+        # Admin check - only admin can upload books
+        if not is_admin_user(user_id, db):
+            db.disconnect()
+            return jsonify({"error": "Upload feature is restricted to admin users"}), 403
         
         cats = db.execute_query(cat_query, (category_id,))
         if not cats:
@@ -1736,11 +1792,16 @@ def get_my_uploads():
     user_id = request.args.get('user_id')
     if not user_id:
         return jsonify({"error": "User ID required"}), 400
-        
+
     db = Database()
     if not db.connect():
          return jsonify({"error": "Database error"}), 500
-         
+
+    # Admin check - only admin can view uploads
+    if not is_admin_user(user_id, db):
+        db.disconnect()
+        return jsonify([]), 200  # Return empty list for non-admin users
+
     query = """
         SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug, 
                b.description, b.price, b.posted_by_user_id,
@@ -1836,6 +1897,256 @@ def save_quiz_result():
         
         return jsonify({"message": "Result saved", "passed": is_passed}), 201
         
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
+
+# ===================== SUBSCRIPTION ENDPOINTS =====================
+
+@app.route('/subscription/status', methods=['GET'])
+@jwt_required
+def get_subscription_status():
+    """Get user's current subscription status."""
+    user_id = request.args.get('user_id')
+
+    if not user_id:
+        return jsonify({"error": "User ID required"}), 400
+
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        query = """
+            SELECT id, plan_type, status, start_date, end_date, auto_renew, created_at
+            FROM subscriptions
+            WHERE user_id = %s
+        """
+        result = db.execute_query(query, (user_id,))
+
+        if result:
+            sub = result[0]
+            # Check if subscription is actually active (not expired)
+            is_active = sub['status'] == 'active'
+            if is_active and sub['end_date']:
+                is_active = sub['end_date'] > datetime.datetime.utcnow()
+
+            return jsonify({
+                "id": sub['id'],
+                "user_id": int(user_id),
+                "plan_type": sub['plan_type'],
+                "status": "active" if is_active else "expired",
+                "start_date": sub['start_date'].isoformat() if sub['start_date'] else None,
+                "end_date": sub['end_date'].isoformat() if sub['end_date'] else None,
+                "auto_renew": bool(sub['auto_renew']),
+                "is_active": is_active
+            }), 200
+        else:
+            # No subscription found
+            return jsonify({
+                "user_id": int(user_id),
+                "status": "none",
+                "is_active": False
+            }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
+
+@app.route('/subscription/subscribe', methods=['POST'])
+@jwt_required
+def subscribe():
+    """Create or renew a subscription (Test Mode - no real payment)."""
+    data = request.get_json()
+    user_id = data.get('user_id')
+    plan_type = data.get('plan_type', 'monthly')  # test_minute, monthly, yearly, lifetime
+
+    if not user_id:
+        return jsonify({"error": "User ID required"}), 400
+
+    if plan_type not in ['test_minute', 'monthly', 'yearly', 'lifetime']:
+        return jsonify({"error": "Invalid plan type"}), 400
+
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        # Calculate end_date based on plan
+        now = datetime.datetime.utcnow()
+        if plan_type == 'test_minute':
+            end_date = now + datetime.timedelta(minutes=1)
+        elif plan_type == 'monthly':
+            end_date = now + datetime.timedelta(days=30)
+        elif plan_type == 'yearly':
+            end_date = now + datetime.timedelta(days=365)
+        else:  # lifetime
+            end_date = None
+
+        # Check if subscription exists
+        check_query = "SELECT id, status FROM subscriptions WHERE user_id = %s"
+        existing = db.execute_query(check_query, (user_id,))
+
+        cursor = db.connection.cursor()
+
+        if existing:
+            # Update existing subscription
+            update_query = """
+                UPDATE subscriptions
+                SET plan_type = %s, status = 'active', start_date = %s, end_date = %s, auto_renew = TRUE
+                WHERE user_id = %s
+            """
+            cursor.execute(update_query, (plan_type, now, end_date, user_id))
+            action = 'renewed'
+        else:
+            # Create new subscription
+            insert_query = """
+                INSERT INTO subscriptions (user_id, plan_type, status, start_date, end_date, auto_renew)
+                VALUES (%s, %s, 'active', %s, %s, TRUE)
+            """
+            cursor.execute(insert_query, (user_id, plan_type, now, end_date))
+            action = 'subscribed'
+
+        # Log to history
+        history_query = """
+            INSERT INTO subscription_history (user_id, action, plan_type, notes)
+            VALUES (%s, %s, %s, %s)
+        """
+        cursor.execute(history_query, (user_id, action, plan_type, f"Test mode subscription - {plan_type}"))
+
+        db.connection.commit()
+        cursor.close()
+
+        return jsonify({
+            "message": f"Subscription {action} successfully",
+            "plan_type": plan_type,
+            "end_date": end_date.isoformat() if end_date else None,
+            "status": "active"
+        }), 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
+
+@app.route('/subscription/cancel', methods=['POST'])
+@jwt_required
+def cancel_subscription():
+    """Cancel subscription (keeps active until end_date)."""
+    data = request.get_json()
+    user_id = data.get('user_id')
+
+    if not user_id:
+        return jsonify({"error": "User ID required"}), 400
+
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        # Update subscription to not auto-renew
+        update_query = """
+            UPDATE subscriptions
+            SET auto_renew = FALSE, status = 'cancelled'
+            WHERE user_id = %s
+        """
+        db.execute_query(update_query, (user_id,))
+
+        # Log to history
+        cursor = db.connection.cursor()
+        history_query = """
+            INSERT INTO subscription_history (user_id, action, notes)
+            VALUES (%s, 'cancelled', 'User cancelled subscription')
+        """
+        cursor.execute(history_query, (user_id,))
+        db.connection.commit()
+        cursor.close()
+
+        return jsonify({"message": "Subscription cancelled"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
+
+@app.route('/subscription/admin/set', methods=['POST'])
+@jwt_required
+def admin_set_subscription():
+    """Admin endpoint to manually set subscription (for testing).
+
+    Requires JWT authentication AND the authenticated user must be the admin.
+    """
+    data = request.get_json()
+    target_email = data.get('email')
+    plan_type = data.get('plan_type', 'monthly')
+    duration_days = data.get('duration_days', 30)
+    action = data.get('action', 'activate')  # activate or deactivate
+
+    # Get the authenticated user's ID from JWT (set by jwt_required decorator)
+    auth_user_id = getattr(request, 'user_id', None)
+
+    if not auth_user_id:
+        return jsonify({"error": "Authentication required"}), 401
+
+    # Verify the authenticated user is actually the admin
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+
+    if not is_admin_user(auth_user_id, db):
+        db.disconnect()
+        return jsonify({"error": "Admin access required"}), 403
+
+    if not target_email:
+        db.disconnect()
+        return jsonify({"error": "Target email required"}), 400
+
+    try:
+        # Get target user ID
+        user_query = "SELECT id FROM users WHERE email = %s"
+        user_result = db.execute_query(user_query, (target_email,))
+
+        if not user_result:
+            return jsonify({"error": "User not found"}), 404
+
+        user_id = user_result[0]['id']
+        cursor = db.connection.cursor()
+
+        if action == 'deactivate':
+            # Deactivate subscription
+            update_query = "UPDATE subscriptions SET status = 'expired' WHERE user_id = %s"
+            cursor.execute(update_query, (user_id,))
+            db.connection.commit()
+            cursor.close()
+            return jsonify({"message": f"Subscription deactivated for {target_email}"}), 200
+
+        # Activate subscription
+        now = datetime.datetime.utcnow()
+        end_date = now + datetime.timedelta(days=duration_days) if plan_type != 'lifetime' else None
+
+        # Upsert subscription
+        upsert_query = """
+            INSERT INTO subscriptions (user_id, plan_type, status, start_date, end_date, auto_renew)
+            VALUES (%s, %s, 'active', %s, %s, TRUE)
+            ON DUPLICATE KEY UPDATE
+                plan_type = VALUES(plan_type),
+                status = 'active',
+                start_date = VALUES(start_date),
+                end_date = VALUES(end_date),
+                auto_renew = TRUE
+        """
+        cursor.execute(upsert_query, (user_id, plan_type, now, end_date))
+        db.connection.commit()
+        cursor.close()
+
+        return jsonify({
+            "message": f"Subscription activated for {target_email}",
+            "plan_type": plan_type,
+            "end_date": end_date.isoformat() if end_date else "lifetime"
+        }), 200
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
