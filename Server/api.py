@@ -1977,7 +1977,7 @@ def subscribe():
         # Calculate end_date based on plan
         now = datetime.datetime.utcnow()
         if plan_type == 'test_minute':
-            end_date = now + datetime.timedelta(minutes=1)
+            end_date = now + datetime.timedelta(minutes=2)
         elif plan_type == 'monthly':
             end_date = now + datetime.timedelta(days=30)
         elif plan_type == 'yearly':

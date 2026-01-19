@@ -93,7 +93,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     // Check subscription
-    final isSubscribed = await SubscriptionService().isSubscribed();
+    final isSubscribed = await SubscriptionService().isSubscribed(
+      forceRefresh: true,
+    );
     if (isSubscribed) {
       _navigateToBook(book);
     } else {
@@ -104,11 +106,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _navigateToBook(Book book) {
     Navigator.of(context)
-        .push(
-          MaterialPageRoute(
-            builder: (_) => PlaylistScreen(book: book),
-          ),
-        )
+        .push(MaterialPageRoute(builder: (_) => PlaylistScreen(book: book)))
         .then((_) => _loadHistory());
   }
 
@@ -428,7 +426,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           TextButton.icon(
                             onPressed: _showSubscriptionSheet,
                             style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 4,
+                              ),
                               minimumSize: Size.zero,
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),

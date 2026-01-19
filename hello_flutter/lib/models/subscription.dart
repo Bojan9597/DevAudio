@@ -33,7 +33,7 @@ class Subscription {
   String get planDisplayName {
     switch (planType) {
       case 'test_minute':
-        return '1 Minute Test';
+        return '2 Minute Test';
       case 'monthly':
         return 'Monthly';
       case 'yearly':

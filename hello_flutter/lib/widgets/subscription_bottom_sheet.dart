@@ -7,7 +7,8 @@ class SubscriptionBottomSheet extends StatefulWidget {
   const SubscriptionBottomSheet({super.key, required this.onSubscribed});
 
   @override
-  State<SubscriptionBottomSheet> createState() => _SubscriptionBottomSheetState();
+  State<SubscriptionBottomSheet> createState() =>
+      _SubscriptionBottomSheetState();
 }
 
 class _SubscriptionBottomSheetState extends State<SubscriptionBottomSheet> {
@@ -16,9 +17,9 @@ class _SubscriptionBottomSheetState extends State<SubscriptionBottomSheet> {
 
   final Map<String, Map<String, String>> _planDetails = {
     'test_minute': {
-      'title': '1 Minute Test',
+      'title': '2 Minute Test',
       'price': 'FREE',
-      'subtitle': 'For testing - expires in 1 minute',
+      'subtitle': 'For testing - expires in 2 minutes',
     },
     'monthly': {
       'title': 'Monthly',
@@ -97,11 +98,7 @@ class _SubscriptionBottomSheetState extends State<SubscriptionBottomSheet> {
             const SizedBox(height: 20),
 
             // Header
-            Icon(
-              Icons.star_rounded,
-              size: 48,
-              color: Colors.amber.shade600,
-            ),
+            Icon(Icons.star_rounded, size: 48, color: Colors.amber.shade600),
             const SizedBox(height: 12),
             Text(
               'Unlock All Audiobooks',
@@ -120,8 +117,9 @@ class _SubscriptionBottomSheetState extends State<SubscriptionBottomSheet> {
             const SizedBox(height: 24),
 
             // Plan options
-            ..._planDetails.entries.map((entry) =>
-                _buildPlanTile(entry.key, entry.value, theme)),
+            ..._planDetails.entries.map(
+              (entry) => _buildPlanTile(entry.key, entry.value, theme),
+            ),
 
             const SizedBox(height: 24),
 
@@ -179,7 +177,10 @@ class _SubscriptionBottomSheetState extends State<SubscriptionBottomSheet> {
   }
 
   Widget _buildPlanTile(
-      String value, Map<String, String> details, ThemeData theme) {
+    String value,
+    Map<String, String> details,
+    ThemeData theme,
+  ) {
     final isSelected = _selectedPlan == value;
     final isDark = theme.brightness == Brightness.dark;
     final isYearly = value == 'yearly';
@@ -273,7 +274,9 @@ class _SubscriptionBottomSheetState extends State<SubscriptionBottomSheet> {
                   Text(
                     details['subtitle']!,
                     style: TextStyle(
-                      color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                      color: isDark
+                          ? Colors.grey.shade400
+                          : Colors.grey.shade600,
                       fontSize: 12,
                     ),
                   ),

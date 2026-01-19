@@ -58,12 +58,16 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     _initCompletionVideo(); // Init completion video
   }
 
-  Future<void> _checkAccess() async {
+  Future<void> _checkAccess({bool forceRefresh = false}) async {
     try {
       final isAdmin = await AuthService().isAdmin();
-      final isSubscribed = await SubscriptionService().isSubscribed();
+      final isSubscribed = await SubscriptionService().isSubscribed(
+        forceRefresh: forceRefresh,
+      );
 
-      print('[PlaylistScreen] Access check: isAdmin=$isAdmin, isSubscribed=$isSubscribed');
+      print(
+        '[PlaylistScreen] Access check (force=$forceRefresh): isAdmin=$isAdmin, isSubscribed=$isSubscribed',
+      );
 
       if (mounted) {
         setState(() {
@@ -92,7 +96,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       builder: (context) => SubscriptionBottomSheet(
         onSubscribed: () {
           Navigator.pop(context);
-          _checkAccess(); // Refresh access status
+          _checkAccess(forceRefresh: true); // Refresh access status
         },
       ),
     );

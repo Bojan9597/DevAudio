@@ -21,7 +21,9 @@ class SubscriptionService {
 
   /// Get subscription status with caching
   /// First checks local cache (with timestamp), then fetches from server if needed
-  Future<Subscription?> getSubscriptionStatus({bool forceRefresh = false}) async {
+  Future<Subscription?> getSubscriptionStatus({
+    bool forceRefresh = false,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final userId = await _authService.getCurrentUserId();
 
@@ -43,16 +45,26 @@ class SubscriptionService {
 
           // Check if subscription has expired since caching
           // Note: endDate from server is in UTC, so compare with UTC time
-          if (subscription.endDate != null && subscription.endDate!.isBefore(DateTime.now().toUtc())) {
+          if (subscription.endDate != null &&
+              subscription.endDate!.isBefore(DateTime.now().toUtc())) {
             // Subscription expired - clear cache and fetch fresh
-            print('[SubscriptionService] Cached subscription expired, fetching fresh');
+            print(
+              '[SubscriptionService] Cached subscription expired, fetching fresh',
+            );
             await prefs.remove(cacheKey);
-          } else if (DateTime.now().toUtc().difference(cachedAt).inMinutes < _cacheValidityMinutes) {
+            // Recursive call with forceRefresh to get fresh data immediately
+            return getSubscriptionStatus(forceRefresh: true);
+          } else if (DateTime.now().toUtc().difference(cachedAt).inMinutes <
+              _cacheValidityMinutes) {
             // Cache still valid
-            print('[SubscriptionService] Using cached subscription: isActive=${subscription.isActive}');
+            print(
+              '[SubscriptionService] Using cached subscription: isActive=${subscription.isActive}',
+            );
             return subscription;
           } else {
-            print('[SubscriptionService] Cache expired (>$_cacheValidityMinutes min), fetching fresh');
+            print(
+              '[SubscriptionService] Cache expired (>$_cacheValidityMinutes min), fetching fresh',
+            );
           }
         } catch (e) {
           print('[SubscriptionService] Error parsing cached subscription: $e');
@@ -79,7 +91,9 @@ class SubscriptionService {
       final headers = await _getHeaders();
       print('[SubscriptionService] Fetching from server for user $userId');
       final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/subscription/status?user_id=$userId'),
+        Uri.parse(
+          '${ApiConstants.baseUrl}/subscription/status?user_id=$userId',
+        ),
         headers: headers,
       );
 
@@ -90,13 +104,18 @@ class SubscriptionService {
         print('[SubscriptionService] Server data: $data');
 
         // Cache the result
-        await prefs.setString(cacheKey, json.encode({
-          'subscription': data,
-          'cached_at': DateTime.now().toIso8601String(),
-        }));
+        await prefs.setString(
+          cacheKey,
+          json.encode({
+            'subscription': data,
+            'cached_at': DateTime.now().toIso8601String(),
+          }),
+        );
 
         final subscription = Subscription.fromJson(data);
-        print('[SubscriptionService] Parsed subscription: isActive=${subscription.isActive}, status=${subscription.status}');
+        print(
+          '[SubscriptionService] Parsed subscription: isActive=${subscription.isActive}, status=${subscription.status}',
+        );
         return subscription;
       } else {
         print('[SubscriptionService] Server error: ${response.body}');
@@ -110,15 +129,37 @@ class SubscriptionService {
   }
 
   /// Quick check if user is subscribed (uses cache)
-  Future<bool> isSubscribed() async {
-    final sub = await getSubscriptionStatus();
+  Future<bool> isSubscribed({bool forceRefresh = false}) async {
+    final sub = await getSubscriptionStatus(forceRefresh: forceRefresh);
     if (sub == null) return false;
-    // Double-check expiration in real-time (server sends UTC time)
+
+    // If we forced a refresh, trust the server's judgment completely.
+    // The server handles the time comparison and sets 'isActive'.
+    // This avoids issues with local clock drift vs server time.
+    if (forceRefresh) {
+      print('[SubscriptionService] isSubscribed (fresh): ${sub.isActive}');
+      return sub.isActive;
+    }
+
+    // If using cache, check for expiration locally
     if (sub.endDate != null && sub.endDate!.isBefore(DateTime.now().toUtc())) {
-      print('[SubscriptionService] isSubscribed: subscription expired (endDate=${sub.endDate}, now=${DateTime.now().toUtc()})');
+      print(
+        '[SubscriptionService] Cached subscription expired locally (endDate=${sub.endDate}), checking server...',
+      );
+
+      // Force refresh to confirm with server
+      final freshSub = await getSubscriptionStatus(forceRefresh: true);
+      if (freshSub != null) {
+        print(
+          '[SubscriptionService] Server confirmed status: ${freshSub.isActive}',
+        );
+        // Trust the server's isActive flag for the fresh data
+        return freshSub.isActive;
+      }
       return false;
     }
-    print('[SubscriptionService] isSubscribed: ${sub.isActive}');
+
+    print('[SubscriptionService] isSubscribed (cache): ${sub.isActive}');
     return sub.isActive;
   }
 
@@ -138,10 +179,7 @@ class SubscriptionService {
       final response = await http.post(
         Uri.parse('${ApiConstants.baseUrl}/subscription/subscribe'),
         headers: headers,
-        body: json.encode({
-          'user_id': userId,
-          'plan_type': planType,
-        }),
+        body: json.encode({'user_id': userId, 'plan_type': planType}),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
