@@ -1927,10 +1927,58 @@ def get_subscription_status():
 
         if result:
             sub = result[0]
-            # Check if subscription is actually active (not expired)
+            # Check for auto-renewal if expired
+            now = datetime.datetime.utcnow()
+            
+            # Lazy Auto-Renewal Logic
+            if sub['end_date'] and sub['end_date'] < now and sub['auto_renew']:
+                # Determine duration based on plan_type
+                plan = sub['plan_type']
+                duration = datetime.timedelta(days=30) # default
+                
+                if plan == 'test_minute':
+                    duration = datetime.timedelta(minutes=1)
+                elif plan == 'yearly':
+                    duration = datetime.timedelta(days=365)
+                elif plan == 'lifetime':
+                    duration = None
+                
+                if duration:
+                    # Calculate new dates
+                    # If it expired a long time ago, restart from now. 
+                    # If it just expired, maybe we should add to end_date? 
+                    # For simplicity and "reactivation", let's restart from NOW to give full value.
+                    new_start = now
+                    new_end = now + duration
+                    
+                    # Update DB
+                    update_query = """
+                        UPDATE subscriptions 
+                        SET start_date = %s, end_date = %s, status = 'active' 
+                        WHERE id = %s
+                    """
+                    cursor = db.connection.cursor()
+                    cursor.execute(update_query, (new_start, new_end, sub['id']))
+                    
+                    # Log renewal
+                    history_query = """
+                        INSERT INTO subscription_history (user_id, action, plan_type, notes)
+                        VALUES (%s, 'renewed', %s, 'Auto-renewal via status check')
+                    """
+                    cursor.execute(history_query, (int(user_id), plan))
+                    db.connection.commit()
+                    cursor.close()
+                    
+                    # Update local variable for return
+                    sub['start_date'] = new_start
+                    sub['end_date'] = new_end
+                    sub['status'] = 'active'
+                    is_active = True
+            
+            # Re-check active status after potential renewal
             is_active = sub['status'] == 'active'
             if is_active and sub['end_date']:
-                is_active = sub['end_date'] > datetime.datetime.utcnow()
+                 is_active = sub['end_date'] > now
 
             return jsonify({
                 "id": sub['id'],
@@ -1977,7 +2025,7 @@ def subscribe():
         # Calculate end_date based on plan
         now = datetime.datetime.utcnow()
         if plan_type == 'test_minute':
-            end_date = now + datetime.timedelta(minutes=2)
+            end_date = now + datetime.timedelta(minutes=1)
         elif plan_type == 'monthly':
             end_date = now + datetime.timedelta(days=30)
         elif plan_type == 'yearly':
