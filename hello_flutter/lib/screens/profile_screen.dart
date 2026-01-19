@@ -229,6 +229,150 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  void _showSubscriptionDetails(Subscription sub) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Subscription Details',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _buildDetailRow('Plan Type', sub.planDisplayName),
+                _buildDetailRow(
+                  'Status',
+                  sub.isActive
+                      ? (sub.autoRenew ? 'Active' : 'Expiring Soon')
+                      : 'Expired',
+                ),
+                if (sub.startDate != null)
+                  _buildDetailRow(
+                    'Started',
+                    _formatSubscriptionDate(sub.startDate!),
+                  ),
+                if (sub.endDate != null)
+                  _buildDetailRow(
+                    'Expires',
+                    _formatSubscriptionDate(sub.endDate!),
+                  ),
+                _buildDetailRow('Auto-Renew', sub.autoRenew ? 'On' : 'Off'),
+
+                const SizedBox(height: 24),
+
+                if (sub.isActive && sub.autoRenew)
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context); // Close dialog
+                        _confirmCancelSubscription();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade100,
+                        foregroundColor: Colors.red,
+                      ),
+                      child: const Text('Cancel Auto-Renewal'),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
+          ),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  void _confirmCancelSubscription() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Turn Off Auto-Renewal?'),
+        content: const Text(
+          'Your subscription will remain active until the end of the current billing period.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Keep On'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _cancelSubscription();
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Turn Off'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _cancelSubscription() async {
+    setState(() => _isLoading = true);
+    try {
+      final result = await SubscriptionService().cancelSubscription();
+      if (result['success']) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(result['message'])));
+          _loadSubscription(); // Refresh to see cancelled status
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result['error'] ?? 'Failed to cancel')),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error cancelling: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   String _getProfilePictureUrl(String path) {
     String url;
     if (path.startsWith('http')) {
@@ -390,40 +534,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           )
                         else if (_subscription?.isActive == true)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  Colors.amber.shade600,
-                                  Colors.orange.shade600,
+                          InkWell(
+                            onTap: () =>
+                                _showSubscriptionDetails(_subscription!),
+                            borderRadius: BorderRadius.circular(20),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.amber.shade600,
+                                    Colors.orange.shade600,
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.star_rounded,
+                                    size: 16,
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _subscription!.endDate != null
+                                        ? 'Premium until ${_formatSubscriptionDate(_subscription!.endDate!)}'
+                                        : 'Lifetime Premium',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                 ],
                               ),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.star_rounded,
-                                  size: 16,
-                                  color: Colors.white,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  _subscription!.endDate != null
-                                      ? 'Premium until ${_formatSubscriptionDate(_subscription!.endDate!)}'
-                                      : 'Lifetime Premium',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
                             ),
                           )
                         else

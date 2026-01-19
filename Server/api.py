@@ -1937,8 +1937,8 @@ def get_subscription_status():
                 "user_id": int(user_id),
                 "plan_type": sub['plan_type'],
                 "status": "active" if is_active else "expired",
-                "start_date": sub['start_date'].isoformat() if sub['start_date'] else None,
-                "end_date": sub['end_date'].isoformat() if sub['end_date'] else None,
+                "start_date": int(sub['start_date'].timestamp()) if sub['start_date'] else None,
+                "end_date": int(sub['end_date'].timestamp()) if sub['end_date'] else None,
                 "auto_renew": bool(sub['auto_renew']),
                 "is_active": is_active
             }), 200
@@ -2022,7 +2022,7 @@ def subscribe():
         return jsonify({
             "message": f"Subscription {action} successfully",
             "plan_type": plan_type,
-            "end_date": end_date.isoformat() if end_date else None,
+            "end_date": int(end_date.timestamp()) if end_date else None,
             "status": "active"
         }), 201
 
@@ -2046,10 +2046,10 @@ def cancel_subscription():
         return jsonify({"error": "Database connection failed"}), 500
 
     try:
-        # Update subscription to not auto-renew
+        # Update subscription to not auto-renew (keep status active until actual expiry)
         update_query = """
             UPDATE subscriptions
-            SET auto_renew = FALSE, status = 'cancelled'
+            SET auto_renew = FALSE
             WHERE user_id = %s
         """
         db.execute_query(update_query, (user_id,))
@@ -2144,7 +2144,7 @@ def admin_set_subscription():
         return jsonify({
             "message": f"Subscription activated for {target_email}",
             "plan_type": plan_type,
-            "end_date": end_date.isoformat() if end_date else "lifetime"
+            "end_date": int(end_date.timestamp()) if end_date else "lifetime"
         }), 200
 
     except Exception as e:

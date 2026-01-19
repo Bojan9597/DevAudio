@@ -24,6 +24,7 @@ def reset_database():
         
         # Delete data from all tables
         tables_to_clear = [
+            'subscriptions',
             'playback_history',
             'user_quiz_results',
             'quiz_questions',
