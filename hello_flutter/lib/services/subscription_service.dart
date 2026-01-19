@@ -44,9 +44,11 @@ class SubscriptionService {
           final subscription = Subscription.fromJson(data['subscription']);
 
           // Check if subscription has expired since caching
-          // Note: endDate from server is in UTC, so compare with UTC time
+          // endDate is now int (seconds since epoch)
+          final nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
           if (subscription.endDate != null &&
-              subscription.endDate!.isBefore(DateTime.now().toUtc())) {
+              subscription.endDate! < nowSeconds) {
             // Subscription expired - clear cache and fetch fresh
             print(
               '[SubscriptionService] Cached subscription expired, fetching fresh',
@@ -54,7 +56,7 @@ class SubscriptionService {
             await prefs.remove(cacheKey);
             // Recursive call with forceRefresh to get fresh data immediately
             return getSubscriptionStatus(forceRefresh: true);
-          } else if (DateTime.now().toUtc().difference(cachedAt).inMinutes <
+          } else if (DateTime.now().difference(cachedAt).inMinutes <
               _cacheValidityMinutes) {
             // Cache still valid
             print(
@@ -113,6 +115,9 @@ class SubscriptionService {
         );
 
         final subscription = Subscription.fromJson(data);
+
+        // Subscription parsed with integer timestamps
+
         print(
           '[SubscriptionService] Parsed subscription: isActive=${subscription.isActive}, status=${subscription.status}',
         );
@@ -141,10 +146,13 @@ class SubscriptionService {
       return sub.isActive;
     }
 
-    // If using cache, check for expiration locally
-    if (sub.endDate != null && sub.endDate!.isBefore(DateTime.now().toUtc())) {
+    // If using cache, check for expiration locally (using timestamps)
+    // We compare current timestamp (seconds) vs endDate (seconds)
+    final nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+    if (sub.endDate != null && sub.endDate! < nowSeconds) {
       print(
-        '[SubscriptionService] Cached subscription expired locally (endDate=${sub.endDate}), checking server...',
+        '[SubscriptionService] Cached subscription expired locally (endDate=${sub.endDate}, now=$nowSeconds), checking server...',
       );
 
       // Force refresh to confirm with server

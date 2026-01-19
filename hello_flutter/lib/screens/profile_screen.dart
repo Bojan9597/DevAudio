@@ -210,8 +210,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  String _formatSubscriptionDate(DateTime date) {
-    // Server sends UTC time, convert to local for display
+  String _formatSubscriptionDate(int timestamp) {
+    // Server sends UTC timestamp
+    final date = DateTime.fromMillisecondsSinceEpoch(
+      timestamp * 1000,
+      isUtc: true,
+    );
     final localDate = date.toLocal();
     final now = DateTime.now();
     final difference = localDate.difference(now);

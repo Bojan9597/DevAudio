@@ -3,8 +3,8 @@ class Subscription {
   final int userId;
   final String planType; // 'monthly', 'yearly', 'lifetime'
   final String status; // 'active', 'expired', 'cancelled', 'none'
-  final DateTime? startDate;
-  final DateTime? endDate;
+  final int? startDate;
+  final int? endDate;
   final bool autoRenew;
   final bool isActive;
 
@@ -25,7 +25,9 @@ class Subscription {
   /// Check if subscription is expiring soon (within 7 days)
   bool get isExpiringSoon {
     if (endDate == null || !isActive) return false;
-    final daysUntilExpiry = endDate!.difference(DateTime.now()).inDays;
+    final nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final secondsUntilExpiry = endDate! - nowSeconds;
+    final daysUntilExpiry = secondsUntilExpiry / (24 * 3600);
     return daysUntilExpiry <= 7 && daysUntilExpiry > 0;
   }
 
@@ -46,6 +48,18 @@ class Subscription {
   }
 
   factory Subscription.fromJson(Map<String, dynamic> json) {
+    // Parse timestamps safely (handle if they come as strings or ints)
+    int? parseTimestamp(dynamic val) {
+      if (val == null) return null;
+      if (val is int) return val;
+      if (val is String) {
+        // Try parsing as int first, fallback to ISO if needed?
+        // User said "use timestamp", so backend sends int.
+        return int.tryParse(val);
+      }
+      return null;
+    }
+
     return Subscription(
       id: json['id'],
       userId: json['user_id'] is int
@@ -53,12 +67,8 @@ class Subscription {
           : int.tryParse(json['user_id'].toString()) ?? 0,
       planType: json['plan_type'] ?? 'monthly',
       status: json['status'] ?? 'none',
-      startDate: json['start_date'] != null
-          ? DateTime.tryParse(json['start_date'].toString())
-          : null,
-      endDate: json['end_date'] != null
-          ? DateTime.tryParse(json['end_date'].toString())
-          : null,
+      startDate: parseTimestamp(json['start_date']),
+      endDate: parseTimestamp(json['end_date']),
       autoRenew: json['auto_renew'] ?? true,
       isActive: json['is_active'] ?? false,
     );
@@ -70,8 +80,8 @@ class Subscription {
       'user_id': userId,
       'plan_type': planType,
       'status': status,
-      'start_date': startDate?.toIso8601String(),
-      'end_date': endDate?.toIso8601String(),
+      'start_date': startDate,
+      'end_date': endDate,
       'auto_renew': autoRenew,
       'is_active': isActive,
     };
