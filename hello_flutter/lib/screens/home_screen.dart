@@ -12,6 +12,8 @@ import 'playlist_screen.dart';
 import 'login_screen.dart';
 import '../widgets/subscription_bottom_sheet.dart';
 import '../services/subscription_service.dart';
+import 'package:hello_flutter/services/connectivity_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -445,6 +447,37 @@ class _HomeScreenState extends State<HomeScreen> {
   }) {
     // Just for demo, show existing books horizontally
     final booksToShow = reversed ? _books.reversed.toList() : _books;
+    final bool isOffline = ConnectivityService().isOffline;
+
+    if (_books.isEmpty && !_isLoading) {
+      return SliverToBoxAdapter(
+        child: SizedBox(
+          height: 220,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isOffline ? Icons.wifi_off : Icons.error_outline,
+                  color: textColor.withOpacity(0.5),
+                  size: 40,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  isOffline
+                      ? 'Not available in offline mode'
+                      : 'No books found',
+                  style: TextStyle(
+                    color: textColor.withOpacity(0.5),
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return SliverToBoxAdapter(
       child: SizedBox(
@@ -477,20 +510,21 @@ class _HomeScreenState extends State<HomeScreen> {
                               child:
                                   (book.coverUrl != null &&
                                       book.coverUrl!.isNotEmpty)
-                                  ? Image.network(
-                                      book.coverUrl!,
+                                  ? CachedNetworkImage(
+                                      imageUrl: book.coverUrl!,
                                       fit: BoxFit.cover,
                                       width: double.infinity,
                                       height: double.infinity,
-                                      errorBuilder: (ctx, _, __) => Container(
-                                        color: textColor.withOpacity(0.1),
-                                        alignment: Alignment.center,
-                                        child: Icon(
-                                          Icons.book,
-                                          size: 40,
-                                          color: textColor,
-                                        ),
-                                      ),
+                                      errorWidget: (context, url, error) =>
+                                          Container(
+                                            color: textColor.withOpacity(0.1),
+                                            alignment: Alignment.center,
+                                            child: Icon(
+                                              Icons.book,
+                                              size: 40,
+                                              color: textColor,
+                                            ),
+                                          ),
                                     )
                                   : Container(
                                       color: textColor.withOpacity(0.1),
@@ -561,10 +595,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               clipBehavior: Clip.antiAlias,
-              child: Image.network(
-                url,
+              child: CachedNetworkImage(
+                imageUrl: url,
                 fit: BoxFit.cover,
-                errorBuilder: (ctx, _, __) => Container(color: Colors.grey),
+                errorWidget: (context, url, error) =>
+                    Container(color: Colors.grey),
               ),
             ),
           ),
@@ -586,10 +621,10 @@ class _HomeScreenState extends State<HomeScreen> {
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
           child: (book.coverUrl != null && book.coverUrl!.isNotEmpty)
-              ? Image.network(
-                  book.coverUrl!,
+              ? CachedNetworkImage(
+                  imageUrl: book.coverUrl!,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Icon(
+                  errorWidget: (context, url, error) => Icon(
                     Icons.play_circle_fill,
                     color: Theme.of(context).colorScheme.primary,
                     size: 40,
@@ -858,7 +893,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   image: DecorationImage(
-                    image: NetworkImage(
+                    image: CachedNetworkImageProvider(
                       ApiConstants.baseUrl +
                           '/static/homeImages/mockup_cover.jpg',
                     ),
