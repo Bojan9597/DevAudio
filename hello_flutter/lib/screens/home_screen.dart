@@ -860,7 +860,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   image: DecorationImage(
                     image: NetworkImage(
                       ApiConstants.baseUrl +
-                          '/static/BookCovers/1768950531_1248524_adapted_1080x2340_1768950476.jpg',
+                          '/static/homeImages/mockup_cover.jpg',
                     ),
                     fit: BoxFit.cover,
                   ),
