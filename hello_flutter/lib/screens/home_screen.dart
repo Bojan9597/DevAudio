@@ -39,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   bool _isLoggedIn = false;
   bool _isSubscribed = false;
+  int _playerFeatureIndex = 0;
 
   // Hardcoded image names from the directory listing
   final List<String> _heroImages = [
@@ -333,6 +334,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   // New Sections (Replaces Categories & Book List when not searching)
                   if (_searchController.text.isEmpty) ...[
+                    // Player Feature Carousel
+                    SliverToBoxAdapter(
+                      child: _buildPlayerFeatureSlider(textColor),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 30)),
+
                     _buildSectionHeader('New Releases', textColor),
                     _buildHorizontalBookList(cardColor, textColor),
 
@@ -722,6 +729,120 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 1.4,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlayerFeatureSlider(Color textColor) {
+    return Column(
+      children: [
+        SizedBox(
+          height: 320,
+          child: PageView(
+            onPageChanged: (index) {
+              setState(() => _playerFeatureIndex = index);
+            },
+            children: [
+              _buildPlayerFeatureSlide(
+                textColor,
+                icon: Icons.speed,
+                iconText: '1.0x',
+                title: 'Find the right speed',
+                description: 'Slow down the narration or pick up the pace.',
+                color: Colors.orange,
+              ),
+              _buildPlayerFeatureSlide(
+                textColor,
+                icon: Icons.mode_night,
+                title: 'Sleep Timer',
+                description: 'Fall asleep without missing a beat.',
+                color: Colors.purple,
+              ),
+              _buildPlayerFeatureSlide(
+                textColor,
+                icon: Icons.favorite,
+                title: 'Favorites',
+                description: 'Keep your top picks handy.',
+                color: Colors.red,
+              ),
+            ],
+          ),
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(3, (index) {
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _playerFeatureIndex == index
+                    ? Colors.orange
+                    : Colors.grey.withOpacity(0.5),
+              ),
+            );
+          }),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPlayerFeatureSlide(
+    Color textColor, {
+    IconData? icon,
+    String? iconText,
+    required String title,
+    required String description,
+    required Color color,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: textColor == Colors.white
+            ? const Color(0xFF1E1E1E)
+            : Colors.grey[200],
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: color, width: 4),
+            ),
+            child: iconText != null
+                ? Text(
+                    iconText,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  )
+                : Icon(icon, size: 40, color: textColor),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            description,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 16, color: textColor.withOpacity(0.7)),
           ),
         ],
       ),
