@@ -739,7 +739,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       children: [
         SizedBox(
-          height: 320,
+          height: 500, // Increased height for the UI mockup
           child: PageView(
             onPageChanged: (index) {
               setState(() => _playerFeatureIndex = index);
@@ -747,25 +747,21 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               _buildPlayerFeatureSlide(
                 textColor,
-                icon: Icons.speed,
-                iconText: '1.0x',
+                highlightTarget: 'speed',
                 title: 'Find the right speed',
                 description: 'Slow down the narration or pick up the pace.',
-                color: Colors.orange,
               ),
               _buildPlayerFeatureSlide(
                 textColor,
-                icon: Icons.mode_night,
+                highlightTarget: 'sleep',
                 title: 'Sleep Timer',
                 description: 'Fall asleep without missing a beat.',
-                color: Colors.purple,
               ),
               _buildPlayerFeatureSlide(
                 textColor,
-                icon: Icons.favorite,
+                highlightTarget: 'favorites',
                 title: 'Favorites',
                 description: 'Keep your top picks handy.',
-                color: Colors.red,
               ),
             ],
           ),
@@ -775,12 +771,12 @@ class _HomeScreenState extends State<HomeScreen> {
           children: List.generate(3, (index) {
             return Container(
               margin: const EdgeInsets.symmetric(horizontal: 4),
-              width: 8,
-              height: 8,
+              width: 24, // Line width
+              height: 4, // Line height
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
+                borderRadius: BorderRadius.circular(2),
                 color: _playerFeatureIndex == index
-                    ? Colors.orange
+                    ? Colors.amber[700]
                     : Colors.grey.withOpacity(0.5),
               ),
             );
@@ -792,43 +788,26 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildPlayerFeatureSlide(
     Color textColor, {
-    IconData? icon,
-    String? iconText,
+    required String highlightTarget,
     required String title,
     required String description,
-    required Color color,
   }) {
+    // Determine card background color
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.grey[200];
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: textColor == Colors.white
-            ? const Color(0xFF1E1E1E)
-            : Colors.grey[200],
+        color: cardColor,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            width: 80,
-            height: 80,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: color, width: 4),
-            ),
-            child: iconText != null
-                ? Text(
-                    iconText,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: textColor,
-                    ),
-                  )
-                : Icon(icon, size: 40, color: textColor),
-          ),
+          // UI Mockup
+          Expanded(child: _buildMockPlayerUI(highlightTarget, isDark)),
           const SizedBox(height: 20),
           Text(
             title,
@@ -847,5 +826,200 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildMockPlayerUI(String highlightTarget, bool isDark) {
+    final highlightColor = Colors.amber[700];
+    final iconColor = isDark ? Colors.white : Colors.black87;
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: isDark ? Colors.black : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Album Art Placeholder
+          Expanded(
+            flex: 5,
+            child: Center(
+              child: Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  image: DecorationImage(
+                    image: NetworkImage(
+                      ApiConstants.baseUrl +
+                          '/static/BookCovers/1768950531_1248524_adapted_1080x2340_1768950476.jpg',
+                    ),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Controls
+          Expanded(
+            flex: 4,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                // Progress Bar
+                Container(
+                  height: 4,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 80,
+                        decoration: BoxDecoration(
+                          color: iconColor,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Main Controls
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Icon(Icons.replay_10, color: iconColor),
+                    Icon(Icons.skip_previous, color: iconColor, size: 30),
+                    CircleAvatar(
+                      radius: 25,
+                      backgroundColor: iconColor,
+                      child: Icon(
+                        Icons.play_arrow,
+                        color: isDark ? Colors.black : Colors.white,
+                        size: 30,
+                      ),
+                    ),
+                    Icon(Icons.skip_next, color: iconColor, size: 30),
+                    Icon(Icons.forward_30, color: iconColor),
+                  ],
+                ),
+
+                // Bottom Actions with Highlight
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // Speed
+                    _buildMockActionButton(
+                      icon: Icons.speed,
+                      label: '1.0x',
+                      isSelected: highlightTarget == 'speed',
+                      color: iconColor,
+                      highlightColor: highlightColor,
+                      isPill: true,
+                    ),
+                    // Sleep
+                    _buildMockActionButton(
+                      icon: Icons.mode_night_outlined,
+                      isSelected: highlightTarget == 'sleep',
+                      color: iconColor,
+                      highlightColor: highlightColor,
+                    ),
+                    // Favorites
+                    _buildMockActionButton(
+                      icon: Icons.favorite_border,
+                      isSelected: highlightTarget == 'favorites',
+                      color: iconColor,
+                      highlightColor: highlightColor,
+                    ),
+                    // More
+                    _buildMockActionButton(
+                      icon: Icons.more_vert,
+                      isSelected: false,
+                      color: iconColor,
+                      highlightColor: highlightColor,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMockActionButton({
+    required IconData icon,
+    String? label,
+    required bool isSelected,
+    required Color color,
+    Color? highlightColor,
+    bool isPill = false,
+  }) {
+    if (isSelected) {
+      return Container(
+        padding: isPill
+            ? const EdgeInsets.symmetric(horizontal: 12, vertical: 6)
+            : const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          border: Border.all(color: highlightColor!, width: 2),
+          borderRadius: BorderRadius.circular(isPill ? 20 : 50),
+          //color: highlightColor.withOpacity(0.2), // Optional bg fill
+        ),
+        child: isPill
+            ? Row(
+                children: [
+                  Icon(icon, size: 18, color: color),
+                  const SizedBox(width: 4),
+                  Text(
+                    label ?? '',
+                    style: TextStyle(
+                      color: color,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              )
+            : Icon(icon, size: 22, color: color),
+      );
+    } else {
+      if (isPill) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.grey.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: color.withOpacity(0.7)),
+              const SizedBox(width: 4),
+              Text(
+                label ?? '',
+                style: TextStyle(
+                  color: color.withOpacity(0.7),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+      return Icon(icon, size: 22, color: color.withOpacity(0.7));
+    }
   }
 }
