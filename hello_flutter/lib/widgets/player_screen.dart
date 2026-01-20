@@ -99,6 +99,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
   int? _userId;
   bool _isFavorite = false;
   bool _isDownloading = false;
+  String? _lastError; // Track last error to avoid duplicate messages
+  bool _isInitializingPlayer = false; // Prevent concurrent player init
 
   final GlobalKey _speedButtonKey = GlobalKey();
   final GlobalKey _moreButtonKey = GlobalKey();
@@ -352,6 +354,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
   }
 
+  void _showDownloadingMessage() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Downloading for offline playback...'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
   Future<void> _downloadBook() async {
     setState(() => _isDownloading = true);
     try {
@@ -381,6 +393,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   Future<void> _initPlayer() async {
+    // Prevent concurrent initialization
+    if (_isInitializingPlayer) {
+      print("[DEBUG][PlayerScreen] Already initializing, skipping");
+      return;
+    }
+    _isInitializingPlayer = true;
+
     try {
       String url = _currentBook.audioUrl;
       final uniqueAudioId = _getUniqueAudioId();
@@ -390,7 +409,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
           audioHandler.currentIndex == _currentIndex &&
           _player.processingState != ProcessingState.idle) {
         // Same track is already loaded, don't reload
-        print("Same track already loaded, skipping reload");
+        print("[DEBUG][PlayerScreen] Same track already loaded, skipping reload");
+        _isInitializingPlayer = false;
         return;
       }
 
@@ -414,55 +434,44 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
       // Check for local file
       final storageId = _getUniqueAudioId();
-      final isDownloaded = await DownloadService().isBookDownloaded(storageId);
+      final downloadService = DownloadService();
+      final isDownloaded = await downloadService.isBookDownloaded(storageId);
 
-      final authService = AuthService(); // Helper for key
+      final authService = AuthService();
 
       print(
-        "[DEBUG][PlayerScreen] isEncrypted=${_currentBook.isEncrypted}, url=$url",
+        "[DEBUG][PlayerScreen] isDownloaded=$isDownloaded, url=$url",
       );
 
-      if (_currentBook.isEncrypted) {
-        final key = await authService.getEncryptionKey();
-        print(
-          "[DEBUG][PlayerScreen] Encryption key=${key != null ? '${key.substring(0, 10)}...' : 'NULL'}",
-        );
-        if (key == null) {
-          throw Exception("Encryption key not found");
-        }
+      // Always use encryption - get the key
+      final key = await authService.getEncryptionKey();
+      print(
+        "[DEBUG][PlayerScreen] Encryption key=${key != null ? '${key.substring(0, 10)}...' : 'NULL'}",
+      );
 
-        if (isDownloaded) {
-          final localPath = await DownloadService().getLocalBookPath(storageId);
-          print("Playing encrypted from local file: $localPath");
-          await audioHandler.loadEncryptedLocalFile(localPath, mediaItem, key);
-        } else {
-          if (url == 'placeholder.mp3' || url.isEmpty) {
-            // Placeholder logic (unlikely for encrypted)
-            url =
-                'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
-          }
-          print(
-            "[DEBUG][PlayerScreen] Calling loadEncryptedAudio with URL: $url",
-          );
-          await audioHandler.loadEncryptedAudio(url, mediaItem, key);
-        }
+      if (key == null) {
+        throw Exception("Encryption key not found. Please re-login.");
+      }
+
+      if (isDownloaded) {
+        // Play from local encrypted file
+        final localPath = await downloadService.getLocalBookPath(storageId);
+        print("[DEBUG][PlayerScreen] Playing from local encrypted file: $localPath");
+        await audioHandler.loadEncryptedLocalFile(localPath, mediaItem, key);
       } else {
-        // Unencrypted / Legacy
-        if (isDownloaded) {
-          final localPath = await DownloadService().getLocalBookPath(storageId);
-          print("Playing from local file: $localPath");
-          await audioHandler.loadLocalFile(localPath, mediaItem);
-        } else {
-          if (url == 'placeholder.mp3' || url.isEmpty) {
-            url =
-                'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
-          }
-          await audioHandler.loadAudio(url, mediaItem);
+        // Stream from server (encrypted)
+        if (url == 'placeholder.mp3' || url.isEmpty) {
+          throw Exception("Invalid audio URL");
         }
+        print("[DEBUG][PlayerScreen] Streaming encrypted audio from: $url");
+        await audioHandler.loadEncryptedAudio(url, mediaItem, key);
       }
 
       // Auto-play
       await audioHandler.play();
+
+      // Clear any previous error since we succeeded
+      _lastError = null;
 
       // Resume logic
       if (_userId != null) {
@@ -480,13 +489,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
         }
       }
     } catch (e) {
-      debugPrint("Error loading audio: $e");
-      await _player.stop(); // Stop potential previous track
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Failed to load audio: $e")));
+      final errorMsg = e.toString();
+      debugPrint("[DEBUG][PlayerScreen] Error loading audio: $errorMsg");
+
+      // Only show error if it's different from last error (avoid spam)
+      if (_lastError != errorMsg && mounted) {
+        _lastError = errorMsg;
+        await _player.stop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to load audio: $errorMsg")),
+        );
       }
+    } finally {
+      _isInitializingPlayer = false;
     }
   }
 
@@ -1036,23 +1051,25 @@ class _PlayerScreenState extends State<PlayerScreen> {
                             return GestureDetector(
                               onTap: () async {
                                 if (_isPurchased) {
-                                  // Use storage ID here!
-                                  final storageId = _getUniqueAudioId();
-                                  final isDownloaded = await DownloadService()
-                                      .isBookDownloaded(storageId);
-                                  if (!isDownloaded) {
-                                    if (!_isDownloading) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Book not downloaded. Retrying download...',
-                                          ),
-                                        ),
-                                      );
-                                      _downloadBook();
+                                  // Check if player has audio loaded
+                                  if (_player.processingState == ProcessingState.idle) {
+                                    // No audio loaded - try to initialize
+                                    final storageId = _getUniqueAudioId();
+                                    final downloadService = DownloadService();
+                                    final isDownloaded = await downloadService.isBookDownloaded(storageId);
+
+                                    if (!isDownloaded && !downloadService.isDownloadInProgress(storageId)) {
+                                      // Not downloaded and not downloading - start download
+                                      if (!_isDownloading) {
+                                        _showDownloadingMessage();
+                                        _downloadBook();
+                                      }
+                                      // Still try to stream while downloading
+                                      _initPlayer();
+                                      return;
                                     }
+                                    // Either downloaded or download in progress - init player
+                                    _initPlayer();
                                     return;
                                   }
                                 }

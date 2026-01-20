@@ -104,12 +104,15 @@ def jwt_required(f):
             if url_user_id and int(url_user_id) != int(payload['user_id']):
                  return jsonify({"error": "Unauthorized access to this user/resource"}), 403
             
-            # Also check query params or body if critical? 
+            # Also check query params or body if critical?
             # For now, URL param check is good for GET requests.
             # For POST, we might need manual check inside route or inspect request.json.
-            
+
+            # Store user_id on request object so routes can access it
+            request.user_id = user_id
+
         except Exception as e:
             return jsonify({"error": str(e)}), 401
-            
+
         return f(*args, **kwargs)
     return decorated_function
