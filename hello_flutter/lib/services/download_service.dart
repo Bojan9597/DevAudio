@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:encrypt/encrypt.dart' as enc;
 
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,18 +21,30 @@ class DownloadService {
 
   Future<String> getLocalBookPath(String fileKey) async {
     final path = await _getLocalPath();
-    // Use .enc extension for encrypted files
-    return '$path/$fileKey.enc';
+    // Use .audio extension for decrypted files (stored securely in app-private storage)
+    return '$path/$fileKey.audio';
   }
 
   Future<bool> isBookDownloaded(String fileKey) async {
     final filePath = await getLocalBookPath(fileKey);
     final file = File(filePath);
     if (await file.exists()) {
-      // Also verify file is not empty/corrupted (at least has IV + some data)
+      // Verify file is not empty/corrupted
       final size = await file.length();
-      return size > 16; // IV is 16 bytes, so valid encrypted file must be larger
+      if (size > 0) {
+        return true;
+      }
     }
+
+    // Clean up old .enc files (legacy format) - they need to be re-downloaded
+    final basePath = await _getLocalPath();
+    final oldEncPath = '$basePath/$fileKey.enc';
+    final oldEncFile = File(oldEncPath);
+    if (await oldEncFile.exists()) {
+      print('[DownloadService] Found legacy .enc file, will be re-downloaded: $oldEncPath');
+      await oldEncFile.delete();
+    }
+
     return false;
   }
 
@@ -68,18 +82,28 @@ class DownloadService {
       final encryptedUrl = url.replaceFirst('/static/', '/encrypted-audio/');
 
       print('[DownloadService] Downloading encrypted from: $encryptedUrl');
-      print('[DownloadService] Saving to: $filePath');
 
       // Get auth token for the encrypted endpoint
-      final token = await AuthService().getAccessToken();
+      final authService = AuthService();
+      final token = await authService.getAccessToken();
       if (token == null) {
         throw Exception('No auth token available for encrypted download');
       }
 
+      // Get encryption key for decryption
+      final encryptionKey = await authService.getEncryptionKey();
+      if (encryptionKey == null) {
+        throw Exception('No encryption key available. Please re-login.');
+      }
+
+      // Download to a temporary file first
+      final tempPath = '$filePath.tmp';
+      print('[DownloadService] Downloading to temp: $tempPath');
+
       // Download with auth header
       await _dio.download(
         encryptedUrl,
-        filePath,
+        tempPath,
         options: Options(
           headers: {
             'Authorization': 'Bearer $token',
@@ -88,46 +112,99 @@ class DownloadService {
         onReceiveProgress: (received, total) {
           if (total > 0) {
             final progress = (received / total * 100).toStringAsFixed(1);
-            print('[DownloadService] Progress: $progress%');
+            print('[DownloadService] Download progress: $progress%');
           }
         },
       );
 
-      // Verify download
-      final file = File(filePath);
-      if (await file.exists()) {
-        final size = await file.length();
-        print('[DownloadService] Download complete. File size: $size bytes');
-        if (size <= 16) {
-          await file.delete();
-          throw Exception('Downloaded file is too small (corrupted)');
-        }
-      } else {
-        throw Exception('Download failed - file not created');
+      // Verify encrypted download
+      final tempFile = File(tempPath);
+      if (!await tempFile.exists()) {
+        throw Exception('Download failed - temp file not created');
+      }
+
+      final encryptedBytes = await tempFile.readAsBytes();
+      print('[DownloadService] Downloaded encrypted size: ${encryptedBytes.length} bytes');
+
+      if (encryptedBytes.length <= 16) {
+        await tempFile.delete();
+        throw Exception('Downloaded file is too small (corrupted)');
+      }
+
+      // Decrypt the file
+      print('[DownloadService] Decrypting...');
+      final decryptedBytes = _decryptAudio(encryptedBytes, encryptionKey);
+      print('[DownloadService] Decrypted size: ${decryptedBytes.length} bytes');
+
+      // Write decrypted audio to final path
+      final outputFile = File(filePath);
+      await outputFile.writeAsBytes(decryptedBytes);
+      print('[DownloadService] Saved decrypted audio to: $filePath');
+
+      // Clean up temp file
+      await tempFile.delete();
+
+      // Verify final file
+      final finalSize = await outputFile.length();
+      print('[DownloadService] Download complete. Final file size: $finalSize bytes');
+
+      if (finalSize == 0) {
+        await outputFile.delete();
+        throw Exception('Decryption failed - output file is empty');
       }
     } catch (e) {
       print('[DownloadService] Download failed: $e');
-      // Clean up partial download
+      // Clean up partial downloads
       try {
         final filePath = await getLocalBookPath(fileKey);
         final file = File(filePath);
         if (await file.exists()) {
           await file.delete();
         }
+        final tempFile = File('$filePath.tmp');
+        if (await tempFile.exists()) {
+          await tempFile.delete();
+        }
       } catch (_) {}
       throw Exception('Failed to download book: $e');
     }
   }
 
+  /// Decrypt AES-CBC encrypted audio bytes
+  /// Format: [16-byte IV] + [AES-CBC encrypted data with PKCS7 padding]
+  List<int> _decryptAudio(Uint8List encryptedBytes, String keyString) {
+    // Extract IV (first 16 bytes) and ciphertext
+    final iv = enc.IV(Uint8List.fromList(encryptedBytes.sublist(0, 16)));
+    final ciphertext = enc.Encrypted(Uint8List.fromList(encryptedBytes.sublist(16)));
+
+    // Create key from base64 string
+    final key = enc.Key.fromBase64(keyString);
+
+    // Decrypt using AES-CBC
+    final encrypter = enc.Encrypter(enc.AES(key, mode: enc.AESMode.cbc));
+    return encrypter.decryptBytes(ciphertext, iv: iv);
+  }
+
   Future<void> deleteBook(String fileKey) async {
     try {
+      final basePath = await _getLocalPath();
+
+      // Delete current .audio file
       final filePath = await getLocalBookPath(fileKey);
       final file = File(filePath);
       if (await file.exists()) {
         await file.delete();
       }
+
+      // Also try to delete old .enc files (legacy encrypted)
+      final encPath = '$basePath/$fileKey.enc';
+      final encFile = File(encPath);
+      if (await encFile.exists()) {
+        await encFile.delete();
+      }
+
       // Also try to delete old .mp3 files (legacy)
-      final legacyPath = (await _getLocalPath()) + '/$fileKey.mp3';
+      final legacyPath = '$basePath/$fileKey.mp3';
       final legacyFile = File(legacyPath);
       if (await legacyFile.exists()) {
         await legacyFile.delete();

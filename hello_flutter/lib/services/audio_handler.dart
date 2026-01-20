@@ -56,13 +56,8 @@ class MyAudioHandler extends BaseAudioHandler {
       );
     });
 
-    // Listen for track completion to auto-advance
-    _player.playerStateStream.listen((state) {
-      if (state.processingState == ProcessingState.completed) {
-        // Track finished - try to play next track
-        playNextTrack();
-      }
-    });
+    // Note: Track completion auto-advance is handled by PlayerScreen
+    // because it needs to check for quizzes before advancing
 
     // Start background progress sync timer
     _startBackgroundProgressSync();
@@ -123,6 +118,18 @@ class MyAudioHandler extends BaseAudioHandler {
   @override
   Future<void> stop() async {
     await _player.stop();
+    await super.stop();
+  }
+
+  /// Clear all playback state (used on logout)
+  Future<void> clearState() async {
+    await _player.stop();
+    mediaItem.add(null); // Clear media item to hide mini player
+    currentBook = null;
+    currentPlaylist = null;
+    currentIndex = 0;
+    currentUniqueAudioId = null;
+    _userId = null;
     await super.stop();
   }
 

@@ -4,6 +4,7 @@ import 'login_screen.dart';
 import 'upload_book_screen.dart';
 import '../states/layout_state.dart';
 import '../l10n/generated/app_localizations.dart';
+import '../main.dart'; // For audioHandler
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -33,6 +34,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _logout() async {
     setState(() => _isLoading = true);
     try {
+      // Stop audio playback and clear mini player state
+      await audioHandler.clearState();
+
       await _authService.logout();
       await globalLayoutState.updateUser(null);
       if (mounted) {

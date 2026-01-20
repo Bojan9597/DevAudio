@@ -153,6 +153,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
         }
 
         if (hasQuiz && !isPassed) {
+          // Stop audio before navigating to quiz
+          _player.stop();
+
           // Navigate to Quiz
           // Use a post-frame callback or Future.microtask to navigate
           Future.microtask(() {
@@ -202,8 +205,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (widget.playlist == null) return;
 
     if (_currentIndex >= widget.playlist!.length - 1) {
-      // End of playlist. Close player.
-      Navigator.of(context).pop();
+      // End of playlist. Close player with result to reload playlist.
+      Navigator.of(context).pop(true); // true = should reload
       return;
     }
 
@@ -457,10 +460,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
       }
 
       if (isDownloaded) {
-        // Play from local encrypted file
+        // Play from local decrypted file (stored securely in app-private storage)
         final localPath = await downloadService.getLocalBookPath(storageId);
-        print("[DEBUG][PlayerScreen] Playing from local encrypted file: $localPath");
-        await audioHandler.loadEncryptedLocalFile(localPath, mediaItem, key);
+        print("[DEBUG][PlayerScreen] Playing from local file: $localPath");
+        await audioHandler.loadLocalFile(localPath, mediaItem);
       } else {
         // Stream from server (encrypted)
         if (url == 'placeholder.mp3' || url.isEmpty) {

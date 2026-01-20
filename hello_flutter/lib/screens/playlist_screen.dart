@@ -219,9 +219,22 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       await _videoController.seekTo(const Duration(seconds: 2));
       await _videoController.play();
 
+      final duration = _videoController.value.duration;
+
+      // If video duration is very short or already at/past end, trigger immediately
+      if (duration.inMilliseconds > 0 && duration.inSeconds <= 2) {
+        // Video too short, trigger completion immediately
+        _playCompletionSequence();
+        return;
+      }
+
       _backgroundLoopListener = () {
-        if (_videoController.value.position >=
-            _videoController.value.duration) {
+        final pos = _videoController.value.position;
+        final dur = _videoController.value.duration;
+
+        // Check if video finished (with small buffer for timing)
+        if (dur.inMilliseconds > 0 &&
+            pos.inMilliseconds >= dur.inMilliseconds - 100) {
           // Video finished
           _playCompletionSequence();
 
@@ -325,13 +338,14 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
         );
       }
 
+      // Must set _isQuizPassed BEFORE calculating _isBookCompleted
+      _isQuizPassed = data['quiz_passed'] ?? false;
+
       if (_hasQuiz) {
         _isBookCompleted = _areTracksCompleted && _isQuizPassed;
       } else {
         _isBookCompleted = _areTracksCompleted;
       }
-
-      _isQuizPassed = data['quiz_passed'] ?? false;
       _isLoading = false;
       _isFirstLoad = false;
     });
