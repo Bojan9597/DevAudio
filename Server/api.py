@@ -1,7 +1,11 @@
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, Response
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import os
+import secrets
+import base64
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
 from werkzeug.security import generate_password_hash, check_password_hash
 from database import Database
 from badge_service import BadgeService
@@ -15,6 +19,40 @@ from jwt_config import generate_access_token, generate_refresh_token
 from jwt_middleware import jwt_required, blacklist_token
 import update_server_ip # Auto-update DB IP on startup
 from session_manager import SessionManager
+
+def generate_aes_key():
+    """Generate a random 256-bit AES key and return as base64 string."""
+    key = secrets.token_bytes(32)  # 256 bits
+    return base64.b64encode(key).decode('utf-8')
+
+def get_or_create_user_aes_key(user_id, db):
+    """Get user's AES key, creating one if it doesn't exist."""
+    query = "SELECT aes_key FROM users WHERE id = %s"
+    result = db.execute_query(query, (user_id,))
+    if result and result[0]['aes_key']:
+        return result[0]['aes_key']
+
+    # Generate new key
+    new_key = generate_aes_key()
+    update_query = "UPDATE users SET aes_key = %s WHERE id = %s"
+    db.execute_query(update_query, (new_key, user_id))
+    return new_key
+
+def encrypt_file_data(data, key_base64):
+    """Encrypt data using AES-CBC with PKCS7 padding. Returns IV + ciphertext."""
+    key = base64.b64decode(key_base64)
+    iv = secrets.token_bytes(16)
+
+    # PKCS7 padding
+    block_size = 16
+    padding_len = block_size - (len(data) % block_size)
+    padded_data = data + bytes([padding_len] * padding_len)
+
+    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+    encryptor = cipher.encryptor()
+    ciphertext = encryptor.update(padded_data) + encryptor.finalize()
+
+    return iv + ciphertext
 
 app = Flask(__name__)
 CORS(app) # Enable CORS for all routes
@@ -172,28 +210,31 @@ def verify_email():
              
         pending_user = pending_users[0]
         if pending_user['verification_code'] == code:
-            # Move to users table
-            insert_query = "INSERT INTO users (name, email, password_hash, is_verified) VALUES (%s, %s, %s, TRUE)"
+            # Generate AES key for the new user
+            aes_key = generate_aes_key()
+
+            # Move to users table with AES key
+            insert_query = "INSERT INTO users (name, email, password_hash, is_verified, aes_key) VALUES (%s, %s, %s, TRUE, %s)"
             cursor = db.connection.cursor()
-            cursor.execute(insert_query, (pending_user['name'], pending_user['email'], pending_user['password_hash']))
+            cursor.execute(insert_query, (pending_user['name'], pending_user['email'], pending_user['password_hash'], aes_key))
             db.connection.commit()
             user_id = cursor.lastrowid
-            
+
             # Delete from pending
             delete_query = "DELETE FROM pending_users WHERE email = %s"
             cursor.execute(delete_query, (email,))
             db.connection.commit()
             cursor.close()
-            
+
             # Generate JWT tokens
             session_id = str(uuid.uuid4())
             access_token = generate_access_token(user_id, session_id)
             refresh_token = generate_refresh_token(user_id, session_id)
-            
+
             # Store session (Single Session Policy)
             session_manager.store_session(user_id, session_id, refresh_token)
-            
-            # Return login data
+
+            # Return login data with AES key
             return jsonify({
                 "message": "Verification successful",
                 "access_token": access_token,
@@ -202,7 +243,8 @@ def verify_email():
                     "id": user_id,
                     "name": pending_user['name'],
                     "email": pending_user['email'],
-                     "profile_picture_url": None 
+                    "profile_picture_url": None,
+                    "aes_key": aes_key
                 }
             }), 200
         else:
@@ -244,14 +286,17 @@ def login():
         
         # Verify password
         if check_password_hash(user['password_hash'], password):
+            # Get or create AES key for user
+            aes_key = get_or_create_user_aes_key(user['id'], db)
+
             # Generate JWT tokens
             session_id = str(uuid.uuid4())
             access_token = generate_access_token(user['id'], session_id)
             refresh_token = generate_refresh_token(user['id'], session_id)
-            
+
             # Store session (Single Session Policy)
             session_manager.store_session(user['id'], session_id, refresh_token)
-            
+
             return jsonify({
                 "message": "Login successful",
                 "access_token": access_token,
@@ -260,7 +305,8 @@ def login():
                     "id": user['id'],
                     "name": user['name'],
                     "email": user['email'],
-                    "profile_picture_url": user['profile_picture_url']
+                    "profile_picture_url": user['profile_picture_url'],
+                    "aes_key": aes_key
                 }
             }), 200
         else:
@@ -340,13 +386,16 @@ def google_login():
         if users:
             # Login existing
             user = users[0]
+            # Get or create AES key
+            aes_key = get_or_create_user_aes_key(user['id'], db)
+
             session_id = str(uuid.uuid4())
             access_token = generate_access_token(user['id'], session_id)
             refresh_token = generate_refresh_token(user['id'], session_id)
-            
+
             # Store session
             session_manager.store_session(user['id'], session_id, refresh_token)
-            
+
             return jsonify({
                 "message": "Login successful",
                 "access_token": access_token,
@@ -355,17 +404,19 @@ def google_login():
                     "id": user['id'],
                     "name": user['name'],
                     "email": user['email'],
-                    "profile_picture_url": user['profile_picture_url']
+                    "profile_picture_url": user['profile_picture_url'],
+                    "aes_key": aes_key
                 }
             }), 200
         else:
             # Register new user (with dummy password hash since it's Google auth)
             # Or make password nullable. For now, we set a placeholder hash.
             dummy_hash = generate_password_hash("google_auth_placeholder")
-            
-            insert_query = "INSERT INTO users (name, email, password_hash) VALUES (%s, %s, %s)"
+            aes_key = generate_aes_key()
+
+            insert_query = "INSERT INTO users (name, email, password_hash, aes_key) VALUES (%s, %s, %s, %s)"
             cursor = db.connection.cursor()
-            cursor.execute(insert_query, (name or "Google User", email, dummy_hash))
+            cursor.execute(insert_query, (name or "Google User", email, dummy_hash, aes_key))
             db.connection.commit()
             user_id = cursor.lastrowid
             cursor.close()
@@ -374,10 +425,10 @@ def google_login():
             session_id = str(uuid.uuid4())
             access_token = generate_access_token(user_id, session_id)
             refresh_token = generate_refresh_token(user_id, session_id)
-            
+
             # Store session
             session_manager.store_session(user_id, session_id, refresh_token)
-            
+
             return jsonify({
                 "message": "User registered via Google",
                 "access_token": access_token,
@@ -386,7 +437,8 @@ def google_login():
                     "id": user_id,
                     "name": name,
                     "email": email,
-                    "profile_picture_url": None
+                    "profile_picture_url": None,
+                    "aes_key": aes_key
                 }
             }), 201
 
@@ -499,6 +551,62 @@ def allowed_file(filename):
 @app.route('/profilePictures/<filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+@app.route('/encrypted-audio/<path:filepath>')
+@jwt_required
+def serve_encrypted_audio(filepath):
+    """Serve audio file encrypted with user's AES key.
+
+    The filepath should be like: AudioBooks/folder/file.wav
+    Server reads the file, encrypts with user's key, and returns encrypted data.
+    """
+    # Get user_id from JWT (set by jwt_required decorator)
+    user_id = getattr(request, 'user_id', None)
+    if not user_id:
+        return jsonify({"error": "Authentication required"}), 401
+
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        # Get user's AES key
+        aes_key = get_or_create_user_aes_key(user_id, db)
+
+        # Build file path
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(base_dir, 'static', filepath)
+
+        # Security: ensure path is within static directory
+        real_path = os.path.realpath(file_path)
+        static_dir = os.path.realpath(os.path.join(base_dir, 'static'))
+        if not real_path.startswith(static_dir):
+            return jsonify({"error": "Invalid path"}), 403
+
+        if not os.path.exists(file_path):
+            return jsonify({"error": "File not found"}), 404
+
+        # Read and encrypt file
+        with open(file_path, 'rb') as f:
+            file_data = f.read()
+
+        encrypted_data = encrypt_file_data(file_data, aes_key)
+
+        # Return encrypted data
+        return Response(
+            encrypted_data,
+            mimetype='application/octet-stream',
+            headers={
+                'Content-Disposition': f'attachment; filename=encrypted_audio.enc',
+                'Content-Length': len(encrypted_data)
+            }
+        )
+
+    except Exception as e:
+        print(f"Encryption error: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
 
 @app.route('/upload-profile-picture', methods=['POST'])
 @jwt_required
@@ -1210,7 +1318,14 @@ def update_progress():
     try:
         check_query = "SELECT id FROM user_books WHERE user_id = %s AND book_id = %s"
         existing = db.execute_query(check_query, (user_id, book_id))
-        
+
+        # Auto-add book to library if user is subscriber but book not in user_books
+        if not existing and is_subscriber(user_id, db):
+            insert_query = "INSERT INTO user_books (user_id, book_id) VALUES (%s, %s)"
+            db.execute_query(insert_query, (user_id, book_id))
+            existing = True  # Now it exists
+            print(f"Auto-added book {book_id} to library for subscriber user {user_id}")
+
         if existing:
             # Duration Logic
             duration_query = "SELECT duration_seconds FROM books WHERE id = %s"
@@ -1983,13 +2098,21 @@ def get_subscription_status():
             if is_active and sub['end_date']:
                  is_active = sub['end_date'] > now
 
+            # Convert naive datetime to UTC timestamp properly
+            # MySQL stores UTC but returns naive datetime, so we need to treat it as UTC
+            def to_utc_timestamp(dt):
+                if dt is None:
+                    return None
+                # Treat the naive datetime as UTC
+                return int(dt.replace(tzinfo=datetime.timezone.utc).timestamp())
+
             return jsonify({
                 "id": sub['id'],
                 "user_id": int(user_id),
                 "plan_type": sub['plan_type'],
                 "status": "active" if is_active else "expired",
-                "start_date": int(sub['start_date'].timestamp()) if sub['start_date'] else None,
-                "end_date": int(sub['end_date'].timestamp()) if sub['end_date'] else None,
+                "start_date": to_utc_timestamp(sub['start_date']),
+                "end_date": to_utc_timestamp(sub['end_date']),
                 "auto_renew": bool(sub['auto_renew']),
                 "is_active": is_active
             }), 200
@@ -2070,10 +2193,13 @@ def subscribe():
         db.connection.commit()
         cursor.close()
 
+        # end_date is UTC naive datetime, convert properly
+        end_date_ts = int(end_date.replace(tzinfo=datetime.timezone.utc).timestamp()) if end_date else None
+
         return jsonify({
             "message": f"Subscription {action} successfully",
             "plan_type": plan_type,
-            "end_date": int(end_date.timestamp()) if end_date else None,
+            "end_date": end_date_ts,
             "status": "active"
         }), 201
 
@@ -2192,10 +2318,13 @@ def admin_set_subscription():
         db.connection.commit()
         cursor.close()
 
+        # end_date is UTC naive datetime, convert properly
+        end_date_ts = int(end_date.replace(tzinfo=datetime.timezone.utc).timestamp()) if end_date else "lifetime"
+
         return jsonify({
             "message": f"Subscription activated for {target_email}",
             "plan_type": plan_type,
-            "end_date": int(end_date.timestamp()) if end_date else "lifetime"
+            "end_date": end_date_ts
         }), 200
 
     except Exception as e:
