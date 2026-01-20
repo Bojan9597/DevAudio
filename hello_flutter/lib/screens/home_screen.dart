@@ -363,6 +363,28 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ],
                               ),
                             ),
+
+                            const SizedBox(height: 50),
+
+                            // Feature Highlights
+                            _buildFeatureItem(
+                              context,
+                              Icons.all_inclusive,
+                              'Unlimited Access',
+                              'Stream our entire catalog of bestsellers and originals. No credits required.',
+                            ),
+                            _buildFeatureItem(
+                              context,
+                              Icons.download_for_offline,
+                              'Listen Offline',
+                              'Download titles to your device and take your library with you wherever you go.',
+                            ),
+                            _buildFeatureItem(
+                              context,
+                              Icons.quiz,
+                              'Interactive Quizzes',
+                              'Test your knowledge and reinforce what you\'ve learned with interactive quizzes.',
+                            ),
                           ],
                         ),
                       ),
@@ -656,6 +678,55 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => PlaylistScreen(book: book)),
+    );
+  }
+
+  Widget _buildFeatureItem(
+    BuildContext context,
+    IconData icon,
+    String title,
+    String description,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 30.0),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: const BoxDecoration(
+              color: Colors.orange,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: Colors.white, size: 30),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+            child: Text(
+              description,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: textColor.withOpacity(0.7),
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
