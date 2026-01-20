@@ -5,8 +5,8 @@ import '../models/category.dart';
 import '../repositories/book_repository.dart';
 import '../repositories/category_repository.dart';
 import '../services/auth_service.dart';
+import '../services/download_service.dart';
 import '../l10n/generated/app_localizations.dart';
-// import 'player_screen.dart'; // Removed unused import
 
 import '../screens/profile_screen.dart';
 import '../screens/discover_screen.dart';
@@ -28,6 +28,10 @@ class _ContentAreaState extends State<ContentArea> {
   List<Category> _categories = []; // State for recursive filtering
   bool _isLoading = true;
   bool _isAdmin = false;
+
+  // Library view mode toggles (separate from global grid/list setting)
+  bool _isLibraryGridView = true;
+  int? _userId;
 
   int _lastRefreshVersion = 0;
 
@@ -79,6 +83,7 @@ class _ContentAreaState extends State<ContentArea> {
     try {
       final books = await BookRepository().getBooks();
       final userId = await AuthService().getCurrentUserId();
+      _userId = userId;
 
       List<int> favoriteIds = [];
       List<String> purchasedIds = [];
@@ -238,7 +243,9 @@ class _ContentAreaState extends State<ContentArea> {
     final favoriteBooks = _allBooks.where((b) => b.isFavorite == true).toList();
 
     // "My Books" = Purchased Books EXCLUDING my own uploads (if admin)
-    final uploadedIds = _isAdmin ? _uploadedBooks.map((b) => b.id).toSet() : <String>{};
+    final uploadedIds = _isAdmin
+        ? _uploadedBooks.map((b) => b.id).toSet()
+        : <String>{};
 
     final myBooks = _allBooks
         .where(
@@ -256,32 +263,15 @@ class _ContentAreaState extends State<ContentArea> {
         icon: const Icon(Icons.menu_book),
         text: AppLocalizations.of(context)!.myBooks,
       ),
-      if (_isAdmin)
-        const Tab(icon: Icon(Icons.cloud_upload), text: 'Uploaded'),
+      if (_isAdmin) const Tab(icon: Icon(Icons.cloud_upload), text: 'Uploaded'),
     ];
 
     // Build tab views - only include Uploaded view for admin
     final tabViews = <Widget>[
-      // Favorites Tab
-      favoriteBooks.isEmpty
-          ? const Center(child: Text('No favorite books yet'))
-          : Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: _buildBookGridOrList(favoriteBooks),
-            ),
-      // My Books Tab
-      myBooks.isEmpty
-          ? const Center(child: Text('No purchased books'))
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: ListView.builder(
-                itemCount: myBooks.length,
-                itemBuilder: (context, index) {
-                  final book = myBooks[index];
-                  return _buildMyBookTile(book);
-                },
-              ),
-            ),
+      // Favorites Tab with list/grid toggle and clickable hearts
+      _buildFavoritesTab(favoriteBooks),
+      // My Books Tab - show only downloaded books
+      _buildMyBooksTab(myBooks),
       // Uploaded Tab with FAB (only for admin)
       if (_isAdmin)
         Stack(
@@ -318,9 +308,7 @@ class _ContentAreaState extends State<ContentArea> {
                     );
 
                     if (result == true) {
-                      await Future.delayed(
-                        const Duration(milliseconds: 500),
-                      );
+                      await Future.delayed(const Duration(milliseconds: 500));
                       globalLayoutState.triggerRefresh();
                     }
                   },
@@ -354,13 +342,393 @@ class _ContentAreaState extends State<ContentArea> {
               tabs: tabs,
             ),
           ),
+          Expanded(child: TabBarView(children: tabViews)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFavoritesTab(List<Book> favoriteBooks) {
+    if (favoriteBooks.isEmpty) {
+      return const Center(child: Text('No favorite books yet'));
+    }
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          // View toggle row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              IconButton(
+                icon: Icon(
+                  _isLibraryGridView ? Icons.view_list : Icons.grid_view,
+                ),
+                onPressed: () =>
+                    setState(() => _isLibraryGridView = !_isLibraryGridView),
+                tooltip: _isLibraryGridView
+                    ? 'Switch to List'
+                    : 'Switch to Grid',
+              ),
+            ],
+          ),
           Expanded(
-            child: TabBarView(
-              children: tabViews,
-            ),
+            child: _isLibraryGridView
+                ? _buildBookGridWithClickableHearts(favoriteBooks)
+                : _buildBookListWithClickableHearts(favoriteBooks),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMyBooksTab(List<Book> myBooks) {
+    return FutureBuilder<List<Book>>(
+      future: _filterDownloadedBooks(myBooks),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final downloadedBooks = snapshot.data ?? [];
+        if (downloadedBooks.isEmpty) {
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.download_done, size: 48, color: Colors.grey),
+                SizedBox(height: 16),
+                Text('No downloaded books'),
+                SizedBox(height: 8),
+                Text(
+                  'Books you download will appear here',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ],
+            ),
+          );
+        }
+        return Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              // View toggle row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      _isLibraryGridView ? Icons.view_list : Icons.grid_view,
+                    ),
+                    onPressed: () => setState(
+                      () => _isLibraryGridView = !_isLibraryGridView,
+                    ),
+                    tooltip: _isLibraryGridView
+                        ? 'Switch to List'
+                        : 'Switch to Grid',
+                  ),
+                ],
+              ),
+              Expanded(
+                child: _isLibraryGridView
+                    ? _buildBookGrid(downloadedBooks)
+                    : ListView.builder(
+                        itemCount: downloadedBooks.length,
+                        itemBuilder: (context, index) {
+                          final book = downloadedBooks[index];
+                          return _buildMyBookTile(book);
+                        },
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<List<Book>> _filterDownloadedBooks(List<Book> books) async {
+    final downloadService = DownloadService();
+    final downloadedBooks = <Book>[];
+    for (final book in books) {
+      // Check if playlist is downloaded for this book
+      final isPlaylistDownloaded = await downloadService.isPlaylistDownloaded(
+        book.id,
+      );
+      // Also check if book itself is downloaded
+      final isBookDownloaded = await downloadService.isBookDownloaded(book.id);
+      if (isPlaylistDownloaded || isBookDownloaded) {
+        downloadedBooks.add(book);
+      }
+    }
+    return downloadedBooks;
+  }
+
+  Widget _buildBookGridWithClickableHearts(List<Book> books) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        int crossAxisCount = (constraints.maxWidth / 200).toInt();
+        if (crossAxisCount < 2) crossAxisCount = 2;
+
+        return GridView.builder(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            childAspectRatio: 0.75,
+            crossAxisSpacing: 20,
+            mainAxisSpacing: 20,
+          ),
+          itemCount: books.length,
+          itemBuilder: (context, index) {
+            final book = books[index];
+            return _buildBookCardWithClickableHeart(book);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildBookListWithClickableHearts(List<Book> books) {
+    return ListView.builder(
+      itemCount: books.length,
+      itemBuilder: (context, index) {
+        final book = books[index];
+        return _buildBookListTileWithClickableHeart(book);
+      },
+    );
+  }
+
+  Widget _buildBookCardWithClickableHeart(Book book) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => _openPlayer(book),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 2,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                ),
+                child: Center(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      if (book.coverUrl != null && book.coverUrl!.isNotEmpty)
+                        Image.network(
+                          book.coverUrl!,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          height: double.infinity,
+                          errorBuilder: (ctx, _, __) => Icon(
+                            Icons.menu_book,
+                            size: 50,
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          ),
+                        )
+                      else
+                        Icon(
+                          Icons.menu_book,
+                          size: 50,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
+                      // Clickable heart button
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: GestureDetector(
+                          onTap: () => _toggleFavorite(book),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.5),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              book.isFavorite
+                                  ? Icons.favorite
+                                  : Icons.favorite_border,
+                              color: Colors.red,
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              flex: 1,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (constraints.maxHeight < 35) {
+                      return const SizedBox.shrink();
+                    }
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              book.title,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              book.author,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.6),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBookListTileWithClickableHeart(Book book) {
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: ListTile(
+        onTap: () => _openPlayer(book),
+        leading: Container(
+          width: 50,
+          height: 50,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: (book.coverUrl != null && book.coverUrl!.isNotEmpty)
+              ? Image.network(
+                  book.coverUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Icon(
+                    Icons.menu_book,
+                    color: Theme.of(context).colorScheme.onPrimary,
+                  ),
+                )
+              : Icon(
+                  Icons.menu_book,
+                  color: Theme.of(context).colorScheme.onPrimary,
+                ),
+        ),
+        title: Text(
+          book.title,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(book.author),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Clickable heart button
+            IconButton(
+              icon: Icon(
+                book.isFavorite ? Icons.favorite : Icons.favorite_border,
+                color: Colors.red,
+                size: 20,
+              ),
+              onPressed: () => _toggleFavorite(book),
+              tooltip: book.isFavorite
+                  ? 'Remove from favorites'
+                  : 'Add to favorites',
+            ),
+            const Icon(Icons.chevron_right),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _toggleFavorite(Book book) async {
+    if (_userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please login to use favorites')),
+      );
+      return;
+    }
+
+    // Optimistic update
+    final index = _allBooks.indexWhere((b) => b.id == book.id);
+    if (index == -1) return;
+
+    setState(() {
+      _allBooks[index] = _allBooks[index].copyWith(
+        isFavorite: !book.isFavorite,
+      );
+    });
+
+    final success = await BookRepository().toggleFavorite(
+      _userId!,
+      book.id,
+      book.isFavorite, // Pass current state (if it was favorite, we want to remove)
+    );
+
+    if (!success) {
+      // Revert on failure
+      if (mounted) {
+        setState(() {
+          _allBooks[index] = _allBooks[index].copyWith(
+            isFavorite: book.isFavorite,
+          );
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update favorite')),
+        );
+      }
+    }
+  }
+
+  Widget _buildBookGrid(List<Book> books) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        int crossAxisCount = (constraints.maxWidth / 200).toInt();
+        if (crossAxisCount < 2) crossAxisCount = 2;
+
+        return GridView.builder(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            childAspectRatio: 0.75,
+            crossAxisSpacing: 20,
+            mainAxisSpacing: 20,
+          ),
+          itemCount: books.length,
+          itemBuilder: (context, index) {
+            final book = books[index];
+            return _buildBookCard(book);
+          },
+        );
+      },
     );
   }
 

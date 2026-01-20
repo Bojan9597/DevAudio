@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
 import 'dart:io';
@@ -5,6 +6,7 @@ import '../models/book.dart';
 import 'encrypted_audio_source.dart';
 import 'auth_service.dart';
 import '../utils/api_constants.dart';
+import '../repositories/book_repository.dart';
 
 class MyAudioHandler extends BaseAudioHandler {
   final AudioPlayer _player = AudioPlayer();
@@ -16,6 +18,10 @@ class MyAudioHandler extends BaseAudioHandler {
   List<Map<String, dynamic>>? currentPlaylist;
   int currentIndex = 0;
   String? currentUniqueAudioId;
+
+  // Background progress sync
+  Timer? _progressTimer;
+  int? _userId;
 
   MyAudioHandler() {
     // Listen to player state and update audio service
@@ -57,6 +63,52 @@ class MyAudioHandler extends BaseAudioHandler {
         playNextTrack();
       }
     });
+
+    // Start background progress sync timer
+    _startBackgroundProgressSync();
+  }
+
+  /// Initialize user ID for background progress sync
+  Future<void> setUserId(int? userId) async {
+    _userId = userId;
+  }
+
+  /// Start periodic background progress sync (every 15 seconds)
+  void _startBackgroundProgressSync() {
+    _progressTimer?.cancel();
+    _progressTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      _saveProgressInBackground();
+    });
+  }
+
+  /// Save progress even when app is in background
+  Future<void> _saveProgressInBackground() async {
+    if (_userId == null || !_player.playing || currentBook == null) return;
+
+    final position = _player.position.inSeconds;
+    final duration = _player.duration?.inSeconds;
+
+    if (position <= 0) return;
+
+    // Get playlist_item_id if playing a playlist track
+    String? playlistItemId;
+    if (currentPlaylist != null && currentPlaylist!.isNotEmpty) {
+      final currentTrack = currentPlaylist![currentIndex];
+      playlistItemId = currentTrack['id']?.toString();
+    }
+
+    try {
+      await BookRepository().updateProgress(
+        _userId!,
+        currentBook!.id,
+        position,
+        duration,
+        playlistItemId: playlistItemId,
+      );
+      print('[AudioHandler] Background progress saved: $position seconds');
+    } catch (e) {
+      print('[AudioHandler] Failed to save background progress: $e');
+    }
   }
 
   // Play the current audio source

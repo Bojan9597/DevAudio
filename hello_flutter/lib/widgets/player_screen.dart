@@ -264,6 +264,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
       _userId = userId;
 
+      // Set userId on audioHandler for background progress sync
+      audioHandler.setUserId(userId);
+
       // Check if user is admin - admin always has access
       final isAdmin = await AuthService().isAdmin();
 
