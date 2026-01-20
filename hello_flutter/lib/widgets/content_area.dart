@@ -513,11 +513,8 @@ class _ContentAreaState extends State<ContentArea> {
                   color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
                 ),
                 child: Center(
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      if (book.coverUrl != null && book.coverUrl!.isNotEmpty)
-                        Image.network(
+                  child: (book.coverUrl != null && book.coverUrl!.isNotEmpty)
+                      ? Image.network(
                           book.coverUrl!,
                           fit: BoxFit.cover,
                           width: double.infinity,
@@ -528,36 +525,11 @@ class _ContentAreaState extends State<ContentArea> {
                             color: Theme.of(context).colorScheme.onPrimary,
                           ),
                         )
-                      else
-                        Icon(
+                      : Icon(
                           Icons.menu_book,
                           size: 50,
                           color: Theme.of(context).colorScheme.onPrimary,
                         ),
-                      // Clickable heart button
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: GestureDetector(
-                          onTap: () => _toggleFavorite(book),
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.5),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              book.isFavorite
-                                  ? Icons.favorite
-                                  : Icons.favorite_border,
-                              color: Colors.red,
-                              size: 24,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
             ),
@@ -570,35 +542,55 @@ class _ContentAreaState extends State<ContentArea> {
                     if (constraints.maxHeight < 35) {
                       return const SizedBox.shrink();
                     }
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    return Row(
                       children: [
-                        Flexible(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              book.title,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Flexible(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    book.title,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
+                              Flexible(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    book.author,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface.withOpacity(0.6),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        Flexible(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              book.author,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurface.withOpacity(0.6),
-                              ),
+                        // Clickable heart button in title area
+                        GestureDetector(
+                          onTap: () => _toggleFavorite(book),
+                          child: Padding(
+                            padding: const EdgeInsets.all(4.0),
+                            child: Icon(
+                              book.isFavorite
+                                  ? Icons.favorite
+                                  : Icons.favorite_border,
+                              color: Colors.red,
+                              size: 22,
                             ),
                           ),
                         ),
@@ -854,11 +846,8 @@ class _ContentAreaState extends State<ContentArea> {
                   color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
                 ),
                 child: Center(
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      if (book.coverUrl != null && book.coverUrl!.isNotEmpty)
-                        Image.network(
+                  child: (book.coverUrl != null && book.coverUrl!.isNotEmpty)
+                      ? Image.network(
                           book.coverUrl!,
                           fit: BoxFit.cover,
                           width: double.infinity,
@@ -869,24 +858,11 @@ class _ContentAreaState extends State<ContentArea> {
                             color: Theme.of(context).colorScheme.onPrimary,
                           ),
                         )
-                      else
-                        Icon(
+                      : Icon(
                           Icons.menu_book,
                           size: 50,
                           color: Theme.of(context).colorScheme.onPrimary,
                         ),
-                      if (book.isFavorite)
-                        const Positioned(
-                          top: 8,
-                          right: 8,
-                          child: Icon(
-                            Icons.favorite,
-                            color: Colors.red,
-                            size: 24,
-                          ),
-                        ),
-                    ],
-                  ),
                 ),
               ),
             ),
@@ -899,35 +875,55 @@ class _ContentAreaState extends State<ContentArea> {
                     if (constraints.maxHeight < 35) {
                       return const SizedBox.shrink();
                     }
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    return Row(
                       children: [
-                        Flexible(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              book.title,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Flexible(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    book.title,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
+                              Flexible(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    book.author,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface.withOpacity(0.6),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        Flexible(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              book.author,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurface.withOpacity(0.6),
-                              ),
+                        // Clickable heart button in title area
+                        GestureDetector(
+                          onTap: () => _toggleFavorite(book),
+                          child: Padding(
+                            padding: const EdgeInsets.all(4.0),
+                            child: Icon(
+                              book.isFavorite
+                                  ? Icons.favorite
+                                  : Icons.favorite_border,
+                              color: Colors.red,
+                              size: 22,
                             ),
                           ),
                         ),
@@ -980,8 +976,18 @@ class _ContentAreaState extends State<ContentArea> {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (book.isFavorite)
-              const Icon(Icons.favorite, color: Colors.red, size: 20),
+            // Clickable heart button
+            GestureDetector(
+              onTap: () => _toggleFavorite(book),
+              child: Padding(
+                padding: const EdgeInsets.all(4.0),
+                child: Icon(
+                  book.isFavorite ? Icons.favorite : Icons.favorite_border,
+                  color: Colors.red,
+                  size: 22,
+                ),
+              ),
+            ),
             const SizedBox(width: 8),
             const Icon(Icons.chevron_right),
           ],
