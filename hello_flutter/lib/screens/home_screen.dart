@@ -6,8 +6,12 @@ import '../repositories/book_repository.dart';
 import '../repositories/category_repository.dart';
 import '../states/layout_state.dart';
 import '../utils/api_constants.dart';
+import '../services/auth_service.dart';
 
 import 'playlist_screen.dart';
+import 'login_screen.dart';
+import '../widgets/subscription_bottom_sheet.dart';
+import '../services/subscription_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -19,6 +23,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final BookRepository _bookRepository = BookRepository();
   final CategoryRepository _categoryRepository = CategoryRepository();
+  final AuthService _authService = AuthService();
+  final SubscriptionService _subscriptionService = SubscriptionService();
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   Timer? _debounce;
@@ -31,6 +37,9 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentPage = 1;
   final int _limit = 10;
 
+  bool _isLoggedIn = false;
+  bool _isSubscribed = false;
+
   // Hardcoded image names from the directory listing
   final List<String> _heroImages = [
     '1768942167_20251226_203128.jpg',
@@ -42,10 +51,25 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _checkLoginStatus();
     _loadCategories();
     _loadBooks();
     _scrollController.addListener(_onScroll);
     _searchController.addListener(_onSearchChanged);
+  }
+
+  Future<void> _checkLoginStatus() async {
+    final loggedIn = await _authService.isLoggedIn();
+    bool subscribed = false;
+    if (loggedIn) {
+      subscribed = await _subscriptionService.isSubscribed();
+    }
+    if (mounted) {
+      setState(() {
+        _isLoggedIn = loggedIn;
+        _isSubscribed = subscribed;
+      });
+    }
   }
 
   @override
@@ -129,6 +153,34 @@ class _HomeScreenState extends State<HomeScreen> {
     globalLayoutState.setCategoryId(category.id);
   }
 
+  void _navigateToSubscription() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => SubscriptionBottomSheet(
+        onSubscribed: () {
+          Navigator.pop(context); // Close sheet
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Subscription activated!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          // Refresh checking status
+          _checkLoginStatus();
+        },
+      ),
+    );
+  }
+
+  void _navigateToLogin() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    ).then((_) => _checkLoginStatus());
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
@@ -198,38 +250,74 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             const SizedBox(height: 20),
-                            ElevatedButton(
-                              onPressed: () {
-                                // Action for trial
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.amber[700],
-                                foregroundColor: Colors.black,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 32,
-                                  vertical: 12,
+
+                            // Dynamic Button and Text
+                            if (!_isLoggedIn) ...[
+                              // Not Logged In
+                              ElevatedButton(
+                                onPressed:
+                                    _navigateToLogin, // Or free trial flow
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.amber[700],
+                                  foregroundColor: Colors.black,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 32,
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(25),
+                                  ),
                                 ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(25),
+                                child: const Text(
+                                  'Continue to free trial',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
-                              child: const Text(
-                                'Continue to free trial',
+                              const SizedBox(height: 12),
+                              Text(
+                                'Auto-renews at \$14.95/month after 30 days. Cancel anytime.',
+                                textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                  color: textColor.withOpacity(0.6),
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Auto-renews at \$12.45/month after 30 days. Cancel anytime.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: textColor.withOpacity(0.6),
+                            ] else if (!_isSubscribed) ...[
+                              ElevatedButton(
+                                onPressed: _navigateToSubscription,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.amber[700],
+                                  foregroundColor: Colors.black,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 32,
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(25),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Subscribe',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
-                            ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Monthly subscription from \$14.95/month. Cancel anytime.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: textColor.withOpacity(0.6),
+                                ),
+                              ),
+                            ],
+
                             const SizedBox(height: 30),
 
                             // Image Collage
@@ -238,7 +326,6 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: Stack(
                                 alignment: Alignment.center,
                                 children: [
-                                  // We'll place images in a fan-like or collage layout
                                   if (_heroImages.length >= 4) ...[
                                     _buildTiltImage(
                                       ApiConstants.baseUrl +
@@ -281,117 +368,197 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
 
-                  // Categories Section
-                  if (!_isLoadingCategories &&
-                      _categories.isNotEmpty &&
-                      _searchController.text.isEmpty)
+                  // New Sections (Replaces Categories & Book List when not searching)
+                  if (_searchController.text.isEmpty) ...[
+                    _buildSectionHeader('New Releases', textColor),
+                    _buildHorizontalBookList(cardColor, textColor),
+
+                    const SliverToBoxAdapter(child: SizedBox(height: 20)),
+
+                    _buildSectionHeader('Top Picks', textColor),
+                    _buildHorizontalBookList(
+                      cardColor,
+                      textColor,
+                      reversed: true,
+                    ), // Simulate different content
+
+                    const SliverToBoxAdapter(child: SizedBox(height: 40)),
+                  ],
+
+                  // Search Results (Only when searching)
+                  if (_searchController.text.isNotEmpty) ...[
                     SliverToBoxAdapter(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16.0,
-                              vertical: 8.0,
-                            ),
-                            child: Text(
-                              'Categories',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: textColor,
-                              ),
-                            ),
-                          ),
-                          SizedBox(
-                            height: 50,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              itemCount: _categories.length,
-                              itemBuilder: (context, index) {
-                                final cat = _categories[index];
-                                return Padding(
-                                  padding: const EdgeInsets.only(right: 12),
-                                  child: ActionChip(
-                                    label: Text(cat.title),
-                                    onPressed: () => _onCategoryTap(cat),
-                                    backgroundColor: isDark
-                                        ? Colors.grey[800]
-                                        : Colors.grey[200],
-                                    labelStyle: TextStyle(
-                                      color: isDark
-                                          ? Colors.white
-                                          : Colors.black,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                        ],
-                      ),
-                    ),
-
-                  // Book List Header
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16.0,
-                        vertical: 8.0,
-                      ),
-                      child: Text(
-                        _searchController.text.isNotEmpty
-                            ? 'Search Results'
-                            : 'All Books',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: textColor,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0,
+                          vertical: 8.0,
                         ),
-                      ),
-                    ),
-                  ),
-
-                  // Book List
-                  if (_books.isEmpty && !_isLoading)
-                    SliverFillRemaining(
-                      child: Center(
                         child: Text(
-                          'No books found.',
-                          style: TextStyle(color: textColor.withOpacity(0.7)),
+                          'Search Results',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
                         ),
                       ),
-                    )
-                  else
-                    SliverList(
-                      delegate: SliverChildBuilderDelegate((context, index) {
-                        if (index == _books.length) {
-                          return _isLoading
-                              ? const Center(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(16),
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                )
-                              : const SizedBox.shrink();
-                        }
-                        return _buildBookItem(
-                          _books[index],
-                          cardColor,
-                          textColor,
-                        );
-                      }, childCount: _books.length + (_isLoading ? 1 : 0)),
                     ),
+                    if (_books.isEmpty && !_isLoading)
+                      SliverFillRemaining(
+                        child: Center(
+                          child: Text(
+                            'No books found.',
+                            style: TextStyle(color: textColor.withOpacity(0.7)),
+                          ),
+                        ),
+                      )
+                    else
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          if (index == _books.length) {
+                            return _isLoading
+                                ? const Center(
+                                    child: Padding(
+                                      padding: EdgeInsets.all(16),
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  )
+                                : const SizedBox.shrink();
+                          }
+                          return _buildBookItem(
+                            _books[index],
+                            cardColor,
+                            textColor,
+                          );
+                        }, childCount: _books.length + (_isLoading ? 1 : 0)),
+                      ),
+                  ],
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, Color textColor) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: textColor.withOpacity(0.5),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHorizontalBookList(
+    Color cardColor,
+    Color textColor, {
+    bool reversed = false,
+  }) {
+    // Just for demo, show existing books horizontally
+    final booksToShow = reversed ? _books.reversed.toList() : _books;
+
+    return SliverToBoxAdapter(
+      child: SizedBox(
+        height: 220,
+        child: _isLoading && _books.isEmpty
+            ? const Center(child: CircularProgressIndicator())
+            : ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: booksToShow.length,
+                itemBuilder: (context, index) {
+                  final book = booksToShow[index];
+                  return Container(
+                    width: 140,
+                    margin: const EdgeInsets.only(right: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Card(
+                            margin: EdgeInsets.zero,
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            color: cardColor,
+                            clipBehavior: Clip.antiAlias,
+                            child: InkWell(
+                              onTap: () => _openPlayer(book),
+                              child:
+                                  (book.coverUrl != null &&
+                                      book.coverUrl!.isNotEmpty)
+                                  ? Image.network(
+                                      book.coverUrl!,
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                      height: double.infinity,
+                                      errorBuilder: (ctx, _, __) => Container(
+                                        color: textColor.withOpacity(0.1),
+                                        alignment: Alignment.center,
+                                        child: Icon(
+                                          Icons.book,
+                                          size: 40,
+                                          color: textColor,
+                                        ),
+                                      ),
+                                    )
+                                  : Container(
+                                      color: textColor.withOpacity(0.1),
+                                      alignment: Alignment.center,
+                                      child: Icon(
+                                        Icons.book,
+                                        size: 40,
+                                        color: textColor,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          book.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: textColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        Text(
+                          book.author,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: textColor.withOpacity(0.7),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
       ),
     );
   }
