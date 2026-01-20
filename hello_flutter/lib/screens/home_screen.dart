@@ -252,71 +252,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             const SizedBox(height: 20),
 
                             // Dynamic Button and Text
-                            if (!_isLoggedIn) ...[
-                              // Not Logged In
-                              ElevatedButton(
-                                onPressed:
-                                    _navigateToLogin, // Or free trial flow
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.amber[700],
-                                  foregroundColor: Colors.black,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 32,
-                                    vertical: 12,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(25),
-                                  ),
-                                ),
-                                child: const Text(
-                                  'Continue to free trial',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Auto-renews at \$14.95/month after 30 days. Cancel anytime.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: textColor.withOpacity(0.6),
-                                ),
-                              ),
-                            ] else if (!_isSubscribed) ...[
-                              ElevatedButton(
-                                onPressed: _navigateToSubscription,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.amber[700],
-                                  foregroundColor: Colors.black,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 32,
-                                    vertical: 12,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(25),
-                                  ),
-                                ),
-                                child: const Text(
-                                  'Subscribe',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Monthly subscription from \$14.95/month. Cancel anytime.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: textColor.withOpacity(0.6),
-                                ),
-                              ),
-                            ],
+                            _buildSubscriptionCTA(textColor),
 
                             const SizedBox(height: 30),
 
@@ -371,7 +307,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               context,
                               Icons.all_inclusive,
                               'Unlimited Access',
-                              'Stream our entire catalog of bestsellers and originals. No credits required.',
+                              'Stream our entire catalog of bestsellers and originals ad-free. No credits required.',
                             ),
                             _buildFeatureItem(
                               context,
@@ -385,6 +321,11 @@ class _HomeScreenState extends State<HomeScreen> {
                               'Interactive Quizzes',
                               'Test your knowledge and reinforce what you\'ve learned with interactive quizzes.',
                             ),
+
+                            const SizedBox(height: 30),
+                            // Secondary CTA
+                            _buildSubscriptionCTA(textColor),
+                            const SizedBox(height: 20),
                           ],
                         ),
                       ),
@@ -679,6 +620,63 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       MaterialPageRoute(builder: (_) => PlaylistScreen(book: book)),
     );
+  }
+
+  Widget _buildSubscriptionCTA(Color textColor) {
+    if (!_isLoggedIn) {
+      return Column(
+        children: [
+          ElevatedButton(
+            onPressed: _navigateToLogin, // Or free trial flow
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.amber[700],
+              foregroundColor: Colors.black,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(25),
+              ),
+            ),
+            child: const Text(
+              'Continue to free trial',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Auto-renews at \$14.95/month after 30 days. Cancel anytime.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: textColor.withOpacity(0.6)),
+          ),
+        ],
+      );
+    } else if (!_isSubscribed) {
+      return Column(
+        children: [
+          ElevatedButton(
+            onPressed: _navigateToSubscription,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.amber[700],
+              foregroundColor: Colors.black,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(25),
+              ),
+            ),
+            child: const Text(
+              'Subscribe',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Monthly subscription from \$14.95/month. Cancel anytime.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: textColor.withOpacity(0.6)),
+          ),
+        ],
+      );
+    }
+    return const SizedBox.shrink();
   }
 
   Widget _buildFeatureItem(
