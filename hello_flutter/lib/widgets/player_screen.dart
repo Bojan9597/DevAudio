@@ -23,6 +23,9 @@ class PlayerScreen extends StatefulWidget {
   final VoidCallback? onPurchaseSuccess;
   final List<Map<String, dynamic>>? playlist;
   final int initialIndex;
+
+  /// Track if the app is in foreground (shared across instances)
+  static bool isAppInForeground = true;
   final Function(int)? onPlaybackComplete;
   final Map<String, dynamic>? trackQuizzes;
 
@@ -41,7 +44,7 @@ class PlayerScreen extends StatefulWidget {
   State<PlayerScreen> createState() => _PlayerScreenState();
 }
 
-class _PlayerScreenState extends State<PlayerScreen> {
+class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver {
   // Use global audio handler
   AudioPlayer get _player => audioHandler.player;
   late Book _currentBook;
@@ -101,6 +104,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   bool _isDownloading = false;
   String? _lastError; // Track last error to avoid duplicate messages
   bool _isInitializingPlayer = false; // Prevent concurrent player init
+  bool _isHandlingCompletion = false; // Prevent double-handling of track completion
 
   final GlobalKey _speedButtonKey = GlobalKey();
   final GlobalKey _moreButtonKey = GlobalKey();
@@ -110,6 +114,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _currentBook = widget.book;
     _currentIndex = widget.initialIndex;
     _isFavorite = widget.book.isFavorite;
@@ -121,12 +126,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
       if (state.processingState == ProcessingState.completed) {
         if (!mounted) return;
 
-        // Mark track as completed in backend
-        if (_userId != null && widget.playlist != null) {
-          final currentTrack = widget.playlist![_currentIndex];
-          final trackId = currentTrack['id'].toString();
+        // Prevent double-handling (e.g., after returning from quiz)
+        if (_isHandlingCompletion) return;
+        _isHandlingCompletion = true;
 
-          BookRepository().completeTrack(_userId!, trackId).then((newBadges) {
+        // Capture the current track index NOW before any async operations
+        final completedIndex = _currentIndex;
+        final completedTrackId = widget.playlist != null
+            ? widget.playlist![completedIndex]['id'].toString()
+            : null;
+
+        // Mark track as completed in backend
+        if (_userId != null && completedTrackId != null) {
+          BookRepository().completeTrack(_userId!, completedTrackId).then((newBadges) {
             if (mounted && newBadges.isNotEmpty) {
               for (var badge in newBadges) {
                 BadgeDialog.show(context, badge);
@@ -136,28 +148,25 @@ class _PlayerScreenState extends State<PlayerScreen> {
         }
 
         if (widget.onPlaybackComplete != null) {
-          widget.onPlaybackComplete!(_currentIndex);
+          widget.onPlaybackComplete!(completedIndex);
         }
 
         // Check for Quiz on the track that JUST finished
         bool hasQuiz = false;
         bool isPassed = false;
 
-        if (widget.playlist != null && widget.trackQuizzes != null) {
-          final currentTrack = widget.playlist![_currentIndex];
-          final trackId = currentTrack['id'].toString();
-          if (widget.trackQuizzes!.containsKey(trackId)) {
-            hasQuiz = widget.trackQuizzes![trackId]['has_quiz'] ?? false;
-            isPassed = widget.trackQuizzes![trackId]['is_passed'] ?? false;
+        if (widget.playlist != null && widget.trackQuizzes != null && completedTrackId != null) {
+          if (widget.trackQuizzes!.containsKey(completedTrackId)) {
+            hasQuiz = widget.trackQuizzes![completedTrackId]['has_quiz'] ?? false;
+            isPassed = widget.trackQuizzes![completedTrackId]['is_passed'] ?? false;
           }
         }
 
-        if (hasQuiz && !isPassed) {
-          // Stop audio before navigating to quiz
+        if (hasQuiz && !isPassed && PlayerScreen.isAppInForeground) {
+          // Stop audio before navigating to quiz (only in foreground)
           _player.stop();
 
-          // Navigate to Quiz
-          // Use a post-frame callback or Future.microtask to navigate
+          // Navigate to Quiz for the COMPLETED track (not current index which may change)
           Future.microtask(() {
             if (mounted) {
               Navigator.push(
@@ -165,18 +174,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 MaterialPageRoute(
                   builder: (context) => QuizTakerScreen(
                     bookId: widget.book.id,
-                    playlistItemId: int.parse(
-                      widget.playlist![_currentIndex]['id'].toString(),
-                    ),
+                    playlistItemId: int.parse(completedTrackId!),
                   ),
                 ),
               ).then((result) {
+                _isHandlingCompletion = false;
                 if (mounted) _playNext();
               });
             }
           });
         } else {
+          // In background mode OR no quiz: just advance to next track
           // Auto-advance if playlist
+          _isHandlingCompletion = false;
           if (widget.playlist != null &&
               _currentIndex < widget.playlist!.length - 1) {
             _playNext();
@@ -205,7 +215,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (widget.playlist == null) return;
 
     if (_currentIndex >= widget.playlist!.length - 1) {
-      // End of playlist. Close player with result to reload playlist.
+      // End of playlist - save progress immediately before closing
+      _saveProgressImmediately();
+      // Close player with result to reload playlist.
       Navigator.of(context).pop(true); // true = should reload
       return;
     }
@@ -214,6 +226,32 @@ class _PlayerScreenState extends State<PlayerScreen> {
       _currentIndex++;
       _loadTrackAtIndex(_currentIndex);
     });
+  }
+
+  /// Save progress immediately (used when book finishes)
+  Future<void> _saveProgressImmediately() async {
+    if (_userId == null) return;
+
+    final position = _player.position.inSeconds;
+    final duration = _player.duration?.inSeconds;
+
+    String? playlistItemId;
+    if (widget.playlist != null && widget.playlist!.isNotEmpty) {
+      final currentTrack = widget.playlist![_currentIndex];
+      playlistItemId = currentTrack['id'].toString();
+    }
+
+    try {
+      await BookRepository().updateProgress(
+        _userId!,
+        widget.book.id,
+        position,
+        duration,
+        playlistItemId: playlistItemId,
+      );
+    } catch (e) {
+      debugPrint('Error saving final progress: $e');
+    }
   }
 
   void _playPrevious() {
@@ -551,12 +589,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _resetBrightness(); // Reset brightness on exit
     _progressTimer?.cancel();
     _playerStateSubscription?.cancel();
     _saveProgress(); // Try to save on exit
     // Don't dispose handler player - it's global
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Track app foreground/background state for quiz handling
+    PlayerScreen.isAppInForeground = (state == AppLifecycleState.resumed);
   }
 
   String _formatTime(Duration duration) {

@@ -1274,22 +1274,65 @@ def complete_track():
             completed_tracks = db.execute_query(completed_query, (user_id, book_id))[0]['completed']
             
             if completed_tracks >= total_tracks:
-                is_book_completed = True
-                print(f"User {user_id} completed book {book_id} (All {completed_tracks} tracks)")
-                
-                # Mark book as read
-                update_read = "UPDATE user_books SET is_read = TRUE, last_accessed_at = CURRENT_TIMESTAMP WHERE user_id = %s AND book_id = %s"
-                db.execute_query(update_read, (user_id, book_id))
-                
-                # Check Badges (since book is now read)
-                try:
-                    badge_service = BadgeService(db.connection)
-                    # We need to capture the return value of check_badges
-                    new_badges_list = badge_service.check_badges(user_id)
-                    # Add them to response
-                    return jsonify({"message": "Track marked as completed", "is_book_completed": is_book_completed, "new_badges": new_badges_list}), 200
-                except Exception as b_err:
-                    print(f"Badge check error: {b_err}")
+                print(f"User {user_id} completed all {completed_tracks} tracks for book {book_id}")
+
+                # Check if all quizzes are passed before marking book as complete
+                # 1. Check book-level quiz
+                book_quiz_query = """
+                    SELECT q.id FROM quizzes q
+                    WHERE q.book_id = %s AND q.playlist_item_id IS NULL
+                """
+                book_quiz = db.execute_query(book_quiz_query, (book_id,))
+
+                book_quiz_passed = True
+                if book_quiz:
+                    quiz_id = book_quiz[0]['id']
+                    passed_query = """
+                        SELECT is_passed FROM user_quiz_results
+                        WHERE user_id = %s AND quiz_id = %s AND is_passed = TRUE
+                        LIMIT 1
+                    """
+                    passed_res = db.execute_query(passed_query, (user_id, quiz_id))
+                    book_quiz_passed = bool(passed_res)
+
+                # 2. Check all track-level quizzes
+                track_quizzes_query = """
+                    SELECT q.id, q.playlist_item_id FROM quizzes q
+                    WHERE q.book_id = %s AND q.playlist_item_id IS NOT NULL
+                """
+                track_quizzes = db.execute_query(track_quizzes_query, (book_id,))
+
+                all_track_quizzes_passed = True
+                if track_quizzes:
+                    for tq in track_quizzes:
+                        passed_query = """
+                            SELECT is_passed FROM user_quiz_results
+                            WHERE user_id = %s AND quiz_id = %s AND is_passed = TRUE
+                            LIMIT 1
+                        """
+                        passed_res = db.execute_query(passed_query, (user_id, tq['id']))
+                        if not passed_res:
+                            all_track_quizzes_passed = False
+                            break
+
+                # Only mark book as complete if all quizzes are passed
+                if book_quiz_passed and all_track_quizzes_passed:
+                    is_book_completed = True
+                    print(f"User {user_id} fully completed book {book_id} (all tracks + all quizzes)")
+
+                    # Mark book as read
+                    update_read = "UPDATE user_books SET is_read = TRUE, last_accessed_at = CURRENT_TIMESTAMP WHERE user_id = %s AND book_id = %s"
+                    db.execute_query(update_read, (user_id, book_id))
+
+                    # Check Badges (since book is now read)
+                    try:
+                        badge_service = BadgeService(db.connection)
+                        new_badges_list = badge_service.check_badges(user_id)
+                        return jsonify({"message": "Track marked as completed", "is_book_completed": is_book_completed, "new_badges": new_badges_list}), 200
+                    except Exception as b_err:
+                        print(f"Badge check error: {b_err}")
+                else:
+                    print(f"User {user_id} has pending quizzes for book {book_id} (book_quiz_passed={book_quiz_passed}, track_quizzes_passed={all_track_quizzes_passed})")
 
         return jsonify({"message": "Track marked as completed", "is_book_completed": is_book_completed, "new_badges": []}), 200
         
@@ -2012,8 +2055,78 @@ def save_quiz_result():
         cursor.execute(ins_query, (user_id, quiz_id, score_percentage, is_passed))
         db.connection.commit()
         cursor.close()
-        
-        return jsonify({"message": "Result saved", "passed": is_passed}), 201
+
+        new_badges = []
+
+        # If quiz passed, check if book should now be marked as complete
+        if is_passed:
+            # Check if all tracks are completed
+            count_query = "SELECT COUNT(*) as total FROM playlist_items WHERE book_id = %s"
+            total_tracks = db.execute_query(count_query, (book_id,))[0]['total']
+
+            completed_query = """
+                SELECT COUNT(*) as completed
+                FROM user_completed_tracks uct
+                JOIN playlist_items pi ON uct.track_id = pi.id
+                WHERE uct.user_id = %s AND pi.book_id = %s
+            """
+            completed_tracks = db.execute_query(completed_query, (user_id, book_id))[0]['completed']
+
+            if completed_tracks >= total_tracks:
+                # All tracks done, check all quizzes
+                # 1. Book-level quiz
+                book_quiz_query = """
+                    SELECT q.id FROM quizzes q
+                    WHERE q.book_id = %s AND q.playlist_item_id IS NULL
+                """
+                book_quiz = db.execute_query(book_quiz_query, (book_id,))
+
+                book_quiz_passed = True
+                if book_quiz:
+                    bq_id = book_quiz[0]['id']
+                    passed_query = """
+                        SELECT is_passed FROM user_quiz_results
+                        WHERE user_id = %s AND quiz_id = %s AND is_passed = TRUE
+                        LIMIT 1
+                    """
+                    passed_res = db.execute_query(passed_query, (user_id, bq_id))
+                    book_quiz_passed = bool(passed_res)
+
+                # 2. Track-level quizzes
+                track_quizzes_query = """
+                    SELECT q.id FROM quizzes q
+                    WHERE q.book_id = %s AND q.playlist_item_id IS NOT NULL
+                """
+                track_quizzes = db.execute_query(track_quizzes_query, (book_id,))
+
+                all_track_quizzes_passed = True
+                if track_quizzes:
+                    for tq in track_quizzes:
+                        passed_query = """
+                            SELECT is_passed FROM user_quiz_results
+                            WHERE user_id = %s AND quiz_id = %s AND is_passed = TRUE
+                            LIMIT 1
+                        """
+                        passed_res = db.execute_query(passed_query, (user_id, tq['id']))
+                        if not passed_res:
+                            all_track_quizzes_passed = False
+                            break
+
+                if book_quiz_passed and all_track_quizzes_passed:
+                    print(f"User {user_id} fully completed book {book_id} after passing quiz")
+
+                    # Mark book as read
+                    update_read = "UPDATE user_books SET is_read = TRUE, last_accessed_at = CURRENT_TIMESTAMP WHERE user_id = %s AND book_id = %s"
+                    db.execute_query(update_read, (user_id, book_id))
+
+                    # Check badges
+                    try:
+                        badge_service = BadgeService(db.connection)
+                        new_badges = badge_service.check_badges(user_id)
+                    except Exception as b_err:
+                        print(f"Badge check error: {b_err}")
+
+        return jsonify({"message": "Result saved", "passed": is_passed, "new_badges": new_badges}), 201
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
