@@ -56,8 +56,13 @@ class MyAudioHandler extends BaseAudioHandler {
       );
     });
 
-    // Note: Track completion auto-advance is handled by PlayerScreen
-    // because it needs to check for quizzes before advancing
+    // Auto-advance to next track when current one is completed
+    _player.processingStateStream.listen((state) {
+      if (state == ProcessingState.completed) {
+        // Automatically skip to next track
+        skipToNext();
+      }
+    });
 
     // Start background progress sync timer
     _startBackgroundProgressSync();

@@ -12,6 +12,7 @@ import '../screens/profile_screen.dart';
 import '../screens/discover_screen.dart';
 import '../screens/upload_book_screen.dart';
 import '../screens/playlist_screen.dart';
+import '../screens/home_screen.dart';
 
 class ContentArea extends StatefulWidget {
   const ContentArea({super.key});
@@ -140,6 +141,10 @@ class _ContentAreaState extends State<ContentArea> {
       listenable: globalLayoutState,
       builder: (context, child) {
         final categoryId = globalLayoutState.selectedCategoryId;
+
+        if (categoryId == 'home') {
+          return const HomeScreen();
+        }
 
         if (categoryId == 'profile') {
           return const ProfileScreen();

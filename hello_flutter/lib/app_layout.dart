@@ -53,12 +53,14 @@ class _AppLayoutState extends State<AppLayout> {
         // Map category ID to index for BottomNavigationBar
         int _selectedIndex = 0;
         final catId = globalLayoutState.selectedCategoryId;
-        if (catId == 'library')
+        if (catId == 'home')
           _selectedIndex = 1;
-        else if (catId == 'discover')
+        else if (catId == 'library')
           _selectedIndex = 2;
-        else if (catId == 'profile')
+        else if (catId == 'discover')
           _selectedIndex = 3;
+        else if (catId == 'profile')
+          _selectedIndex = 4;
         // Index 0 is "Categories" (Menu)
 
         return Scaffold(
@@ -110,12 +112,15 @@ class _AppLayoutState extends State<AppLayout> {
                       globalLayoutState.toggleMenu();
                       break;
                     case 1:
-                      globalLayoutState.setCategoryId('library');
+                      globalLayoutState.setCategoryId('home');
                       break;
                     case 2:
-                      globalLayoutState.setCategoryId('discover');
+                      globalLayoutState.setCategoryId('library');
                       break;
                     case 3:
+                      globalLayoutState.setCategoryId('discover');
+                      break;
+                    case 4:
                       globalLayoutState.setCategoryId('profile');
                       break;
                   }
@@ -124,6 +129,10 @@ class _AppLayoutState extends State<AppLayout> {
                   BottomNavigationBarItem(
                     icon: const Icon(Icons.menu),
                     label: AppLocalizations.of(context)!.categories,
+                  ),
+                  const BottomNavigationBarItem(
+                    icon: Icon(Icons.home),
+                    label: 'Home',
                   ),
                   BottomNavigationBarItem(
                     icon: const Icon(Icons.library_books),
