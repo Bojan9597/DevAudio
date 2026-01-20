@@ -1176,11 +1176,14 @@ def complete_track():
                 # Check Badges (since book is now read)
                 try:
                     badge_service = BadgeService(db.connection)
-                    badge_service.check_badges(user_id)
+                    # We need to capture the return value of check_badges
+                    new_badges_list = badge_service.check_badges(user_id)
+                    # Add them to response
+                    return jsonify({"message": "Track marked as completed", "is_book_completed": is_book_completed, "new_badges": new_badges_list}), 200
                 except Exception as b_err:
                     print(f"Badge check error: {b_err}")
 
-        return jsonify({"message": "Track marked as completed", "is_book_completed": is_book_completed}), 200
+        return jsonify({"message": "Track marked as completed", "is_book_completed": is_book_completed, "new_badges": []}), 200
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500

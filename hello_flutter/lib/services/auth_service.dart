@@ -65,82 +65,6 @@ class AuthService {
     return await _storage.read(key: _encryptionKeyStorageKey);
   }
 
-  Future<Map<String, dynamic>> login(String email, String password) async {
-    if (ConnectivityService().isOffline) throw Exception('Offline mode');
-
-    final response = await http.post(
-      Uri.parse('$baseUrl/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({'email': email, 'password': password}),
-    );
-
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      await _saveUser(data['user']);
-      await _saveTokens(data['access_token'], data['refresh_token']);
-      return data;
-    } else {
-      final error = json.decode(response.body);
-      throw Exception(error['error'] ?? 'Login failed');
-    }
-  }
-
-  Future<Map<String, dynamic>> register(
-    String name,
-    String email,
-    String password,
-    String confirmPassword,
-  ) async {
-    if (ConnectivityService().isOffline) throw Exception('Offline mode');
-
-    final response = await http.post(
-      Uri.parse('$baseUrl/register'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'name': name,
-        'email': email,
-        'password': password,
-        'confirm_password': confirmPassword,
-      }),
-    );
-
-    if (response.statusCode == 201) {
-      final data = json.decode(response.body);
-      // Backend might return tokens if no verification is needed (unlikely based on current logic, but good to handle)
-      if (data.containsKey('access_token')) {
-        await _saveUser(data['user']);
-        await _saveTokens(data['access_token'], data['refresh_token']);
-      }
-      return data;
-    } else if (response.statusCode == 202) {
-      // Verification required
-      return json.decode(response.body);
-    } else {
-      final error = json.decode(response.body);
-      throw Exception(error['error'] ?? 'Registration failed');
-    }
-  }
-
-  Future<Map<String, dynamic>> verifyEmail(String email, String code) async {
-    if (ConnectivityService().isOffline) throw Exception('Offline mode');
-
-    final response = await http.post(
-      Uri.parse('$baseUrl/verify-email'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({'email': email, 'code': code}),
-    );
-
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      await _saveUser(data['user']);
-      await _saveTokens(data['access_token'], data['refresh_token']);
-      return data;
-    } else {
-      final error = json.decode(response.body);
-      throw Exception(error['error'] ?? 'Verification failed');
-    }
-  }
-
   Future<bool> loginWithGoogle() async {
     try {
       if (ConnectivityService().isOffline) throw Exception('Offline mode');
@@ -169,33 +93,6 @@ class AuthService {
     } catch (error) {
       print('Google Sign In Error: $error');
       rethrow;
-    }
-  }
-
-  Future<void> changePassword(
-    int userId,
-    String currentPassword,
-    String newPassword,
-  ) async {
-    if (ConnectivityService().isOffline) throw Exception('Offline mode');
-
-    final token = await getAccessToken();
-    final response = await http.post(
-      Uri.parse('$baseUrl/change-password'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: json.encode({
-        'user_id': userId,
-        'current_password': currentPassword,
-        'new_password': newPassword,
-      }),
-    );
-
-    if (response.statusCode != 200) {
-      final error = json.decode(response.body);
-      throw Exception(error['error'] ?? 'Password change failed');
     }
   }
 

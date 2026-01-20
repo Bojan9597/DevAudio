@@ -262,6 +262,31 @@ class BookRepository {
     return [];
   }
 
+  Future<List<Badge>> completeTrack(int userId, String trackId) async {
+    if (ConnectivityService().isOffline) return [];
+
+    final headers = await _getHeaders();
+    final response = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}/complete-track'),
+      headers: headers,
+      body: json.encode({'user_id': userId, 'track_id': trackId}),
+    );
+
+    if (response.statusCode == 200) {
+      print("Track completed: $trackId");
+      final data = json.decode(response.body);
+      if (data['new_badges'] != null) {
+        return (data['new_badges'] as List).map((e) {
+          e['isEarned'] = true;
+          return Badge.fromJson(e);
+        }).toList();
+      }
+    } else {
+      print('Failed to complete track: ${response.body}');
+    }
+    return [];
+  }
+
   Future<int> getBookStatus(
     int userId,
     String bookId, {

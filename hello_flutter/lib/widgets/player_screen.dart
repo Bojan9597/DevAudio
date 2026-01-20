@@ -119,6 +119,20 @@ class _PlayerScreenState extends State<PlayerScreen> {
       if (state.processingState == ProcessingState.completed) {
         if (!mounted) return;
 
+        // Mark track as completed in backend
+        if (_userId != null && widget.playlist != null) {
+          final currentTrack = widget.playlist![_currentIndex];
+          final trackId = currentTrack['id'].toString();
+
+          BookRepository().completeTrack(_userId!, trackId).then((newBadges) {
+            if (mounted && newBadges.isNotEmpty) {
+              for (var badge in newBadges) {
+                BadgeDialog.show(context, badge);
+              }
+            }
+          });
+        }
+
         if (widget.onPlaybackComplete != null) {
           widget.onPlaybackComplete!(_currentIndex);
         }
