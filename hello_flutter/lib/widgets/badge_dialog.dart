@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' hide Badge;
 import '../models/badge.dart';
+import '../l10n/generated/app_localizations.dart';
 
 class BadgeDialog extends StatelessWidget {
   final Badge badge;
@@ -24,9 +25,9 @@ class BadgeDialog extends StatelessWidget {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-            "BADGE EARNED!",
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context)!.badgeEarned,
+            style: const TextStyle(
               color: Colors.amber,
               fontWeight: FontWeight.bold,
               letterSpacing: 1.2,
@@ -58,7 +59,7 @@ class BadgeDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Awesome!'),
+          child: Text(AppLocalizations.of(context)!.awesome),
         ),
       ],
     );

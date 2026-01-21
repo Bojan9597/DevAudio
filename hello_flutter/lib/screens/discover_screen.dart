@@ -4,6 +4,7 @@ import '../models/book.dart';
 import '../repositories/book_repository.dart';
 import '../theme/app_theme.dart';
 import 'playlist_screen.dart';
+import '../l10n/generated/app_localizations.dart';
 
 class DiscoverScreen extends StatefulWidget {
   const DiscoverScreen({Key? key}) : super(key: key);
@@ -86,7 +87,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error loading books: $e')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.errorLoadingBooks(e.toString()))));
       }
     }
   }
@@ -106,7 +107,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Discover'),
+        title: Text(AppLocalizations.of(context)!.discover),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -118,7 +119,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search by title...',
+                hintText: AppLocalizations.of(context)!.searchByTitle,
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
                 fillColor: isDark ? Colors.grey[800] : Colors.grey[200],
@@ -135,7 +136,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             child: _books.isEmpty && !_isLoading
                 ? Center(
                     child: Text(
-                      'No books found.',
+                      AppLocalizations.of(context)!.noBooksFound,
                       style: TextStyle(color: textColor.withOpacity(0.7)),
                     ),
                   )
@@ -214,7 +215,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  'Posted by ${book.postedBy ?? "Unknown"}',
+                  AppLocalizations.of(context)!.postedBy(book.postedBy ?? "Unknown"),
                   style: TextStyle(
                     color: AppTheme.orangeColor,
                     fontSize: 12,

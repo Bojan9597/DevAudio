@@ -55,4 +55,422 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get newPassword => 'New Password';
+
+  @override
+  String get home => 'Home';
+
+  @override
+  String get discover => 'Discover';
+
+  @override
+  String get uploadAudioBook => 'Upload Audio Book';
+
+  @override
+  String get themeSystem => 'System';
+
+  @override
+  String get themeLight => 'Light';
+
+  @override
+  String get themeDark => 'Dark';
+
+  @override
+  String get languageEnglish => 'English (US)';
+
+  @override
+  String get languageSpanish => 'Español';
+
+  @override
+  String get languageSerbian => 'Srpski';
+
+  @override
+  String get languageFrench => 'Français';
+
+  @override
+  String get languageGerman => 'Deutsch';
+
+  @override
+  String get enteringOfflineMode => 'Entering offline mode';
+
+  @override
+  String get backOnline => 'Back online';
+
+  @override
+  String get signInWithGoogle => 'Sign in with Google';
+
+  @override
+  String get googleLoginFailed => 'Google Login Failed';
+
+  @override
+  String get searchForBooks => 'Search for books...';
+
+  @override
+  String get searchByTitle => 'Search by title...';
+
+  @override
+  String get searchResults => 'Search Results';
+
+  @override
+  String get noBooksFound => 'No books found.';
+
+  @override
+  String noBooksFoundInCategory(String categoryId) {
+    return 'No books found in \"$categoryId\"';
+  }
+
+  @override
+  String booksInCategory(String categoryId) {
+    return 'Books in $categoryId';
+  }
+
+  @override
+  String get switchToList => 'Switch to List';
+
+  @override
+  String get switchToGrid => 'Switch to Grid';
+
+  @override
+  String get getYourImaginationGoing => 'Get your imagination going';
+
+  @override
+  String get homeHeroDescription =>
+      'The best audiobooks and Originals. The most entertainment. The podcasts you want to hear.';
+
+  @override
+  String get continueToFreeTrial => 'Continue to free trial';
+
+  @override
+  String get autoRenewsInfo =>
+      'Auto-renews at \$14.95/month after 30 days. Cancel anytime.';
+
+  @override
+  String get subscribe => 'Subscribe';
+
+  @override
+  String get monthlySubscriptionInfo =>
+      'Monthly subscription from \$14.95/month. Cancel anytime.';
+
+  @override
+  String get subscriptionActivated => 'Subscription activated!';
+
+  @override
+  String get unlimitedAccess => 'Unlimited Access';
+
+  @override
+  String get unlimitedAccessDescription =>
+      'Stream our entire catalog of bestsellers and originals ad-free. No credits required.';
+
+  @override
+  String get listenOffline => 'Listen Offline';
+
+  @override
+  String get listenOfflineDescription =>
+      'Download titles to your device and take your library with you wherever you go.';
+
+  @override
+  String get interactiveQuizzes => 'Interactive Quizzes';
+
+  @override
+  String get interactiveQuizzesDescription =>
+      'Test your knowledge and reinforce what you\'ve learned with interactive quizzes.';
+
+  @override
+  String get findTheRightSpeed => 'Find the right speed';
+
+  @override
+  String get findTheRightSpeedDescription =>
+      'Slow down the narration or pick up the pace.';
+
+  @override
+  String get sleepTimer => 'Sleep Timer';
+
+  @override
+  String get sleepTimerDescription => 'Fall asleep without missing a beat.';
+
+  @override
+  String get favoritesFeature => 'Favorites';
+
+  @override
+  String get favoritesFeatureDescription => 'Keep your top picks handy.';
+
+  @override
+  String get newReleases => 'New Releases';
+
+  @override
+  String get topPicks => 'Top Picks';
+
+  @override
+  String get notAvailableOffline => 'Not available in offline mode';
+
+  @override
+  String errorLoadingBooks(String error) {
+    return 'Error loading books: $error';
+  }
+
+  @override
+  String postedBy(String name) {
+    return 'Posted by $name';
+  }
+
+  @override
+  String get guestUser => 'Guest User';
+
+  @override
+  String get noEmail => 'No Email';
+
+  @override
+  String get admin => 'Admin';
+
+  @override
+  String get upgradeToPremium => 'Upgrade to Premium';
+
+  @override
+  String premiumUntil(String date) {
+    return 'Premium until $date';
+  }
+
+  @override
+  String get lifetimePremium => 'Lifetime Premium';
+
+  @override
+  String get listenHistory => 'Listen History';
+
+  @override
+  String get stats => 'Stats';
+
+  @override
+  String get badges => 'Badges';
+
+  @override
+  String get noListeningHistory => 'No listening history yet.';
+
+  @override
+  String get listeningStats => 'Listening Stats';
+
+  @override
+  String totalTime(String time) {
+    return 'Total Time: $time';
+  }
+
+  @override
+  String booksCompleted(int count) {
+    return 'Books Completed: $count';
+  }
+
+  @override
+  String get noBadgesYet => 'No badges loaded yet';
+
+  @override
+  String get subscriptionDetails => 'Subscription Details';
+
+  @override
+  String get planType => 'Plan Type';
+
+  @override
+  String get status => 'Status';
+
+  @override
+  String get active => 'Active';
+
+  @override
+  String get expiringSoon => 'Expiring Soon';
+
+  @override
+  String get expired => 'Expired';
+
+  @override
+  String get started => 'Started';
+
+  @override
+  String get expires => 'Expires';
+
+  @override
+  String get autoRenew => 'Auto-Renew';
+
+  @override
+  String get on => 'On';
+
+  @override
+  String get off => 'Off';
+
+  @override
+  String get cancelAutoRenewal => 'Cancel Auto-Renewal';
+
+  @override
+  String get turnOffAutoRenewal => 'Turn Off Auto-Renewal?';
+
+  @override
+  String get subscriptionWillRemainActive =>
+      'Your subscription will remain active until the end of the current billing period.';
+
+  @override
+  String get keepOn => 'Keep On';
+
+  @override
+  String get turnOff => 'Turn Off';
+
+  @override
+  String get close => 'Close';
+
+  @override
+  String lastListened(String date) {
+    return 'Last listened: $date';
+  }
+
+  @override
+  String progress(String current, String total) {
+    return 'Progress: $current / $total';
+  }
+
+  @override
+  String earnedOn(String date) {
+    return 'Earned on $date';
+  }
+
+  @override
+  String get unlockAllAudiobooks => 'Unlock All Audiobooks';
+
+  @override
+  String get subscribeToGetAccess =>
+      'Subscribe to get unlimited access to our entire library';
+
+  @override
+  String get subscribeNow => 'Subscribe Now';
+
+  @override
+  String get maybeLater => 'Maybe Later';
+
+  @override
+  String get subscriptionActivatedSuccess =>
+      'Subscription activated! Enjoy unlimited access.';
+
+  @override
+  String get subscriptionFailed => 'Subscription failed';
+
+  @override
+  String get bestValue => 'BEST VALUE';
+
+  @override
+  String get planTestMinuteTitle => '2 Minute Test';
+
+  @override
+  String get planTestMinuteSubtitle => 'For testing - expires in 2 minutes';
+
+  @override
+  String get planMonthlyTitle => 'Monthly';
+
+  @override
+  String get planMonthlySubtitle => 'Billed monthly, cancel anytime';
+
+  @override
+  String get planYearlyTitle => 'Yearly';
+
+  @override
+  String get planYearlySubtitle => 'Save 33% - Best value!';
+
+  @override
+  String get planLifetimeTitle => 'Lifetime';
+
+  @override
+  String get planLifetimeSubtitle => 'One-time payment, forever access';
+
+  @override
+  String get badgeEarned => 'BADGE EARNED!';
+
+  @override
+  String get awesome => 'Awesome!';
+
+  @override
+  String get noFavoriteBooks => 'No favorite books yet';
+
+  @override
+  String get noUploadedBooks => 'No uploaded books';
+
+  @override
+  String get noDownloadedBooks => 'No downloaded books';
+
+  @override
+  String get booksDownloadedAppearHere => 'Books you download will appear here';
+
+  @override
+  String get uploaded => 'Uploaded';
+
+  @override
+  String get removeFromFavorites => 'Remove from favorites';
+
+  @override
+  String get addToFavorites => 'Add to favorites';
+
+  @override
+  String get pleaseLoginToUseFavorites => 'Please login to use favorites';
+
+  @override
+  String get failedToUpdateFavorite => 'Failed to update favorite';
+
+  @override
+  String get quizResults => 'Quiz Results';
+
+  @override
+  String youScored(int score, int total) {
+    return 'You scored $score out of $total!';
+  }
+
+  @override
+  String scorePercentage(String percentage) {
+    return 'Score: $percentage%';
+  }
+
+  @override
+  String get passed => 'PASSED!';
+
+  @override
+  String get keepTrying => 'Keep trying!';
+
+  @override
+  String get returnToQuiz => 'Return to Quiz';
+
+  @override
+  String get finish => 'Finish';
+
+  @override
+  String get previous => 'Previous';
+
+  @override
+  String get nextQuestion => 'Next Question';
+
+  @override
+  String get submitQuiz => 'Submit Quiz';
+
+  @override
+  String get questionAdded => 'Question added!';
+
+  @override
+  String get addAtLeastOneQuestion => 'Add at least one question.';
+
+  @override
+  String get quizSavedSuccessfully => 'Quiz saved successfully!';
+
+  @override
+  String get saving => 'Saving...';
+
+  @override
+  String get finishAndSave => 'Finish & Save';
+
+  @override
+  String get purchaseSuccessful =>
+      'Purchase Successful! Downloading playlist...';
+
+  @override
+  String get noTracksFound => 'No tracks found';
+
+  @override
+  String error(String message) {
+    return 'Error: $message';
+  }
+
+  @override
+  String get uploadBook => 'Upload Book';
+
+  @override
+  String get free => 'FREE';
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../app_layout.dart';
 import '../states/layout_state.dart';
+import '../l10n/generated/app_localizations.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -39,7 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Google Login Failed: $e'),
+            content: Text('${AppLocalizations.of(context)!.googleLoginFailed}: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -109,9 +110,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           foregroundColor: Colors.black,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
-                        child: const Text(
-                          'Sign in with Google',
-                          style: TextStyle(
+                        child: Text(
+                          AppLocalizations.of(context)!.signInWithGoogle,
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w500,
                           ),

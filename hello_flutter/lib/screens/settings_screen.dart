@@ -54,7 +54,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: Text(AppLocalizations.of(context)!.settings),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
@@ -83,35 +83,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 globalLayoutState.setLocale(const Locale('en'));
                                 Navigator.pop(context);
                               },
-                              child: const Text('English (US)'),
+                              child: Text(AppLocalizations.of(context)!.languageEnglish),
                             ),
                             SimpleDialogOption(
                               onPressed: () {
                                 globalLayoutState.setLocale(const Locale('es'));
                                 Navigator.pop(context);
                               },
-                              child: const Text('Español'),
+                              child: Text(AppLocalizations.of(context)!.languageSpanish),
                             ),
                             SimpleDialogOption(
                               onPressed: () {
                                 globalLayoutState.setLocale(const Locale('sr'));
                                 Navigator.pop(context);
                               },
-                              child: const Text('Srpski'),
+                              child: Text(AppLocalizations.of(context)!.languageSerbian),
                             ),
                             SimpleDialogOption(
                               onPressed: () {
                                 globalLayoutState.setLocale(const Locale('fr'));
                                 Navigator.pop(context);
                               },
-                              child: const Text('Français'),
+                              child: Text(AppLocalizations.of(context)!.languageFrench),
                             ),
                             SimpleDialogOption(
                               onPressed: () {
                                 globalLayoutState.setLocale(const Locale('de'));
                                 Navigator.pop(context);
                               },
-                              child: const Text('Deutsch'),
+                              child: Text(AppLocalizations.of(context)!.languageGerman),
                             ),
                           ],
                         );
@@ -137,21 +137,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 );
                                 Navigator.pop(context);
                               },
-                              child: const Text('System'),
+                              child: Text(AppLocalizations.of(context)!.themeSystem),
                             ),
                             SimpleDialogOption(
                               onPressed: () {
                                 globalLayoutState.setThemeMode(ThemeMode.light);
                                 Navigator.pop(context);
                               },
-                              child: const Text('Light'),
+                              child: Text(AppLocalizations.of(context)!.themeLight),
                             ),
                             SimpleDialogOption(
                               onPressed: () {
                                 globalLayoutState.setThemeMode(ThemeMode.dark);
                                 Navigator.pop(context);
                               },
-                              child: const Text('Dark'),
+                              child: Text(AppLocalizations.of(context)!.themeDark),
                             ),
                           ],
                         );
@@ -164,7 +164,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 if (_isAdmin)
                   ListTile(
                     leading: const Icon(Icons.cloud_upload),
-                    title: const Text('Upload Audio Book'),
+                    title: Text(AppLocalizations.of(context)!.uploadAudioBook),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                     onTap: () async {
                       final result = await Navigator.push(
@@ -204,28 +204,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   String _getThemeName(ThemeMode mode) {
+    final l10n = AppLocalizations.of(context)!;
     switch (mode) {
       case ThemeMode.light:
-        return 'Light';
+        return l10n.themeLight;
       case ThemeMode.dark:
-        return 'Dark';
+        return l10n.themeDark;
       default:
-        return 'System';
+        return l10n.themeSystem;
     }
   }
 
   String _getLanguageName(String? code) {
+    final l10n = AppLocalizations.of(context)!;
     switch (code) {
       case 'es':
-        return 'Español';
+        return l10n.languageSpanish;
       case 'sr':
-        return 'Srpski';
+        return l10n.languageSerbian;
       case 'fr':
-        return 'Français';
+        return l10n.languageFrench;
       case 'de':
-        return 'Deutsch';
+        return l10n.languageGerman;
       default:
-        return 'English (US)';
+        return l10n.languageEnglish;
     }
   }
 }

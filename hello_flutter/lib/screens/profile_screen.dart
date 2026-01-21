@@ -10,6 +10,7 @@ import '../models/badge.dart';
 import '../models/subscription.dart';
 import '../screens/playlist_screen.dart';
 import '../widgets/subscription_bottom_sheet.dart';
+import '../l10n/generated/app_localizations.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -75,8 +76,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onSubscribed();
           }
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Subscription activated!'),
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.subscriptionActivated),
               backgroundColor: Colors.green,
             ),
           );
@@ -246,9 +247,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Subscription Details',
-                      style: TextStyle(
+                    Text(
+                      AppLocalizations.of(context)!.subscriptionDetails,
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
@@ -260,24 +261,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                _buildDetailRow('Plan Type', sub.planDisplayName),
+                _buildDetailRow(AppLocalizations.of(context)!.planType, sub.planDisplayName),
                 _buildDetailRow(
-                  'Status',
+                  AppLocalizations.of(context)!.status,
                   sub.isActive
-                      ? (sub.autoRenew ? 'Active' : 'Expiring Soon')
-                      : 'Expired',
+                      ? (sub.autoRenew ? AppLocalizations.of(context)!.active : AppLocalizations.of(context)!.expiringSoon)
+                      : AppLocalizations.of(context)!.expired,
                 ),
                 if (sub.startDate != null)
                   _buildDetailRow(
-                    'Started',
+                    AppLocalizations.of(context)!.started,
                     _formatSubscriptionDate(sub.startDate!),
                   ),
                 if (sub.endDate != null)
                   _buildDetailRow(
-                    'Expires',
+                    AppLocalizations.of(context)!.expires,
                     _formatSubscriptionDate(sub.endDate!),
                   ),
-                _buildDetailRow('Auto-Renew', sub.autoRenew ? 'On' : 'Off'),
+                _buildDetailRow(AppLocalizations.of(context)!.autoRenew, sub.autoRenew ? AppLocalizations.of(context)!.on : AppLocalizations.of(context)!.off),
 
                 const SizedBox(height: 24),
 
@@ -293,7 +294,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         backgroundColor: Colors.red.shade100,
                         foregroundColor: Colors.red,
                       ),
-                      child: const Text('Cancel Auto-Renewal'),
+                      child: Text(AppLocalizations.of(context)!.cancelAutoRenewal),
                     ),
                   ),
               ],
@@ -326,14 +327,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Turn Off Auto-Renewal?'),
-        content: const Text(
-          'Your subscription will remain active until the end of the current billing period.',
+        title: Text(AppLocalizations.of(context)!.turnOffAutoRenewal),
+        content: Text(
+          AppLocalizations.of(context)!.subscriptionWillRemainActive,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Keep On'),
+            child: Text(AppLocalizations.of(context)!.keepOn),
           ),
           TextButton(
             onPressed: () async {
@@ -341,7 +342,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               await _cancelSubscription();
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Turn Off'),
+            child: Text(AppLocalizations.of(context)!.turnOff),
           ),
         ],
       ),
@@ -394,8 +395,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     // Default to placeholders if user data is missing
-    final userName = _user?['name'] ?? 'Guest User';
-    final userEmail = _user?['email'] ?? 'No Email';
+    final userName = _user?['name'] ?? AppLocalizations.of(context)!.guestUser;
+    final userEmail = _user?['email'] ?? AppLocalizations.of(context)!.noEmail;
 
     return DefaultTabController(
       length: 3,
@@ -513,18 +514,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.admin_panel_settings,
                                   size: 16,
                                   color: Colors.white,
                                 ),
-                                SizedBox(width: 6),
+                                const SizedBox(width: 6),
                                 Text(
-                                  'Admin',
-                                  style: TextStyle(
+                                  AppLocalizations.of(context)!.admin,
+                                  style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 12,
@@ -563,8 +564,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   const SizedBox(width: 6),
                                   Text(
                                     _subscription!.endDate != null
-                                        ? 'Premium until ${_formatSubscriptionDate(_subscription!.endDate!)}'
-                                        : 'Lifetime Premium',
+                                        ? AppLocalizations.of(context)!.premiumUntil(_formatSubscriptionDate(_subscription!.endDate!))
+                                        : AppLocalizations.of(context)!.lifetimePremium,
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
@@ -592,7 +593,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               size: 18,
                             ),
                             label: Text(
-                              'Upgrade to Premium',
+                              AppLocalizations.of(context)!.upgradeToPremium,
                               style: TextStyle(
                                 color: Colors.amber.shade600,
                                 fontWeight: FontWeight.bold,
@@ -638,10 +639,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 context,
               ).colorScheme.onSurface.withOpacity(0.6),
               indicatorColor: Theme.of(context).colorScheme.primary,
-              tabs: const [
-                Tab(icon: Icon(Icons.history), text: 'Listen History'),
-                Tab(icon: Icon(Icons.bar_chart), text: 'Stats'),
-                Tab(icon: Icon(Icons.emoji_events), text: 'Badges'),
+              tabs: [
+                Tab(icon: const Icon(Icons.history), text: AppLocalizations.of(context)!.listenHistory),
+                Tab(icon: const Icon(Icons.bar_chart), text: AppLocalizations.of(context)!.stats),
+                Tab(icon: const Icon(Icons.emoji_events), text: AppLocalizations.of(context)!.badges),
               ],
             ),
           ),
@@ -663,7 +664,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildHistoryTab() {
     if (_history.isEmpty) {
-      return const Center(child: Text('No listening history yet.'));
+      return Center(child: Text(AppLocalizations.of(context)!.noListeningHistory));
     }
     return ListView.builder(
       padding: const EdgeInsets.all(16),
@@ -733,17 +734,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           const Icon(Icons.bar_chart, size: 80, color: Colors.grey),
           const SizedBox(height: 16),
-          const Text(
-            'Listening Stats',
-            style: TextStyle(fontSize: 20, color: Colors.grey),
+          Text(
+            AppLocalizations.of(context)!.listeningStats,
+            style: const TextStyle(fontSize: 20, color: Colors.grey),
           ),
           const SizedBox(height: 8),
           Text(
-            'Total Time: ${_formatDuration(totalSeconds)}',
+            AppLocalizations.of(context)!.totalTime(_formatDuration(totalSeconds)),
             style: const TextStyle(fontSize: 18),
           ),
           Text(
-            'Books Completed: $totalBooks',
+            AppLocalizations.of(context)!.booksCompleted(totalBooks),
             style: const TextStyle(fontSize: 18),
           ),
         ],
@@ -753,7 +754,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildAchievementsTab() {
     if (_badges.isEmpty) {
-      return const Center(child: Text('No badges loaded yet'));
+      return Center(child: Text(AppLocalizations.of(context)!.noBadgesYet));
     }
     return GridView.builder(
       padding: const EdgeInsets.all(16),
@@ -881,7 +882,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
+              child: Text(AppLocalizations.of(context)!.close),
             ),
           ],
         );

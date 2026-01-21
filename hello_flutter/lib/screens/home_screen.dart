@@ -14,6 +14,7 @@ import '../widgets/subscription_bottom_sheet.dart';
 import '../services/subscription_service.dart';
 import 'package:hello_flutter/services/connectivity_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../l10n/generated/app_localizations.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -165,8 +166,8 @@ class _HomeScreenState extends State<HomeScreen> {
         onSubscribed: () {
           Navigator.pop(context); // Close sheet
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Subscription activated!'),
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.subscriptionActivated),
               backgroundColor: Colors.green,
             ),
           );
@@ -201,7 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 controller: _searchController,
                 style: TextStyle(color: textColor),
                 decoration: InputDecoration(
-                  hintText: 'Search for books...',
+                  hintText: AppLocalizations.of(context)!.searchForBooks,
                   hintStyle: TextStyle(color: textColor.withOpacity(0.5)),
                   prefixIcon: Icon(
                     Icons.search,
@@ -234,7 +235,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Column(
                           children: [
                             Text(
-                              'Get your imagination going',
+                              AppLocalizations.of(context)!.getYourImaginationGoing,
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 28,
@@ -244,7 +245,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              'The best audiobooks and Originals. The most entertainment. The podcasts you want to hear.',
+                              AppLocalizations.of(context)!.homeHeroDescription,
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 16,
@@ -309,20 +310,20 @@ class _HomeScreenState extends State<HomeScreen> {
                             _buildFeatureItem(
                               context,
                               Icons.all_inclusive,
-                              'Unlimited Access',
-                              'Stream our entire catalog of bestsellers and originals ad-free. No credits required.',
+                              AppLocalizations.of(context)!.unlimitedAccess,
+                              AppLocalizations.of(context)!.unlimitedAccessDescription,
                             ),
                             _buildFeatureItem(
                               context,
                               Icons.download_for_offline,
-                              'Listen Offline',
-                              'Download titles to your device and take your library with you wherever you go.',
+                              AppLocalizations.of(context)!.listenOffline,
+                              AppLocalizations.of(context)!.listenOfflineDescription,
                             ),
                             _buildFeatureItem(
                               context,
                               Icons.quiz,
-                              'Interactive Quizzes',
-                              'Test your knowledge and reinforce what you\'ve learned with interactive quizzes.',
+                              AppLocalizations.of(context)!.interactiveQuizzes,
+                              AppLocalizations.of(context)!.interactiveQuizzesDescription,
                             ),
 
                             const SizedBox(height: 30),
@@ -342,12 +343,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SliverToBoxAdapter(child: SizedBox(height: 30)),
 
-                    _buildSectionHeader('New Releases', textColor),
+                    _buildSectionHeader(AppLocalizations.of(context)!.newReleases, textColor),
                     _buildHorizontalBookList(cardColor, textColor),
 
                     const SliverToBoxAdapter(child: SizedBox(height: 20)),
 
-                    _buildSectionHeader('Top Picks', textColor),
+                    _buildSectionHeader(AppLocalizations.of(context)!.topPicks, textColor),
                     _buildHorizontalBookList(
                       cardColor,
                       textColor,
@@ -366,7 +367,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           vertical: 8.0,
                         ),
                         child: Text(
-                          'Search Results',
+                          AppLocalizations.of(context)!.searchResults,
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -379,7 +380,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       SliverFillRemaining(
                         child: Center(
                           child: Text(
-                            'No books found.',
+                            AppLocalizations.of(context)!.noBooksFound,
                             style: TextStyle(color: textColor.withOpacity(0.7)),
                           ),
                         ),
@@ -465,8 +466,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 8),
                 Text(
                   isOffline
-                      ? 'Not available in offline mode'
-                      : 'No books found',
+                      ? AppLocalizations.of(context)!.notAvailableOffline
+                      : AppLocalizations.of(context)!.noBooksFound,
                   style: TextStyle(
                     color: textColor.withOpacity(0.5),
                     fontSize: 14,
@@ -678,14 +679,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 borderRadius: BorderRadius.circular(25),
               ),
             ),
-            child: const Text(
-              'Continue to free trial',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            child: Text(
+              AppLocalizations.of(context)!.continueToFreeTrial,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
           const SizedBox(height: 12),
           Text(
-            'Auto-renews at \$14.95/month after 30 days. Cancel anytime.',
+            AppLocalizations.of(context)!.autoRenewsInfo,
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12, color: textColor.withOpacity(0.6)),
           ),
@@ -704,14 +705,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 borderRadius: BorderRadius.circular(25),
               ),
             ),
-            child: const Text(
-              'Subscribe',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            child: Text(
+              AppLocalizations.of(context)!.subscribe,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
           const SizedBox(height: 12),
           Text(
-            'Monthly subscription from \$14.95/month. Cancel anytime.',
+            AppLocalizations.of(context)!.monthlySubscriptionInfo,
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12, color: textColor.withOpacity(0.6)),
           ),
@@ -783,20 +784,20 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildPlayerFeatureSlide(
                 textColor,
                 highlightTarget: 'speed',
-                title: 'Find the right speed',
-                description: 'Slow down the narration or pick up the pace.',
+                title: AppLocalizations.of(context)!.findTheRightSpeed,
+                description: AppLocalizations.of(context)!.findTheRightSpeedDescription,
               ),
               _buildPlayerFeatureSlide(
                 textColor,
                 highlightTarget: 'sleep',
-                title: 'Sleep Timer',
-                description: 'Fall asleep without missing a beat.',
+                title: AppLocalizations.of(context)!.sleepTimer,
+                description: AppLocalizations.of(context)!.sleepTimerDescription,
               ),
               _buildPlayerFeatureSlide(
                 textColor,
                 highlightTarget: 'favorites',
-                title: 'Favorites',
-                description: 'Keep your top picks handy.',
+                title: AppLocalizations.of(context)!.favoritesFeature,
+                description: AppLocalizations.of(context)!.favoritesFeatureDescription,
               ),
             ],
           ),

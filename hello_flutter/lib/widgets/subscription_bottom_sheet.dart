@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/subscription_service.dart';
+import '../l10n/generated/app_localizations.dart';
 
 class SubscriptionBottomSheet extends StatefulWidget {
   final VoidCallback onSubscribed;
@@ -15,28 +16,31 @@ class _SubscriptionBottomSheetState extends State<SubscriptionBottomSheet> {
   String _selectedPlan = 'monthly';
   bool _isLoading = false;
 
-  final Map<String, Map<String, String>> _planDetails = {
-    'test_minute': {
-      'title': '2 Minute Test',
-      'price': 'FREE',
-      'subtitle': 'For testing - expires in 2 minutes',
-    },
-    'monthly': {
-      'title': 'Monthly',
-      'price': '\$9.99/month',
-      'subtitle': 'Billed monthly, cancel anytime',
-    },
-    'yearly': {
-      'title': 'Yearly',
-      'price': '\$79.99/year',
-      'subtitle': 'Save 33% - Best value!',
-    },
-    'lifetime': {
-      'title': 'Lifetime',
-      'price': '\$199.99',
-      'subtitle': 'One-time payment, forever access',
-    },
-  };
+  Map<String, Map<String, String>> _getPlanDetails(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return {
+      'test_minute': {
+        'title': l10n.planTestMinuteTitle,
+        'price': l10n.free,
+        'subtitle': l10n.planTestMinuteSubtitle,
+      },
+      'monthly': {
+        'title': l10n.planMonthlyTitle,
+        'price': '\$9.99/month',
+        'subtitle': l10n.planMonthlySubtitle,
+      },
+      'yearly': {
+        'title': l10n.planYearlyTitle,
+        'price': '\$79.99/year',
+        'subtitle': l10n.planYearlySubtitle,
+      },
+      'lifetime': {
+        'title': l10n.planLifetimeTitle,
+        'price': '\$199.99',
+        'subtitle': l10n.planLifetimeSubtitle,
+      },
+    };
+  }
 
   Future<void> _subscribe() async {
     setState(() => _isLoading = true);
@@ -48,8 +52,8 @@ class _SubscriptionBottomSheetState extends State<SubscriptionBottomSheet> {
         widget.onSubscribed();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Subscription activated! Enjoy unlimited access.'),
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.subscriptionActivatedSuccess),
               backgroundColor: Colors.green,
             ),
           );
@@ -58,7 +62,7 @@ class _SubscriptionBottomSheetState extends State<SubscriptionBottomSheet> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['error'] ?? 'Subscription failed'),
+              content: Text(result['error'] ?? AppLocalizations.of(context)!.subscriptionFailed),
               backgroundColor: Colors.red,
             ),
           );
@@ -101,14 +105,14 @@ class _SubscriptionBottomSheetState extends State<SubscriptionBottomSheet> {
             Icon(Icons.star_rounded, size: 48, color: Colors.amber.shade600),
             const SizedBox(height: 12),
             Text(
-              'Unlock All Audiobooks',
+              AppLocalizations.of(context)!.unlockAllAudiobooks,
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Subscribe to get unlimited access to our entire library',
+              AppLocalizations.of(context)!.subscribeToGetAccess,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
               ),
@@ -117,7 +121,7 @@ class _SubscriptionBottomSheetState extends State<SubscriptionBottomSheet> {
             const SizedBox(height: 24),
 
             // Plan options
-            ..._planDetails.entries.map(
+            ..._getPlanDetails(context).entries.map(
               (entry) => _buildPlanTile(entry.key, entry.value, theme),
             ),
 
@@ -145,9 +149,9 @@ class _SubscriptionBottomSheetState extends State<SubscriptionBottomSheet> {
                           color: Colors.white,
                         ),
                       )
-                    : const Text(
-                        'Subscribe Now',
-                        style: TextStyle(
+                    : Text(
+                        AppLocalizations.of(context)!.subscribeNow,
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -161,7 +165,7 @@ class _SubscriptionBottomSheetState extends State<SubscriptionBottomSheet> {
             TextButton(
               onPressed: _isLoading ? null : () => Navigator.pop(context),
               child: Text(
-                'Maybe Later',
+                AppLocalizations.of(context)!.maybeLater,
                 style: TextStyle(
                   color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                 ),
@@ -258,9 +262,9 @@ class _SubscriptionBottomSheetState extends State<SubscriptionBottomSheet> {
                             color: Colors.green,
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: const Text(
-                            'BEST VALUE',
-                            style: TextStyle(
+                          child: Text(
+                            AppLocalizations.of(context)!.bestValue,
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,

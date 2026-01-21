@@ -26,7 +26,7 @@ class _AppLayoutState extends State<AppLayout> {
     ) {
       if (!mounted) return;
 
-      final message = isOffline ? "Entering offline mode" : "Back online";
+      final message = isOffline ? AppLocalizations.of(context)!.enteringOfflineMode : AppLocalizations.of(context)!.backOnline;
       final color = isOffline ? Colors.redAccent : Colors.green;
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -130,17 +130,17 @@ class _AppLayoutState extends State<AppLayout> {
                     icon: const Icon(Icons.menu),
                     label: AppLocalizations.of(context)!.categories,
                   ),
-                  const BottomNavigationBarItem(
-                    icon: Icon(Icons.home),
-                    label: 'Home',
+                  BottomNavigationBarItem(
+                    icon: const Icon(Icons.home),
+                    label: AppLocalizations.of(context)!.home,
                   ),
                   BottomNavigationBarItem(
                     icon: const Icon(Icons.library_books),
                     label: AppLocalizations.of(context)!.library,
                   ),
-                  const BottomNavigationBarItem(
-                    icon: Icon(Icons.explore),
-                    label: 'Discover',
+                  BottomNavigationBarItem(
+                    icon: const Icon(Icons.explore),
+                    label: AppLocalizations.of(context)!.discover,
                   ),
                   BottomNavigationBarItem(
                     icon: const Icon(Icons.person),

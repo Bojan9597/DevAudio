@@ -183,7 +183,7 @@ class _ContentAreaState extends State<ContentArea> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'No books found in "$categoryId"',
+                  AppLocalizations.of(context)!.noBooksFoundInCategory(categoryId),
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 18,
@@ -205,7 +205,7 @@ class _ContentAreaState extends State<ContentArea> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Books in $categoryId',
+                      AppLocalizations.of(context)!.booksInCategory(categoryId),
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -221,8 +221,8 @@ class _ContentAreaState extends State<ContentArea> {
                     ),
                     onPressed: () => globalLayoutState.toggleViewMode(),
                     tooltip: globalLayoutState.isGridView
-                        ? 'Switch to List'
-                        : 'Switch to Grid',
+                        ? AppLocalizations.of(context)!.switchToList
+                        : AppLocalizations.of(context)!.switchToGrid,
                   ),
                 ],
               ),
@@ -268,7 +268,7 @@ class _ContentAreaState extends State<ContentArea> {
         icon: const Icon(Icons.menu_book),
         text: AppLocalizations.of(context)!.myBooks,
       ),
-      if (_isAdmin) const Tab(icon: Icon(Icons.cloud_upload), text: 'Uploaded'),
+      if (_isAdmin) Tab(icon: const Icon(Icons.cloud_upload), text: AppLocalizations.of(context)!.uploaded),
     ];
 
     // Build tab views - only include Uploaded view for admin
@@ -282,7 +282,7 @@ class _ContentAreaState extends State<ContentArea> {
         Stack(
           children: [
             _uploadedBooks.isEmpty
-                ? const Center(child: Text('No uploaded books'))
+                ? Center(child: Text(AppLocalizations.of(context)!.noUploadedBooks))
                 : Padding(
                     padding: const EdgeInsets.only(
                       top: 16.0,
@@ -319,9 +319,9 @@ class _ContentAreaState extends State<ContentArea> {
                   },
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   icon: const Icon(Icons.cloud_upload),
-                  label: const Text(
-                    'Upload Audio Book',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  label: Text(
+                    AppLocalizations.of(context)!.uploadAudioBook,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -355,7 +355,7 @@ class _ContentAreaState extends State<ContentArea> {
 
   Widget _buildFavoritesTab(List<Book> favoriteBooks) {
     if (favoriteBooks.isEmpty) {
-      return const Center(child: Text('No favorite books yet'));
+      return Center(child: Text(AppLocalizations.of(context)!.noFavoriteBooks));
     }
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -372,8 +372,8 @@ class _ContentAreaState extends State<ContentArea> {
                 onPressed: () =>
                     setState(() => _isLibraryGridView = !_isLibraryGridView),
                 tooltip: _isLibraryGridView
-                    ? 'Switch to List'
-                    : 'Switch to Grid',
+                    ? AppLocalizations.of(context)!.switchToList
+                    : AppLocalizations.of(context)!.switchToGrid,
               ),
             ],
           ),
@@ -396,17 +396,17 @@ class _ContentAreaState extends State<ContentArea> {
         }
         final downloadedBooks = snapshot.data ?? [];
         if (downloadedBooks.isEmpty) {
-          return const Center(
+          return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.download_done, size: 48, color: Colors.grey),
-                SizedBox(height: 16),
-                Text('No downloaded books'),
-                SizedBox(height: 8),
+                const Icon(Icons.download_done, size: 48, color: Colors.grey),
+                const SizedBox(height: 16),
+                Text(AppLocalizations.of(context)!.noDownloadedBooks),
+                const SizedBox(height: 8),
                 Text(
-                  'Books you download will appear here',
-                  style: TextStyle(color: Colors.grey),
+                  AppLocalizations.of(context)!.booksDownloadedAppearHere,
+                  style: const TextStyle(color: Colors.grey),
                 ),
               ],
             ),
@@ -428,8 +428,8 @@ class _ContentAreaState extends State<ContentArea> {
                       () => _isLibraryGridView = !_isLibraryGridView,
                     ),
                     tooltip: _isLibraryGridView
-                        ? 'Switch to List'
-                        : 'Switch to Grid',
+                        ? AppLocalizations.of(context)!.switchToList
+                        : AppLocalizations.of(context)!.switchToGrid,
                   ),
                 ],
               ),
@@ -657,8 +657,8 @@ class _ContentAreaState extends State<ContentArea> {
               ),
               onPressed: () => _toggleFavorite(book),
               tooltip: book.isFavorite
-                  ? 'Remove from favorites'
-                  : 'Add to favorites',
+                  ? AppLocalizations.of(context)!.removeFromFavorites
+                  : AppLocalizations.of(context)!.addToFavorites,
             ),
             const Icon(Icons.chevron_right),
           ],
@@ -670,7 +670,7 @@ class _ContentAreaState extends State<ContentArea> {
   Future<void> _toggleFavorite(Book book) async {
     if (_userId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please login to use favorites')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.pleaseLoginToUseFavorites)),
       );
       return;
     }
@@ -700,7 +700,7 @@ class _ContentAreaState extends State<ContentArea> {
           );
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to update favorite')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.failedToUpdateFavorite)),
         );
       }
     }
