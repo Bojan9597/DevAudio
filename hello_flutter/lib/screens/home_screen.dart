@@ -47,12 +47,12 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isSubscribed = false;
   int _playerFeatureIndex = 0;
 
-  // Hardcoded image names from the directory listing
+  // Hardcoded image names - elemental thumbnails
   final List<String> _heroImages = [
-    'clouds-2085111_1280.jpg',
-    'fire-flame-with-sparkle-black-background.jpg',
-    'view-undiscovered-planet-universe.jpg',
-    'wet-metal-background.jpg',
+    'air.jpg',
+    'water.jpg',
+    'earth.jpg',
+    'fire.jpg',
   ];
 
   List<String> _localHeroImagePaths = [];
