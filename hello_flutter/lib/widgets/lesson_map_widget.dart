@@ -1,6 +1,10 @@
 import 'dart:math';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:dio/dio.dart';
 import '../utils/api_constants.dart';
+import '../services/connectivity_service.dart';
 
 class LessonMapWidget extends StatelessWidget {
   final List<dynamic> tracks;
@@ -53,8 +57,12 @@ class LessonMapWidget extends StatelessWidget {
 
         for (int i = 0; i < itemCount; i++) {
           final double y = padding + i * itemHeight;
-          final double center = width / 2;
-          final double amplitude = min(width / 3, 120.0);
+          // 10% padding from left, 20% padding from right
+          final double leftPadding = width * 0.1;
+          final double rightPadding = width * 0.2;
+          final double usableWidth = width - leftPadding - rightPadding;
+          final double center = leftPadding + (usableWidth / 2);
+          final double amplitude = min(usableWidth / 2, 100.0);
           final double wiggle = (random.nextDouble() * 2 - 1) * 0.3;
           final double sine = sin(i * 0.8 + wiggle);
           final double x = center + (sine * amplitude);
@@ -90,8 +98,8 @@ class LessonMapWidget extends StatelessWidget {
                   final bool isTrackQuizLocked = !isCompleted;
 
                   return Positioned(
-                    left: pos.dx - 40, // Center 80px wide widget (roughly)
-                    top: pos.dy - 40,
+                    left: pos.dx - 70, // Center 140px wide widget
+                    top: pos.dy - 60, // Center 120px tall island
                     child: _LessonNode(
                       title: title,
                       isCompleted: isCompleted,
@@ -129,8 +137,8 @@ class LessonMapWidget extends StatelessWidget {
                 // 3. Draw Main Quiz Node
                 if (hasQuiz && positions.isNotEmpty)
                   Positioned(
-                    left: positions.last.dx - 40,
-                    top: positions.last.dy - 40,
+                    left: positions.last.dx - 70,
+                    top: positions.last.dy - 60,
                     child: _LessonNode(
                       title: "Final Quiz",
                       isCompleted: isQuizPassed,
@@ -316,18 +324,6 @@ class _LessonNode extends StatelessWidget {
             Container(
               width: 120,
               height: 120,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: (isCompleted || (isQuiz && !isLocked))
-                        ? Colors.orange.withOpacity(0.4)
-                        : Colors.black26,
-                    blurRadius: 10,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
               child: isQuiz
                   ? Icon(
                       isLocked ? Icons.lock : Icons.quiz,
@@ -339,19 +335,11 @@ class _LessonNode extends StatelessWidget {
                         alignment: Alignment.center,
                         children: [
                           // Island background
-                          Image.network(
-                            '${ApiConstants.baseUrl}/static/Animations/island.jpg',
-                            width: 120,
-                            height: 120,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Container(
-                              color: Colors.black54,
-                            ),
-                          ),
-                          // Centered star icon (same size)
+                          _IslandImage(),
+                          // Centered star icon (20% bigger: 35 * 1.2 = 42)
                           Icon(
                             Icons.star_rounded,
-                            size: 35,
+                            size: 42,
                             color: isCompleted ? Colors.amber : Colors.grey.shade700,
                           ),
                         ],
@@ -391,5 +379,104 @@ class _LessonNode extends StatelessWidget {
       return raw.substring(0, 18) + "...";
     }
     return raw;
+  }
+}
+
+// Cached island image widget
+class _IslandImage extends StatefulWidget {
+  const _IslandImage();
+
+  @override
+  State<_IslandImage> createState() => _IslandImageState();
+}
+
+class _IslandImageState extends State<_IslandImage> {
+  String? _localPath;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadIslandImage();
+  }
+
+  Future<void> _loadIslandImage() async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final filePath = '${directory.path}/island.jpg';
+      final file = File(filePath);
+
+      if (await file.exists()) {
+        if (mounted) {
+          setState(() {
+            _localPath = filePath;
+            _isLoading = false;
+          });
+        }
+      } else if (!ConnectivityService().isOffline) {
+        // Download the island image
+        final imageUrl = '${ApiConstants.baseUrl}/static/Animations/island.jpg';
+        await Dio().download(imageUrl, filePath);
+
+        if (mounted) {
+          setState(() {
+            _localPath = filePath;
+            _isLoading = false;
+          });
+        }
+      } else {
+        // Offline and no cached image
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      print("Error loading island image: $e");
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Container(
+        width: 120,
+        height: 120,
+        color: Colors.black54,
+      );
+    }
+
+    if (_localPath != null) {
+      return Image.file(
+        File(_localPath!),
+        width: 120,
+        height: 120,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Container(
+          width: 120,
+          height: 120,
+          color: Colors.black54,
+        ),
+      );
+    }
+
+    // Fallback to network image
+    return Image.network(
+      '${ApiConstants.baseUrl}/static/Animations/island.jpg',
+      width: 120,
+      height: 120,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => Container(
+        width: 120,
+        height: 120,
+        color: Colors.black54,
+      ),
+    );
   }
 }
