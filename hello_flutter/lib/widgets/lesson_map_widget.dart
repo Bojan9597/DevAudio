@@ -330,20 +330,20 @@ class _LessonNode extends StatelessWidget {
                       size: 80,
                       color: isCompleted ? Colors.amber : Colors.grey,
                     )
-                  : ClipOval(
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          // Island background
-                          _IslandImage(),
-                          // Centered star icon (20% bigger: 35 * 1.2 = 42)
-                          Icon(
-                            Icons.star_rounded,
-                            size: 42,
-                            color: isCompleted ? Colors.amber : Colors.grey.shade700,
-                          ),
-                        ],
-                      ),
+                  : Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Island background (PNG with transparency)
+                        _IslandImage(),
+                        // Centered star icon
+                        Icon(
+                          Icons.star_rounded,
+                          size: 42,
+                          color: isCompleted
+                              ? Colors.amber
+                              : Colors.grey.shade700,
+                        ),
+                      ],
                     ),
             ),
             const SizedBox(height: 8),
@@ -403,7 +403,7 @@ class _IslandImageState extends State<_IslandImage> {
   Future<void> _loadIslandImage() async {
     try {
       final directory = await getApplicationDocumentsDirectory();
-      final filePath = '${directory.path}/island.jpg';
+      final filePath = '${directory.path}/island.png';
       final file = File(filePath);
 
       if (await file.exists()) {
@@ -414,8 +414,8 @@ class _IslandImageState extends State<_IslandImage> {
           });
         }
       } else if (!ConnectivityService().isOffline) {
-        // Download the island image
-        final imageUrl = '${ApiConstants.baseUrl}/static/Animations/island.jpg';
+        // Download the island image (PNG for transparency support)
+        final imageUrl = '${ApiConstants.baseUrl}/static/Animations/island.png';
         await Dio().download(imageUrl, filePath);
 
         if (mounted) {
@@ -445,11 +445,7 @@ class _IslandImageState extends State<_IslandImage> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Container(
-        width: 120,
-        height: 120,
-        color: Colors.black54,
-      );
+      return Container(width: 120, height: 120, color: Colors.transparent);
     }
 
     if (_localPath != null) {
@@ -458,25 +454,19 @@ class _IslandImageState extends State<_IslandImage> {
         width: 120,
         height: 120,
         fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => Container(
-          width: 120,
-          height: 120,
-          color: Colors.black54,
-        ),
+        errorBuilder: (context, error, stackTrace) =>
+            Container(width: 120, height: 120, color: Colors.transparent),
       );
     }
 
     // Fallback to network image
     return Image.network(
-      '${ApiConstants.baseUrl}/static/Animations/island.jpg',
+      '${ApiConstants.baseUrl}/static/Animations/island.png',
       width: 120,
       height: 120,
       fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) => Container(
-        width: 120,
-        height: 120,
-        color: Colors.black54,
-      ),
+      errorBuilder: (context, error, stackTrace) =>
+          Container(width: 120, height: 120, color: Colors.transparent),
     );
   }
 }

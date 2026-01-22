@@ -49,10 +49,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Hardcoded image names from the directory listing
   final List<String> _heroImages = [
-    '1768942167_20251226_203128.jpg',
-    '1768943401_20260120_192824.jpg',
-    '1768942167_20251226_203128 copy.jpg',
-    '1768943401_20260120_192824 copy.jpg',
+    'clouds-2085111_1280.jpg',
+    'fire-flame-with-sparkle-black-background.jpg',
+    'view-undiscovered-planet-universe.jpg',
+    'wet-metal-background.jpg',
   ];
 
   List<String> _localHeroImagePaths = [];
@@ -73,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final directory = await getApplicationDocumentsDirectory();
 
     for (final imageName in _heroImages) {
-      final filePath = '${directory.path}/homeImages_$imageName';
+      final filePath = '${directory.path}/homeImages_thumb_$imageName';
       final file = File(filePath);
 
       try {
@@ -81,8 +81,9 @@ class _HomeScreenState extends State<HomeScreen> {
           localPaths.add(filePath);
         } else {
           if (!ConnectivityService().isOffline) {
+            // Load from thumbnails folder for faster performance
             final imageUrl =
-                '${ApiConstants.baseUrl}/static/homeImages/$imageName';
+                '${ApiConstants.baseUrl}/static/homeImages/thumbnails/$imageName';
             await Dio().download(imageUrl, filePath);
             localPaths.add(filePath);
           }
@@ -204,7 +205,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Navigator.pop(context); // Close sheet
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(AppLocalizations.of(context)!.subscriptionActivated),
+              content: Text(
+                AppLocalizations.of(context)!.subscriptionActivated,
+              ),
               backgroundColor: Colors.green,
             ),
           );
@@ -272,7 +275,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Column(
                           children: [
                             Text(
-                              AppLocalizations.of(context)!.getYourImaginationGoing,
+                              AppLocalizations.of(
+                                context,
+                              )!.getYourImaginationGoing,
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 28,
@@ -297,45 +302,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
                             const SizedBox(height: 30),
 
-                            // Image Collage
-                            SizedBox(
-                              height: 200,
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  if (_localHeroImagePaths.length >= 4) ...[
-                                    _buildTiltImage(
-                                      _localHeroImagePaths[0],
-                                      -15,
-                                      -60,
-                                      20,
-                                      true,
-                                    ),
-                                    _buildTiltImage(
-                                      _localHeroImagePaths[1],
-                                      -5,
-                                      -20,
-                                      10,
-                                      true,
-                                    ),
-                                    _buildTiltImage(
-                                      _localHeroImagePaths[2],
-                                      5,
-                                      20,
-                                      10,
-                                      true,
-                                    ),
-                                    _buildTiltImage(
-                                      _localHeroImagePaths[3],
-                                      15,
-                                      60,
-                                      20,
-                                      true,
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
+                            // 2x2 Image Grid
+                            if (_localHeroImagePaths.length >= 4)
+                              _buildHeroImageGrid()
+                            else
+                              const SizedBox(height: 200),
 
                             const SizedBox(height: 50),
 
@@ -344,19 +315,25 @@ class _HomeScreenState extends State<HomeScreen> {
                               context,
                               Icons.all_inclusive,
                               AppLocalizations.of(context)!.unlimitedAccess,
-                              AppLocalizations.of(context)!.unlimitedAccessDescription,
+                              AppLocalizations.of(
+                                context,
+                              )!.unlimitedAccessDescription,
                             ),
                             _buildFeatureItem(
                               context,
                               Icons.download_for_offline,
                               AppLocalizations.of(context)!.listenOffline,
-                              AppLocalizations.of(context)!.listenOfflineDescription,
+                              AppLocalizations.of(
+                                context,
+                              )!.listenOfflineDescription,
                             ),
                             _buildFeatureItem(
                               context,
                               Icons.quiz,
                               AppLocalizations.of(context)!.interactiveQuizzes,
-                              AppLocalizations.of(context)!.interactiveQuizzesDescription,
+                              AppLocalizations.of(
+                                context,
+                              )!.interactiveQuizzesDescription,
                             ),
 
                             const SizedBox(height: 30),
@@ -376,12 +353,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SliverToBoxAdapter(child: SizedBox(height: 30)),
 
-                    _buildSectionHeader(AppLocalizations.of(context)!.newReleases, textColor),
+                    _buildSectionHeader(
+                      AppLocalizations.of(context)!.newReleases,
+                      textColor,
+                    ),
                     _buildHorizontalBookList(cardColor, textColor),
 
                     const SliverToBoxAdapter(child: SizedBox(height: 20)),
 
-                    _buildSectionHeader(AppLocalizations.of(context)!.topPicks, textColor),
+                    _buildSectionHeader(
+                      AppLocalizations.of(context)!.topPicks,
+                      textColor,
+                    ),
                     _buildHorizontalBookList(
                       cardColor,
                       textColor,
@@ -543,7 +526,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               onTap: () => _openPlayer(book),
                               child:
                                   (book.absoluteCoverUrlThumbnail != null &&
-                                      book.absoluteCoverUrlThumbnail!.isNotEmpty)
+                                      book
+                                          .absoluteCoverUrlThumbnail!
+                                          .isNotEmpty)
                                   ? CachedNetworkImage(
                                       imageUrl: book.absoluteCoverUrlThumbnail!,
                                       fit: BoxFit.cover,
@@ -601,51 +586,40 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildTiltImage(
-    String path,
-    double angleDeg,
-    double offsetX,
-    double offsetY,
-    bool isLocal,
-  ) {
-    return Positioned(
-      left: 0,
-      right: 0,
-      child: Transform.translate(
-        offset: Offset(offsetX, offsetY),
-        child: Transform.rotate(
-          angle: angleDeg * 3.14159 / 180,
-          child: Center(
-            child: Container(
-              height: 120,
-              width: 120,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: isLocal
-                  ? Image.file(
-                      File(path),
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          Container(color: Colors.grey),
-                    )
-                  : CachedNetworkImage(
-                      imageUrl: path,
-                      fit: BoxFit.cover,
-                      errorWidget: (context, url, error) =>
-                          Container(color: Colors.grey),
-                    ),
+  Widget _buildHeroImageGrid() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GridView.count(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1.0,
+        children: _localHeroImagePaths.take(4).map((path) {
+          return Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
             ),
-          ),
-        ),
+            clipBehavior: Clip.antiAlias,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.file(
+                File(path),
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) =>
+                    Container(color: Colors.grey[800]),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -662,7 +636,9 @@ class _HomeScreenState extends State<HomeScreen> {
           height: 50,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
-          child: (book.absoluteCoverUrlThumbnail != null && book.absoluteCoverUrlThumbnail!.isNotEmpty)
+          child:
+              (book.absoluteCoverUrlThumbnail != null &&
+                  book.absoluteCoverUrlThumbnail!.isNotEmpty)
               ? CachedNetworkImage(
                   imageUrl: book.absoluteCoverUrlThumbnail!,
                   fit: BoxFit.cover,
@@ -826,19 +802,25 @@ class _HomeScreenState extends State<HomeScreen> {
                 textColor,
                 highlightTarget: 'speed',
                 title: AppLocalizations.of(context)!.findTheRightSpeed,
-                description: AppLocalizations.of(context)!.findTheRightSpeedDescription,
+                description: AppLocalizations.of(
+                  context,
+                )!.findTheRightSpeedDescription,
               ),
               _buildPlayerFeatureSlide(
                 textColor,
                 highlightTarget: 'sleep',
                 title: AppLocalizations.of(context)!.sleepTimer,
-                description: AppLocalizations.of(context)!.sleepTimerDescription,
+                description: AppLocalizations.of(
+                  context,
+                )!.sleepTimerDescription,
               ),
               _buildPlayerFeatureSlide(
                 textColor,
                 highlightTarget: 'favorites',
                 title: AppLocalizations.of(context)!.favoritesFeature,
-                description: AppLocalizations.of(context)!.favoritesFeatureDescription,
+                description: AppLocalizations.of(
+                  context,
+                )!.favoritesFeatureDescription,
               ),
             ],
           ),
