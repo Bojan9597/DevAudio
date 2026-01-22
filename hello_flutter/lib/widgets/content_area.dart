@@ -7,6 +7,7 @@ import '../repositories/category_repository.dart';
 import '../services/auth_service.dart';
 import '../services/download_service.dart';
 import '../l10n/generated/app_localizations.dart';
+import '../utils/category_translations.dart';
 
 import '../screens/profile_screen.dart';
 import '../screens/discover_screen.dart';
@@ -183,7 +184,7 @@ class _ContentAreaState extends State<ContentArea> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  AppLocalizations.of(context)!.noBooksFoundInCategory(categoryId),
+                  AppLocalizations.of(context)!.noBooksFoundInCategory(_getCategoryTitle(categoryId)),
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 18,
@@ -205,7 +206,7 @@ class _ContentAreaState extends State<ContentArea> {
                 children: [
                   Expanded(
                     child: Text(
-                      AppLocalizations.of(context)!.booksInCategory(categoryId),
+                      AppLocalizations.of(context)!.booksInCategory(_getCategoryTitle(categoryId)),
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -242,6 +243,29 @@ class _ContentAreaState extends State<ContentArea> {
     final minutes = twoDigits(d.inMinutes.remainder(60));
     final sec = twoDigits(d.inSeconds.remainder(60));
     return "${d.inHours > 0 ? '${twoDigits(d.inHours)}:' : ''}$minutes:$sec";
+  }
+
+  String _getCategoryTitle(String categoryId) {
+    // Recursively search for category title by ID
+    Category? findCategory(List<Category> categories, String id) {
+      for (final cat in categories) {
+        if (cat.id == id) return cat;
+        if (cat.children != null) {
+          final found = findCategory(cat.children!, id);
+          if (found != null) return found;
+        }
+      }
+      return null;
+    }
+
+    final category = findCategory(_categories, categoryId);
+    if (category != null) {
+      return translateCategoryTitle(
+        category.title,
+        AppLocalizations.of(context)!,
+      );
+    }
+    return categoryId; // Fallback to ID if not found
   }
 
   Widget _buildLibraryView() {

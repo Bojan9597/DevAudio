@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../states/layout_state.dart';
 import '../models/category.dart';
 import '../repositories/category_repository.dart';
-import '../services/auth_service.dart';
-import '../main.dart';
+import '../l10n/generated/app_localizations.dart';
+import '../utils/category_translations.dart';
 
 class SideMenu extends StatefulWidget {
   const SideMenu({super.key});
@@ -148,7 +148,10 @@ class _SideMenuState extends State<SideMenu> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        category.title,
+                        translateCategoryTitle(
+                          category.title,
+                          AppLocalizations.of(context)!,
+                        ),
                         style: TextStyle(
                           color: isSelected
                               ? colorScheme.primary

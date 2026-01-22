@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class LayoutState extends ChangeNotifier {
   bool isCollapsed = false;
   String selectedCategoryId =
-      'library'; // Default restored to 'library' as per previous successful state
+      'programming'; // Default to 'programming' category
   bool isGridView = true;
   ThemeMode _themeMode = ThemeMode.system;
   Locale? _locale;

@@ -477,4 +477,103 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get free => 'KOSTENLOS';
+
+  @override
+  String get catProgramming => 'Programmierung';
+
+  @override
+  String get catOperatingSystems => 'Betriebssysteme';
+
+  @override
+  String get catLinux => 'Linux';
+
+  @override
+  String get catNetworking => 'Netzwerke';
+
+  @override
+  String get catFileSystems => 'Dateisysteme';
+
+  @override
+  String get catSecurity => 'Sicherheit';
+
+  @override
+  String get catShellScripting => 'Shell-Skripting';
+
+  @override
+  String get catSystemAdministration => 'Systemverwaltung';
+
+  @override
+  String get catWindows => 'Windows';
+
+  @override
+  String get catInternals => 'Interna';
+
+  @override
+  String get catPowerShell => 'PowerShell';
+
+  @override
+  String get catMacOS => 'macOS';
+
+  @override
+  String get catShellAndScripting => 'Shell & Skripting';
+
+  @override
+  String get catProgrammingLanguages => 'Programmiersprachen';
+
+  @override
+  String get catPython => 'Python';
+
+  @override
+  String get catBasics => 'Grundlagen';
+
+  @override
+  String get catAdvancedTopics => 'Fortgeschrittene Themen';
+
+  @override
+  String get catWebDevelopment => 'Webentwicklung';
+
+  @override
+  String get catDataScience => 'Data Science';
+
+  @override
+  String get catScriptingAndAutomation => 'Skripting & Automatisierung';
+
+  @override
+  String get catCCpp => 'C / C++';
+
+  @override
+  String get catCBasics => 'C Grundlagen';
+
+  @override
+  String get catCppBasics => 'C++ Grundlagen';
+
+  @override
+  String get catCppAdvanced => 'C++ Fortgeschritten';
+
+  @override
+  String get catSTL => 'STL';
+
+  @override
+  String get catSystemProgramming => 'Systemprogrammierung';
+
+  @override
+  String get catJava => 'Java';
+
+  @override
+  String get catOOP => 'Objektorientierte Programmierung';
+
+  @override
+  String get catConcurrencyAndThreads => 'Nebenläufigkeit & Threads';
+
+  @override
+  String get catJavaScript => 'JavaScript';
+
+  @override
+  String get catBrowserAndDOM => 'Browser & DOM';
+
+  @override
+  String get catNodeJs => 'Node.js';
+
+  @override
+  String get catFrameworks => 'Frameworks (React, Vue, Angular)';
 }

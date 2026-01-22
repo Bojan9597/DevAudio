@@ -961,6 +961,204 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'FREE'**
   String get free;
+
+  /// No description provided for @catProgramming.
+  ///
+  /// In en, this message translates to:
+  /// **'Programming'**
+  String get catProgramming;
+
+  /// No description provided for @catOperatingSystems.
+  ///
+  /// In en, this message translates to:
+  /// **'Operating Systems'**
+  String get catOperatingSystems;
+
+  /// No description provided for @catLinux.
+  ///
+  /// In en, this message translates to:
+  /// **'Linux'**
+  String get catLinux;
+
+  /// No description provided for @catNetworking.
+  ///
+  /// In en, this message translates to:
+  /// **'Networking'**
+  String get catNetworking;
+
+  /// No description provided for @catFileSystems.
+  ///
+  /// In en, this message translates to:
+  /// **'File Systems'**
+  String get catFileSystems;
+
+  /// No description provided for @catSecurity.
+  ///
+  /// In en, this message translates to:
+  /// **'Security'**
+  String get catSecurity;
+
+  /// No description provided for @catShellScripting.
+  ///
+  /// In en, this message translates to:
+  /// **'Shell Scripting'**
+  String get catShellScripting;
+
+  /// No description provided for @catSystemAdministration.
+  ///
+  /// In en, this message translates to:
+  /// **'System Administration'**
+  String get catSystemAdministration;
+
+  /// No description provided for @catWindows.
+  ///
+  /// In en, this message translates to:
+  /// **'Windows'**
+  String get catWindows;
+
+  /// No description provided for @catInternals.
+  ///
+  /// In en, this message translates to:
+  /// **'Internals'**
+  String get catInternals;
+
+  /// No description provided for @catPowerShell.
+  ///
+  /// In en, this message translates to:
+  /// **'PowerShell'**
+  String get catPowerShell;
+
+  /// No description provided for @catMacOS.
+  ///
+  /// In en, this message translates to:
+  /// **'macOS'**
+  String get catMacOS;
+
+  /// No description provided for @catShellAndScripting.
+  ///
+  /// In en, this message translates to:
+  /// **'Shell & Scripting'**
+  String get catShellAndScripting;
+
+  /// No description provided for @catProgrammingLanguages.
+  ///
+  /// In en, this message translates to:
+  /// **'Programming Languages'**
+  String get catProgrammingLanguages;
+
+  /// No description provided for @catPython.
+  ///
+  /// In en, this message translates to:
+  /// **'Python'**
+  String get catPython;
+
+  /// No description provided for @catBasics.
+  ///
+  /// In en, this message translates to:
+  /// **'Basics'**
+  String get catBasics;
+
+  /// No description provided for @catAdvancedTopics.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced Topics'**
+  String get catAdvancedTopics;
+
+  /// No description provided for @catWebDevelopment.
+  ///
+  /// In en, this message translates to:
+  /// **'Web Development'**
+  String get catWebDevelopment;
+
+  /// No description provided for @catDataScience.
+  ///
+  /// In en, this message translates to:
+  /// **'Data Science'**
+  String get catDataScience;
+
+  /// No description provided for @catScriptingAndAutomation.
+  ///
+  /// In en, this message translates to:
+  /// **'Scripting & Automation'**
+  String get catScriptingAndAutomation;
+
+  /// No description provided for @catCCpp.
+  ///
+  /// In en, this message translates to:
+  /// **'C / C++'**
+  String get catCCpp;
+
+  /// No description provided for @catCBasics.
+  ///
+  /// In en, this message translates to:
+  /// **'C Basics'**
+  String get catCBasics;
+
+  /// No description provided for @catCppBasics.
+  ///
+  /// In en, this message translates to:
+  /// **'C++ Basics'**
+  String get catCppBasics;
+
+  /// No description provided for @catCppAdvanced.
+  ///
+  /// In en, this message translates to:
+  /// **'C++ Advanced'**
+  String get catCppAdvanced;
+
+  /// No description provided for @catSTL.
+  ///
+  /// In en, this message translates to:
+  /// **'STL'**
+  String get catSTL;
+
+  /// No description provided for @catSystemProgramming.
+  ///
+  /// In en, this message translates to:
+  /// **'System Programming'**
+  String get catSystemProgramming;
+
+  /// No description provided for @catJava.
+  ///
+  /// In en, this message translates to:
+  /// **'Java'**
+  String get catJava;
+
+  /// No description provided for @catOOP.
+  ///
+  /// In en, this message translates to:
+  /// **'Object-Oriented Programming'**
+  String get catOOP;
+
+  /// No description provided for @catConcurrencyAndThreads.
+  ///
+  /// In en, this message translates to:
+  /// **'Concurrency & Threads'**
+  String get catConcurrencyAndThreads;
+
+  /// No description provided for @catJavaScript.
+  ///
+  /// In en, this message translates to:
+  /// **'JavaScript'**
+  String get catJavaScript;
+
+  /// No description provided for @catBrowserAndDOM.
+  ///
+  /// In en, this message translates to:
+  /// **'Browser & DOM'**
+  String get catBrowserAndDOM;
+
+  /// No description provided for @catNodeJs.
+  ///
+  /// In en, this message translates to:
+  /// **'Node.js'**
+  String get catNodeJs;
+
+  /// No description provided for @catFrameworks.
+  ///
+  /// In en, this message translates to:
+  /// **'Frameworks (React, Vue, Angular)'**
+  String get catFrameworks;
 }
 
 class _AppLocalizationsDelegate

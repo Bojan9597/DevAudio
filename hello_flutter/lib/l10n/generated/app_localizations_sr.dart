@@ -475,4 +475,103 @@ class AppLocalizationsSr extends AppLocalizations {
 
   @override
   String get free => 'BESPLATNO';
+
+  @override
+  String get catProgramming => 'Programiranje';
+
+  @override
+  String get catOperatingSystems => 'Operativni sistemi';
+
+  @override
+  String get catLinux => 'Linux';
+
+  @override
+  String get catNetworking => 'Umrežavanje';
+
+  @override
+  String get catFileSystems => 'Sistemi fajlova';
+
+  @override
+  String get catSecurity => 'Sigurnost';
+
+  @override
+  String get catShellScripting => 'Shell skriptovanje';
+
+  @override
+  String get catSystemAdministration => 'Sistemska administracija';
+
+  @override
+  String get catWindows => 'Windows';
+
+  @override
+  String get catInternals => 'Interni sistemi';
+
+  @override
+  String get catPowerShell => 'PowerShell';
+
+  @override
+  String get catMacOS => 'macOS';
+
+  @override
+  String get catShellAndScripting => 'Shell i skriptovanje';
+
+  @override
+  String get catProgrammingLanguages => 'Programski jezici';
+
+  @override
+  String get catPython => 'Python';
+
+  @override
+  String get catBasics => 'Osnove';
+
+  @override
+  String get catAdvancedTopics => 'Napredne teme';
+
+  @override
+  String get catWebDevelopment => 'Web razvoj';
+
+  @override
+  String get catDataScience => 'Nauka o podacima';
+
+  @override
+  String get catScriptingAndAutomation => 'Skriptovanje i automatizacija';
+
+  @override
+  String get catCCpp => 'C / C++';
+
+  @override
+  String get catCBasics => 'C osnove';
+
+  @override
+  String get catCppBasics => 'C++ osnove';
+
+  @override
+  String get catCppAdvanced => 'C++ napredni';
+
+  @override
+  String get catSTL => 'STL';
+
+  @override
+  String get catSystemProgramming => 'Sistemsko programiranje';
+
+  @override
+  String get catJava => 'Java';
+
+  @override
+  String get catOOP => 'Objektno-orijentisano programiranje';
+
+  @override
+  String get catConcurrencyAndThreads => 'Konkurentnost i niti';
+
+  @override
+  String get catJavaScript => 'JavaScript';
+
+  @override
+  String get catBrowserAndDOM => 'Pretraživač i DOM';
+
+  @override
+  String get catNodeJs => 'Node.js';
+
+  @override
+  String get catFrameworks => 'Radni okviri (React, Vue, Angular)';
 }
