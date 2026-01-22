@@ -1,11 +1,10 @@
 """
-Restore badges to the database.
-This script re-creates the standard badges that should always be in the system.
+Restore badges from backup to current database
 """
-
 from database import Database
 
 def restore_badges():
+    """Insert badges from backup SQL into current database"""
     db = Database()
     if not db.connect():
         print("Failed to connect to database")
@@ -16,42 +15,37 @@ def restore_badges():
         
         print("Restoring badges...")
         
-        # Check if badges already exist
-        cursor.execute("SELECT COUNT(*) as count FROM badges")
-        result = cursor.fetchone()
-        
-        if result[0] > 0:
-            print(f"⚠ Badges already exist ({result[0]} badges). Skipping restoration.")
-            cursor.close()
-            db.disconnect()
-            return True
-        
-        # Define the original badges (from backup)
+        # Badges from backup SQL
         badges = [
+            # Read badges
             ('read', 'Read 1 Book', 'Finished your first book', 'read_1', 1),
             ('read', 'Read 2 Books', 'Finished 2 books', 'read_2', 2),
             ('read', 'Read 5 Books', 'Finished 5 books', 'read_5', 5),
             ('read', 'Read 10 Books', 'Finished 10 books', 'read_10', 10),
+            # Buy badges
             ('buy', 'Collector I', 'Bought your first book', 'buy_1', 1),
             ('buy', 'Collector II', 'Bought 2 books', 'buy_2', 2),
             ('buy', 'Collector III', 'Bought 5 books', 'buy_5', 5),
             ('buy', 'Collector IV', 'Bought 10 books', 'buy_10', 10),
         ]
         
-        # Insert badges
         insert_query = """
             INSERT INTO badges (category, name, description, code, threshold)
             VALUES (%s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                name = VALUES(name),
+                description = VALUES(description),
+                threshold = VALUES(threshold)
         """
         
         for badge in badges:
             cursor.execute(insert_query, badge)
-            print(f"  ✓ Created badge: {badge[1]}")
+            print(f"  ✓ Inserted/updated badge: {badge[1]} ({badge[3]})")
         
         db.connection.commit()
         cursor.close()
         
-        print(f"\n✅ Successfully restored {len(badges)} badges!")
+        print(f"\n✅ Restored {len(badges)} badges!")
         return True
         
     except Exception as e:
@@ -61,5 +55,31 @@ def restore_badges():
     finally:
         db.disconnect()
 
-if __name__ == "__main__":
+def verify_badges():
+    """Verify badges are in the database"""
+    db = Database()
+    if not db.connect():
+        print("Failed to connect to database")
+        return
+    
+    try:
+        cursor = db.connection.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM badges ORDER BY category, threshold")
+        badges = cursor.fetchall()
+        cursor.close()
+        
+        print("\n📛 Current badges in database:")
+        for badge in badges:
+            print(f"  [{badge['category']}] {badge['name']} - threshold: {badge['threshold']}")
+        
+        return len(badges) > 0
+        
+    except Exception as e:
+        print(f"❌ Error verifying badges: {e}")
+        return False
+    finally:
+        db.disconnect()
+
+if __name__ == '__main__':
     restore_badges()
+    verify_badges()
