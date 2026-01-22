@@ -1,3 +1,5 @@
+import '../utils/url_helper.dart';
+
 class Book {
   final String id;
   final String title;
@@ -16,6 +18,9 @@ class Book {
   final String? coverUrl;
   final bool isPlaylist;
   final bool isEncrypted; // Added isEncrypted field
+
+  /// Returns the absolute cover URL with base URL prepended if needed
+  String get absoluteCoverUrl => ensureAbsoluteUrl(coverUrl);
 
   const Book({
     required this.id,

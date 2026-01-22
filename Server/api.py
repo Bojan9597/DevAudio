@@ -1110,8 +1110,11 @@ def get_books():
                 # Construct full Cover URL if relative
                 cover_path = row['cover_image_path']
                 if cover_path and not cover_path.startswith('http'):
-                     if not cover_path.startswith('static/'):
+                     if not cover_path.startswith('static/') and not cover_path.startswith('/static/'):
                          cover_path = f"static/BookCovers/{cover_path}"
+                     # Remove leading slash if present to avoid double slashes
+                     if cover_path.startswith('/'):
+                         cover_path = cover_path[1:]
                      cover_path = f"{BASE_URL}{cover_path}"
                 
                 # Calculate listen percentage if user_id is provided
@@ -1623,8 +1626,11 @@ def get_listen_history(user_id):
                 # Construct full Cover URL if relative
                 cover_path = book['cover_image_path']
                 if cover_path and not cover_path.startswith('http'):
-                     if not cover_path.startswith('static/'):
+                     if not cover_path.startswith('static/') and not cover_path.startswith('/static/'):
                          cover_path = f"static/BookCovers/{cover_path}"
+                     # Remove leading slash if present to avoid double slashes
+                     if cover_path.startswith('/'):
+                         cover_path = cover_path[1:]
                      cover_path = f"{BASE_URL}{cover_path}"
 
                 # Construct full Audio URL if relative
@@ -1988,8 +1994,11 @@ def get_my_uploads():
              # Construct full Cover URL if relative
              cover_path = row['cover_image_path']
              if cover_path and not cover_path.startswith('http'):
-                 if not cover_path.startswith('static/'):
+                 if not cover_path.startswith('static/') and not cover_path.startswith('/static/'):
                      cover_path = f"static/BookCovers/{cover_path}"
+                 # Remove leading slash if present to avoid double slashes
+                 if cover_path.startswith('/'):
+                     cover_path = cover_path[1:]
                  cover_path = f"{BASE_URL}{cover_path}"
 
              books.append({

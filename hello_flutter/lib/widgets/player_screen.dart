@@ -272,7 +272,7 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
       title: track['title'],
       author: widget.book.author,
       audioUrl: trackUrl,
-      coverUrl: widget.book.coverUrl,
+      coverUrl: widget.book.absoluteCoverUrl,
       categoryId: widget.book.categoryId,
       subcategoryIds: const [],
       postedBy: widget.book.postedBy,
@@ -465,8 +465,8 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
         title: _currentBook.title,
         artist: widget.book.author,
         artUri:
-            (widget.book.coverUrl != null && widget.book.coverUrl!.isNotEmpty)
-            ? Uri.parse(widget.book.coverUrl!)
+            (widget.book.absoluteCoverUrl != null && widget.book.absoluteCoverUrl!.isNotEmpty)
+            ? Uri.parse(widget.book.absoluteCoverUrl!)
             : null,
       );
 
@@ -937,7 +937,7 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
                         (_currentBook.coverUrl != null &&
                             _currentBook.coverUrl!.isNotEmpty)
                         ? Image.network(
-                            _currentBook.coverUrl!,
+                            _currentBook.absoluteCoverUrl,
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) => Icon(
                               Icons.music_note,

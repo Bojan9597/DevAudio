@@ -41,13 +41,10 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   bool _isAdmin = false;
   bool _hasAccess = false;
   bool _isCheckingAccess = true;
-  late VideoPlayerController _videoController;
-  late VideoPlayerController _completionVideoController; // New controller
+  late VideoPlayerController _completionVideoController;
   bool _isVideoInitialized = false;
   bool _isCompletionVideoInitialized = false;
   bool _showCompletionOverlay = false;
-  VoidCallback? _backgroundLoopListener;
-  bool _isSeeking = false;
 
   @override
   void initState() {
@@ -141,111 +138,20 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   }
 
   Future<void> _initVideoPlayer() async {
-    final String fileName = 'backgroundAudioBookPlaylist.mp4';
-    final videoUrl = '${ApiConstants.baseUrl}/static/Animations/$fileName';
-
-    try {
-      final directory = await getApplicationDocumentsDirectory();
-      final filePath = '${directory.path}/$fileName';
-      final file = File(filePath);
-
-      if (await file.exists()) {
-        _videoController = VideoPlayerController.file(file);
-      } else {
-        // If offline and no file, we can't play video.
-        if (ConnectivityService().isOffline) {
-          if (mounted) setState(() => _isVideoInitialized = false);
-          return;
-        }
-
-        try {
-          await Dio().download(videoUrl, filePath);
-          _videoController = VideoPlayerController.file(file);
-        } catch (e) {
-          print("Download bg video failed, fallback to network: $e");
-          _videoController = VideoPlayerController.networkUrl(
-            Uri.parse(videoUrl),
-          );
-        }
-      }
-
-      await _videoController.initialize();
-      await _videoController.setVolume(0.0); // Mute background video
-      await _videoController.play();
-
-      if (mounted) {
-        setState(() {
-          _isVideoInitialized = true;
-        });
-        _updateBackgroundLoop(false);
-      }
-    } catch (e) {
-      print("Error initializing video background: $e");
+    // Background.png is now used as a static image, so we don't need video initialization
+    // The image will be loaded directly in the build method
+    if (mounted) {
+      setState(() {
+        _isVideoInitialized = true; // Mark as "initialized" to show background
+      });
     }
   }
 
   Future<void> _updateBackgroundLoop(bool isBookCompleted) async {
-    if (!_isVideoInitialized) return;
-
-    if (_backgroundLoopListener != null) {
-      _videoController.removeListener(_backgroundLoopListener!);
-      _backgroundLoopListener = null;
-    }
-
-    if (!isBookCompleted) {
-      // Loop 0-2s
-      _backgroundLoopListener = () {
-        final position = _videoController.value.position;
-        if (!_isSeeking && position >= const Duration(seconds: 2)) {
-          _isSeeking = true;
-          _videoController.seekTo(Duration.zero).then((_) {
-            // Optional: Ensure it plays if it stopped?
-            // _videoController.play();
-            // Small delay to let position update reflect 0 safely?
-            Future.delayed(const Duration(milliseconds: 50), () {
-              if (mounted) _isSeeking = false;
-            });
-          });
-        }
-      };
-      _videoController.addListener(_backgroundLoopListener!);
-    } else {
-      // Logic when book is completed:
-      // 1. Seek to 2s (start of "completion" segment).
-      // 2. Play to End.
-      // 3. When playback finishes -> Trigger completion overlay sequence.
-
-      // Ensure specific start point BEFORE adding listener
-      await _videoController.seekTo(const Duration(seconds: 2));
-      await _videoController.play();
-
-      final duration = _videoController.value.duration;
-
-      // If video duration is very short or already at/past end, trigger immediately
-      if (duration.inMilliseconds > 0 && duration.inSeconds <= 2) {
-        // Video too short, trigger completion immediately
-        _playCompletionSequence();
-        return;
-      }
-
-      _backgroundLoopListener = () {
-        final pos = _videoController.value.position;
-        final dur = _videoController.value.duration;
-
-        // Check if video finished (with small buffer for timing)
-        if (dur.inMilliseconds > 0 &&
-            pos.inMilliseconds >= dur.inMilliseconds - 100) {
-          // Video finished
-          _playCompletionSequence();
-
-          if (_backgroundLoopListener != null) {
-            _videoController.removeListener(_backgroundLoopListener!);
-            _backgroundLoopListener = null;
-          }
-        }
-      };
-
-      _videoController.addListener(_backgroundLoopListener!);
+    // Since we're using a static background image, we don't need to manage video loops
+    // Just trigger completion sequence if book is completed
+    if (isBookCompleted) {
+      _playCompletionSequence();
     }
   }
 
@@ -261,7 +167,6 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
 
   @override
   void dispose() {
-    _videoController.dispose();
     _completionVideoController.dispose();
     super.dispose();
   }
@@ -510,9 +415,9 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
 
   Future<void> _downloadBackgroundAssets() async {
     if (ConnectivityService().isOffline) return;
-    final String fileName = 'backgroundAudioBookPlaylist.mp4';
-    final videoUrl = '${ApiConstants.baseUrl}/static/Animations/$fileName';
-    await DownloadService().downloadFile(videoUrl, fileName);
+    final String fileName = 'Background.png';
+    final imageUrl = '${ApiConstants.baseUrl}/static/Animations/$fileName';
+    await DownloadService().downloadFile(imageUrl, fileName);
   }
 
   void _playTrack(Map<String, dynamic> track, int index) async {
@@ -547,7 +452,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       title: trackTitle,
       author: widget.book.author,
       audioUrl: trackUrl,
-      coverUrl: widget.book.coverUrl,
+      coverUrl: widget.book.absoluteCoverUrl,
       categoryId: widget.book.categoryId,
       subcategoryIds: const [],
       postedBy: widget.book.postedBy,
@@ -648,24 +553,20 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       backgroundColor: const Color(0xFF121212),
       body: Stack(
         children: [
-          // Background Video
+          // Background Image
           if (_isVideoInitialized)
             SizedBox.expand(
-              child: FittedBox(
+              child: Image.network(
+                '${ApiConstants.baseUrl}/static/Animations/Background.png',
                 fit: BoxFit.cover,
-                child: SizedBox(
-                  width: _videoController.value.size.width,
-                  height: _videoController.value.size.height,
-                  child: SizedBox(
-                    width: _videoController.value.size.width,
-                    height: _videoController.value.size.height,
-                    child: VideoPlayer(_videoController),
-                  ),
+                alignment: Alignment.center,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: const Color(0xFF121212),
                 ),
               ),
             ),
 
-          // Overlay to darken video for readability
+          // Overlay to darken background for readability
           if (_isVideoInitialized)
             Container(color: Colors.black.withOpacity(0.6)),
 

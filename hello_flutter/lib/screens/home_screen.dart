@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/book.dart';
 import '../models/category.dart';
@@ -15,6 +16,8 @@ import '../services/subscription_service.dart';
 import 'package:hello_flutter/services/connectivity_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../l10n/generated/app_localizations.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:dio/dio.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -52,14 +55,48 @@ class _HomeScreenState extends State<HomeScreen> {
     '1768943401_20260120_192824 copy.jpg',
   ];
 
+  List<String> _localHeroImagePaths = [];
+
   @override
   void initState() {
     super.initState();
     _checkLoginStatus();
     _loadCategories();
     _loadBooks();
+    _downloadHeroImages();
     _scrollController.addListener(_onScroll);
     _searchController.addListener(_onSearchChanged);
+  }
+
+  Future<void> _downloadHeroImages() async {
+    final List<String> localPaths = [];
+    final directory = await getApplicationDocumentsDirectory();
+
+    for (final imageName in _heroImages) {
+      final filePath = '${directory.path}/homeImages_$imageName';
+      final file = File(filePath);
+
+      try {
+        if (await file.exists()) {
+          localPaths.add(filePath);
+        } else {
+          if (!ConnectivityService().isOffline) {
+            final imageUrl =
+                '${ApiConstants.baseUrl}/static/homeImages/$imageName';
+            await Dio().download(imageUrl, filePath);
+            localPaths.add(filePath);
+          }
+        }
+      } catch (e) {
+        print('Error downloading hero image $imageName: $e');
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _localHeroImagePaths = localPaths;
+      });
+    }
   }
 
   Future<void> _checkLoginStatus() async {
@@ -266,38 +303,34 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: Stack(
                                 alignment: Alignment.center,
                                 children: [
-                                  if (_heroImages.length >= 4) ...[
+                                  if (_localHeroImagePaths.length >= 4) ...[
                                     _buildTiltImage(
-                                      ApiConstants.baseUrl +
-                                          '/static/homeImages/' +
-                                          _heroImages[0],
+                                      _localHeroImagePaths[0],
                                       -15,
                                       -60,
                                       20,
+                                      true,
                                     ),
                                     _buildTiltImage(
-                                      ApiConstants.baseUrl +
-                                          '/static/homeImages/' +
-                                          _heroImages[1],
+                                      _localHeroImagePaths[1],
                                       -5,
                                       -20,
                                       10,
+                                      true,
                                     ),
                                     _buildTiltImage(
-                                      ApiConstants.baseUrl +
-                                          '/static/homeImages/' +
-                                          _heroImages[2],
+                                      _localHeroImagePaths[2],
                                       5,
                                       20,
                                       10,
+                                      true,
                                     ),
                                     _buildTiltImage(
-                                      ApiConstants.baseUrl +
-                                          '/static/homeImages/' +
-                                          _heroImages[3],
+                                      _localHeroImagePaths[3],
                                       15,
                                       60,
                                       20,
+                                      true,
                                     ),
                                   ],
                                 ],
@@ -509,10 +542,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: InkWell(
                               onTap: () => _openPlayer(book),
                               child:
-                                  (book.coverUrl != null &&
-                                      book.coverUrl!.isNotEmpty)
+                                  (book.absoluteCoverUrl != null &&
+                                      book.absoluteCoverUrl!.isNotEmpty)
                                   ? CachedNetworkImage(
-                                      imageUrl: book.coverUrl!,
+                                      imageUrl: book.absoluteCoverUrl!,
                                       fit: BoxFit.cover,
                                       width: double.infinity,
                                       height: double.infinity,
@@ -569,10 +602,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTiltImage(
-    String url,
+    String path,
     double angleDeg,
     double offsetX,
     double offsetY,
+    bool isLocal,
   ) {
     return Positioned(
       left: 0,
@@ -596,12 +630,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               clipBehavior: Clip.antiAlias,
-              child: CachedNetworkImage(
-                imageUrl: url,
-                fit: BoxFit.cover,
-                errorWidget: (context, url, error) =>
-                    Container(color: Colors.grey),
-              ),
+              child: isLocal
+                  ? Image.file(
+                      File(path),
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          Container(color: Colors.grey),
+                    )
+                  : CachedNetworkImage(
+                      imageUrl: path,
+                      fit: BoxFit.cover,
+                      errorWidget: (context, url, error) =>
+                          Container(color: Colors.grey),
+                    ),
             ),
           ),
         ),
@@ -621,9 +662,9 @@ class _HomeScreenState extends State<HomeScreen> {
           height: 50,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
-          child: (book.coverUrl != null && book.coverUrl!.isNotEmpty)
+          child: (book.absoluteCoverUrl != null && book.absoluteCoverUrl!.isNotEmpty)
               ? CachedNetworkImage(
-                  imageUrl: book.coverUrl!,
+                  imageUrl: book.absoluteCoverUrl!,
                   fit: BoxFit.cover,
                   errorWidget: (context, url, error) => Icon(
                     Icons.play_circle_fill,

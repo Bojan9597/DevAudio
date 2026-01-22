@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../utils/api_constants.dart';
 
 class LessonMapWidget extends StatelessWidget {
   final List<dynamic> tracks;
@@ -307,17 +308,16 @@ class _LessonNode extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 80,
+        width: 140,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             // Icon Container
             Container(
-              width: 60,
-              height: 60,
+              width: 120,
+              height: 120,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.black54,
                 boxShadow: [
                   BoxShadow(
                     color: (isCompleted || (isQuiz && !isLocked))
@@ -328,15 +328,35 @@ class _LessonNode extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Icon(
-                isQuiz
-                    ? (isLocked ? Icons.lock : Icons.quiz)
-                    : Icons.star_rounded,
-                size: 50,
-                color: isQuiz
-                    ? (isCompleted ? Colors.amber : Colors.grey)
-                    : (isCompleted ? Colors.amber : Colors.grey.shade700),
-              ),
+              child: isQuiz
+                  ? Icon(
+                      isLocked ? Icons.lock : Icons.quiz,
+                      size: 80,
+                      color: isCompleted ? Colors.amber : Colors.grey,
+                    )
+                  : ClipOval(
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Island background
+                          Image.network(
+                            '${ApiConstants.baseUrl}/static/Animations/island.jpg',
+                            width: 120,
+                            height: 120,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              color: Colors.black54,
+                            ),
+                          ),
+                          // Centered star icon (same size)
+                          Icon(
+                            Icons.star_rounded,
+                            size: 35,
+                            color: isCompleted ? Colors.amber : Colors.grey.shade700,
+                          ),
+                        ],
+                      ),
+                    ),
             ),
             const SizedBox(height: 8),
             // Title
