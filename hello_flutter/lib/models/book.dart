@@ -16,11 +16,15 @@ class Book {
   final double? price;
   final String? postedByUserId;
   final String? coverUrl;
+  final String? coverUrlThumbnail;
   final bool isPlaylist;
   final bool isEncrypted; // Added isEncrypted field
 
   /// Returns the absolute cover URL with base URL prepended if needed
   String get absoluteCoverUrl => ensureAbsoluteUrl(coverUrl);
+
+  /// Returns the absolute thumbnail URL with base URL prepended if needed
+  String get absoluteCoverUrlThumbnail => ensureAbsoluteUrl(coverUrlThumbnail ?? coverUrl);
 
   const Book({
     required this.id,
@@ -38,6 +42,7 @@ class Book {
     this.price,
     this.postedByUserId,
     this.coverUrl,
+    this.coverUrlThumbnail,
     this.isPlaylist = false,
     this.isEncrypted = false, // Added to constructor
   });
@@ -65,6 +70,7 @@ class Book {
       price: (json['price'] as num?)?.toDouble(),
       postedByUserId: json['postedByUserId'] as String?,
       coverUrl: json['coverUrl'] as String?,
+      coverUrlThumbnail: json['coverUrlThumbnail'] as String?,
       isPlaylist: json['isPlaylist'] as bool? ?? false,
       isEncrypted: json['isEncrypted'] as bool? ?? false, // Added to fromJson
     );
@@ -98,6 +104,7 @@ class Book {
       price: price ?? this.price,
       postedByUserId: postedByUserId ?? this.postedByUserId,
       coverUrl: coverUrl ?? this.coverUrl,
+      coverUrlThumbnail: coverUrlThumbnail,
       isEncrypted: isEncrypted ?? this.isEncrypted,
     );
   }

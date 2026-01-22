@@ -10,6 +10,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from database import Database
 from badge_service import BadgeService
 from mutagen import File as MutagenFile
+from image_utils import ensure_thumbnail_exists
 
 import re
 import datetime
@@ -1109,12 +1110,18 @@ def get_books():
 
                 # Construct full Cover URL if relative
                 cover_path = row['cover_image_path']
+                cover_thumbnail_path = None
                 if cover_path and not cover_path.startswith('http'):
                      if not cover_path.startswith('static/') and not cover_path.startswith('/static/'):
                          cover_path = f"static/BookCovers/{cover_path}"
                      # Remove leading slash if present to avoid double slashes
                      if cover_path.startswith('/'):
                          cover_path = cover_path[1:]
+
+                     # Generate thumbnail path
+                     thumbnail_relative = ensure_thumbnail_exists(cover_path, 'static')
+                     cover_thumbnail_path = f"{BASE_URL}{thumbnail_relative}"
+
                      cover_path = f"{BASE_URL}{cover_path}"
                 
                 # Calculate listen percentage if user_id is provided
@@ -1130,7 +1137,8 @@ def get_books():
                     "author": row['author'],
                     "audioUrl": audio_path,
                     "coverUrl": cover_path,
-                    "categoryId": row['category_slug'] or "", 
+                    "coverUrlThumbnail": cover_thumbnail_path,  # Thumbnail for list views
+                    "categoryId": row['category_slug'] or "",
                     "subcategoryIds": subcategory_ids,
                     "postedBy": row['posted_by_name'] or "Unknown",
                     "description": row['description'],
@@ -1288,7 +1296,7 @@ def complete_track():
                 book_quiz = db.execute_query(book_quiz_query, (book_id,))
 
                 book_quiz_passed = True
-                if book_quiz:
+                if book_quiz and len(book_quiz) > 0:
                     quiz_id = book_quiz[0]['id']
                     passed_query = """
                         SELECT is_passed FROM user_quiz_results
@@ -1306,7 +1314,7 @@ def complete_track():
                 track_quizzes = db.execute_query(track_quizzes_query, (book_id,))
 
                 all_track_quizzes_passed = True
-                if track_quizzes:
+                if track_quizzes and len(track_quizzes) > 0:
                     for tq in track_quizzes:
                         passed_query = """
                             SELECT is_passed FROM user_quiz_results
@@ -1625,12 +1633,18 @@ def get_listen_history(user_id):
                 
                 # Construct full Cover URL if relative
                 cover_path = book['cover_image_path']
+                cover_thumbnail_path = None
                 if cover_path and not cover_path.startswith('http'):
                      if not cover_path.startswith('static/') and not cover_path.startswith('/static/'):
                          cover_path = f"static/BookCovers/{cover_path}"
                      # Remove leading slash if present to avoid double slashes
                      if cover_path.startswith('/'):
                          cover_path = cover_path[1:]
+
+                     # Generate thumbnail path
+                     thumbnail_relative = ensure_thumbnail_exists(cover_path, 'static')
+                     cover_thumbnail_path = f"{BASE_URL}{thumbnail_relative}"
+
                      cover_path = f"{BASE_URL}{cover_path}"
 
                 # Construct full Audio URL if relative
@@ -1650,6 +1664,7 @@ def get_listen_history(user_id):
                     "author": book['author'],
                     "audioUrl": audio_path,
                     "coverUrl": cover_path,
+                    "coverUrlThumbnail": cover_thumbnail_path,
                     "categoryId": book['category_slug'] or "",
                     "lastPosition": int(total_listened_seconds),
                     "duration": total_duration,
@@ -1993,12 +2008,18 @@ def get_my_uploads():
 
              # Construct full Cover URL if relative
              cover_path = row['cover_image_path']
+             cover_thumbnail_path = None
              if cover_path and not cover_path.startswith('http'):
                  if not cover_path.startswith('static/') and not cover_path.startswith('/static/'):
                      cover_path = f"static/BookCovers/{cover_path}"
                  # Remove leading slash if present to avoid double slashes
                  if cover_path.startswith('/'):
                      cover_path = cover_path[1:]
+
+                 # Generate thumbnail path
+                 thumbnail_relative = ensure_thumbnail_exists(cover_path, 'static')
+                 cover_thumbnail_path = f"{BASE_URL}{thumbnail_relative}"
+
                  cover_path = f"{BASE_URL}{cover_path}"
 
              books.append({
@@ -2007,6 +2028,7 @@ def get_my_uploads():
                 "author": row['author'],
                 "audioUrl": audio_path,
                 "coverUrl": cover_path,
+                "coverUrlThumbnail": cover_thumbnail_path,
                 "categoryId": row['category_slug'] or "",
                 "description": row['description'],
                 "price": float(row['price']) if row['price'] else 0.0,
@@ -2091,7 +2113,7 @@ def save_quiz_result():
                 book_quiz = db.execute_query(book_quiz_query, (book_id,))
 
                 book_quiz_passed = True
-                if book_quiz:
+                if book_quiz and len(book_quiz) > 0:
                     bq_id = book_quiz[0]['id']
                     passed_query = """
                         SELECT is_passed FROM user_quiz_results
@@ -2109,7 +2131,7 @@ def save_quiz_result():
                 track_quizzes = db.execute_query(track_quizzes_query, (book_id,))
 
                 all_track_quizzes_passed = True
-                if track_quizzes:
+                if track_quizzes and len(track_quizzes) > 0:
                     for tq in track_quizzes:
                         passed_query = """
                             SELECT is_passed FROM user_quiz_results

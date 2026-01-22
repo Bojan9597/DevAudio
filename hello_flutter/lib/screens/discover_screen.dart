@@ -177,9 +177,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           height: 50,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
-          child: (book.absoluteCoverUrl != null && book.absoluteCoverUrl!.isNotEmpty)
+          child: (book.absoluteCoverUrlThumbnail != null && book.absoluteCoverUrlThumbnail!.isNotEmpty)
               ? Image.network(
-                  book.absoluteCoverUrl!,
+                  book.absoluteCoverUrlThumbnail!,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Icon(
                     Icons.play_circle_fill,

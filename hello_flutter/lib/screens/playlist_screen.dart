@@ -566,9 +566,9 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
               ),
             ),
 
-          // Overlay to darken background for readability
+          // Overlay to darken background for readability (reduced opacity)
           if (_isVideoInitialized)
-            Container(color: Colors.black.withOpacity(0.6)),
+            Container(color: Colors.black.withOpacity(0.3)),
 
           // Content
           _isLoading

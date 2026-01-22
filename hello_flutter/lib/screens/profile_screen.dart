@@ -690,7 +690,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: (book.coverUrl != null && book.coverUrl!.isNotEmpty)
                   ? Image.network(
-                      book.absoluteCoverUrl,
+                      book.absoluteCoverUrlThumbnail,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) => Icon(
                         Icons.play_circle_fill,

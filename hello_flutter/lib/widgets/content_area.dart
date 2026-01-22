@@ -542,9 +542,9 @@ class _ContentAreaState extends State<ContentArea> {
                   color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
                 ),
                 child: Center(
-                  child: (book.absoluteCoverUrl != null && book.absoluteCoverUrl!.isNotEmpty)
+                  child: (book.absoluteCoverUrlThumbnail != null && book.absoluteCoverUrlThumbnail!.isNotEmpty)
                       ? Image.network(
-                          book.absoluteCoverUrl!,
+                          book.absoluteCoverUrlThumbnail!,
                           fit: BoxFit.cover,
                           width: double.infinity,
                           height: double.infinity,
@@ -650,9 +650,9 @@ class _ContentAreaState extends State<ContentArea> {
             color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: (book.absoluteCoverUrl != null && book.absoluteCoverUrl!.isNotEmpty)
+          child: (book.absoluteCoverUrlThumbnail != null && book.absoluteCoverUrlThumbnail!.isNotEmpty)
               ? Image.network(
-                  book.absoluteCoverUrl!,
+                  book.absoluteCoverUrlThumbnail!,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Icon(
                     Icons.menu_book,
@@ -771,9 +771,9 @@ class _ContentAreaState extends State<ContentArea> {
             borderRadius: BorderRadius.circular(8),
             color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
           ),
-          child: (book.absoluteCoverUrl != null && book.absoluteCoverUrl!.isNotEmpty)
+          child: (book.absoluteCoverUrlThumbnail != null && book.absoluteCoverUrlThumbnail!.isNotEmpty)
               ? Image.network(
-                  book.absoluteCoverUrl!,
+                  book.absoluteCoverUrlThumbnail!,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Icon(
                     Icons.play_circle_fill,
@@ -875,9 +875,9 @@ class _ContentAreaState extends State<ContentArea> {
                   color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
                 ),
                 child: Center(
-                  child: (book.absoluteCoverUrl != null && book.absoluteCoverUrl!.isNotEmpty)
+                  child: (book.absoluteCoverUrlThumbnail != null && book.absoluteCoverUrlThumbnail!.isNotEmpty)
                       ? Image.network(
-                          book.absoluteCoverUrl!,
+                          book.absoluteCoverUrlThumbnail!,
                           fit: BoxFit.cover,
                           width: double.infinity,
                           height: double.infinity,
@@ -983,9 +983,9 @@ class _ContentAreaState extends State<ContentArea> {
             color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: (book.absoluteCoverUrl != null && book.absoluteCoverUrl!.isNotEmpty)
+          child: (book.absoluteCoverUrlThumbnail != null && book.absoluteCoverUrlThumbnail!.isNotEmpty)
               ? Image.network(
-                  book.absoluteCoverUrl!,
+                  book.absoluteCoverUrlThumbnail!,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Icon(
                     Icons.menu_book,

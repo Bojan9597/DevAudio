@@ -57,9 +57,9 @@ class LessonMapWidget extends StatelessWidget {
 
         for (int i = 0; i < itemCount; i++) {
           final double y = padding + i * itemHeight;
-          // 10% padding from left, 20% padding from right
+          // 10% padding from left, 30% padding from right
           final double leftPadding = width * 0.1;
-          final double rightPadding = width * 0.2;
+          final double rightPadding = width * 0.3;
           final double usableWidth = width - leftPadding - rightPadding;
           final double center = leftPadding + (usableWidth / 2);
           final double amplitude = min(usableWidth / 2, 100.0);

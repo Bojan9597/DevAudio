@@ -542,10 +542,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: InkWell(
                               onTap: () => _openPlayer(book),
                               child:
-                                  (book.absoluteCoverUrl != null &&
-                                      book.absoluteCoverUrl!.isNotEmpty)
+                                  (book.absoluteCoverUrlThumbnail != null &&
+                                      book.absoluteCoverUrlThumbnail!.isNotEmpty)
                                   ? CachedNetworkImage(
-                                      imageUrl: book.absoluteCoverUrl!,
+                                      imageUrl: book.absoluteCoverUrlThumbnail!,
                                       fit: BoxFit.cover,
                                       width: double.infinity,
                                       height: double.infinity,
@@ -662,9 +662,9 @@ class _HomeScreenState extends State<HomeScreen> {
           height: 50,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
-          child: (book.absoluteCoverUrl != null && book.absoluteCoverUrl!.isNotEmpty)
+          child: (book.absoluteCoverUrlThumbnail != null && book.absoluteCoverUrlThumbnail!.isNotEmpty)
               ? CachedNetworkImage(
-                  imageUrl: book.absoluteCoverUrl!,
+                  imageUrl: book.absoluteCoverUrlThumbnail!,
                   fit: BoxFit.cover,
                   errorWidget: (context, url, error) => Icon(
                     Icons.play_circle_fill,
