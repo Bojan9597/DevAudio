@@ -85,32 +85,67 @@ class _AppLayoutState extends State<AppLayout> {
                     tooltip: AppLocalizations.of(context)!.categories,
                   )
                 : null,
-            title: Text(
-              'DevAudio',
-              style: TextStyle(
-                color: Theme.of(context).appBarTheme.foregroundColor,
-                fontWeight: FontWeight.bold,
-              ),
+            titleSpacing: isOnDiscover ? 0 : null,
+            title: Row(
+              children: [
+                if (isOnDiscover)
+                  GestureDetector(
+                    onTap: () => globalLayoutState.toggleMenu(),
+                    child: Text(
+                      AppLocalizations.of(context)!.categories,
+                      style: TextStyle(
+                        color: Theme.of(context).appBarTheme.foregroundColor,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                if (!isOnDiscover)
+                  Text(
+                    'DevAudio',
+                    style: TextStyle(
+                      color: Theme.of(context).appBarTheme.foregroundColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+              ],
             ),
           ),
-          body: Stack(
-            children: [
-              // 1. Content Area (Background)
-              const Positioned.fill(child: ContentArea()),
+          body: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onHorizontalDragEnd: (details) {
+              if (details.primaryVelocity == null) return;
+              // Swipe right to open menu (only on Discover tab and menu is closed)
+              if (details.primaryVelocity! > 100 &&
+                  isOnDiscover &&
+                  globalLayoutState.isCollapsed) {
+                globalLayoutState.toggleMenu();
+              }
+              // Swipe left to close menu (menu is open)
+              else if (details.primaryVelocity! < -100 &&
+                  !globalLayoutState.isCollapsed) {
+                globalLayoutState.toggleMenu();
+              }
+            },
+            child: Stack(
+              children: [
+                // 1. Content Area (Background)
+                const Positioned.fill(child: ContentArea()),
 
-              // 2. Scrim (only when menu is open)
-              if (!globalLayoutState.isCollapsed)
-                Positioned.fill(
-                  child: GestureDetector(
-                    onTap: () => globalLayoutState.toggleMenu(),
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(color: Colors.black.withOpacity(0.5)),
+                // 2. Scrim (only when menu is open)
+                if (!globalLayoutState.isCollapsed)
+                  Positioned.fill(
+                    child: GestureDetector(
+                      onTap: () => globalLayoutState.toggleMenu(),
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(color: Colors.black.withOpacity(0.5)),
+                    ),
                   ),
-                ),
 
-              // 3. Side Menu
-              const Positioned(left: 0, top: 0, bottom: 0, child: SideMenu()),
-            ],
+                // 3. Side Menu
+                const Positioned(left: 0, top: 0, bottom: 0, child: SideMenu()),
+              ],
+            ),
           ),
           bottomNavigationBar: Column(
             mainAxisSize: MainAxisSize.min,

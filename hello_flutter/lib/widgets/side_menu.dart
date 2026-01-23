@@ -64,32 +64,42 @@ class _SideMenuState extends State<SideMenu> {
         // 0 width when collapsed, 60% when expanded
         final width = isCollapsed ? 0.0 : (screenWidth * 0.75);
 
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          width: width,
-          color: Theme.of(context).cardColor,
-          clipBehavior: Clip.hardEdge,
-          child: Column(
-            children: [
-              const SizedBox(height: 10),
-              // Dynamic Categories - Takes up available space
-              Expanded(
-                child: _isLoading
-                    ? Center(
-                        child: CircularProgressIndicator(
-                          color: Theme.of(context).colorScheme.onSurface,
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onHorizontalDragEnd: (details) {
+            // Swipe left to close
+            if (details.primaryVelocity != null &&
+                details.primaryVelocity! < -100) {
+              globalLayoutState.toggleMenu();
+            }
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            width: width,
+            color: Theme.of(context).cardColor,
+            clipBehavior: Clip.hardEdge,
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                // Dynamic Categories - Takes up available space
+                Expanded(
+                  child: _isLoading
+                      ? Center(
+                          child: CircularProgressIndicator(
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        )
+                      : ListView(
+                          padding: EdgeInsets.zero,
+                          children: _categories
+                              .map((c) => _buildCategoryItem(c, 0, isCollapsed))
+                              .toList(),
                         ),
-                      )
-                    : ListView(
-                        padding: EdgeInsets.zero,
-                        children: _categories
-                            .map((c) => _buildCategoryItem(c, 0, isCollapsed))
-                            .toList(),
-                      ),
-              ),
-              Divider(color: Theme.of(context).dividerColor),
-              const SizedBox(height: 20),
-            ],
+                ),
+                Divider(color: Theme.of(context).dividerColor),
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         );
       },
