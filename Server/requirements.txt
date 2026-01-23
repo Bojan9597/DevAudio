@@ -5,3 +5,4 @@ werkzeug
 mutagen>=1.47.0
 PyJWT==2.8.0
 python-dotenv==1.0.1
+cryptography>=41.0.0

@@ -2548,6 +2548,10 @@ def admin_set_subscription():
     finally:
         db.disconnect()
 
+# Register new encryption endpoints (v2)
+from api_encryption_endpoints import register_encryption_endpoints
+register_encryption_endpoints(app)
+
 if __name__ == '__main__':
     # Run on 0.0.0.0 to be accessible, port 5000
     app.run(host='0.0.0.0', port=5000, debug=True)
