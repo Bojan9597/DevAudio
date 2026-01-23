@@ -5,6 +5,7 @@ import 'upload_book_screen.dart';
 import '../states/layout_state.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../main.dart'; // For audioHandler
+import '../widgets/support_dialog.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -184,6 +185,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       }
                     },
                   ),
+
+                // Contact Support - Available for all users
+                ListTile(
+                  leading: const Icon(Icons.support_agent, color: Colors.blue),
+                  title: const Text('Contact Support'),
+                  subtitle: const Text('Send us a message'),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => const SupportDialog(),
+                    );
+                  },
+                ),
 
                 const Divider(),
                 const SizedBox(height: 40),

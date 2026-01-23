@@ -2548,6 +2548,68 @@ def admin_set_subscription():
     finally:
         db.disconnect()
 
+# Support/Contact Email endpoint
+@app.route('/send-support-email', methods=['POST'])
+@jwt_required
+def send_support_email_endpoint():
+    """Send support/contact message via email"""
+    user_id = getattr(request, 'user_id', None)
+    if not user_id:
+        return jsonify({"error": "Authentication required"}), 401
+
+    db = Database()
+    try:
+        data = request.get_json()
+        message = data.get('message', '').strip()
+
+        if not message:
+            return jsonify({"error": "Message cannot be empty"}), 400
+
+        if len(message) > 5000:
+            return jsonify({"error": "Message too long (max 5000 characters)"}), 400
+
+        # Get user info
+        user_query = "SELECT name, email FROM users WHERE id = %s"
+        user_result = db.execute_query(user_query, (user_id,))
+
+        if not user_result:
+            return jsonify({"error": "User not found"}), 404
+
+        user_name = user_result[0]['name'] or 'Unknown User'
+        user_email = user_result[0]['email']
+
+        # Check if user is admin
+        is_admin = is_admin_user(user_id, db)
+
+        # Send email
+        from email_service import send_support_email
+        success, error = send_support_email(
+            user_name=user_name,
+            user_email=user_email,
+            user_id=user_id,
+            message=message,
+            is_admin=is_admin
+        )
+
+        if success:
+            return jsonify({
+                "message": "Email sent successfully",
+                "success": True
+            }), 200
+        else:
+            print(f"Email send failed: {error}")
+            return jsonify({
+                "error": "Failed to send email",
+                "details": error,
+                "success": False
+            }), 500
+
+    except Exception as e:
+        print(f"Error in send_support_email: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
+
 # Register new encryption endpoints (v2)
 from api_encryption_endpoints import register_encryption_endpoints
 register_encryption_endpoints(app)
