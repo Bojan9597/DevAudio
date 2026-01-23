@@ -1159,6 +1159,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Frameworks (React, Vue, Angular)'**
   String get catFrameworks;
+
+  /// No description provided for @browseByCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse audiobooks by category'**
+  String get browseByCategory;
+
+  /// No description provided for @noCategoriesFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No categories found'**
+  String get noCategoriesFound;
 }
 
 class _AppLocalizationsDelegate

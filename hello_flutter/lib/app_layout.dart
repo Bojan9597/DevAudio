@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'widgets/side_menu.dart';
 import 'widgets/content_area.dart';
 import 'widgets/mini_player.dart';
+import 'widgets/side_menu.dart';
 import 'states/layout_state.dart';
 import 'l10n/generated/app_localizations.dart';
 
@@ -55,20 +55,36 @@ class _AppLayoutState extends State<AppLayout> {
         // Map category ID to index for BottomNavigationBar
         int _selectedIndex = 0;
         final catId = globalLayoutState.selectedCategoryId;
-        if (catId == 'home')
+        final isOnDiscover =
+            catId == 'categories' ||
+            (catId != 'home' && catId != 'library' && catId != 'profile');
+
+        if (catId == 'categories')
+          _selectedIndex = 0;
+        else if (catId == 'home')
           _selectedIndex = 1;
         else if (catId == 'library')
           _selectedIndex = 2;
-        else if (catId == 'discover')
-          _selectedIndex = 3;
         else if (catId == 'profile')
-          _selectedIndex = 4;
-        // Index 0 is "Categories" (Menu)
+          _selectedIndex = 3;
+        else
+          _selectedIndex = 0; // Any category selection goes to Discover tab
+        // Index 0 is "Discover" (categories)
 
         return Scaffold(
           appBar: AppBar(
-            automaticallyImplyLeading: false, // We use the bottom tab for menu
+            automaticallyImplyLeading: false,
             backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+            leading: isOnDiscover
+                ? IconButton(
+                    icon: Icon(
+                      globalLayoutState.isCollapsed ? Icons.menu : Icons.close,
+                      color: Theme.of(context).appBarTheme.foregroundColor,
+                    ),
+                    onPressed: () => globalLayoutState.toggleMenu(),
+                    tooltip: AppLocalizations.of(context)!.categories,
+                  )
+                : null,
             title: Text(
               'DevAudio',
               style: TextStyle(
@@ -82,7 +98,7 @@ class _AppLayoutState extends State<AppLayout> {
               // 1. Content Area (Background)
               const Positioned.fill(child: ContentArea()),
 
-              // 2. Scrim
+              // 2. Scrim (only when menu is open)
               if (!globalLayoutState.isCollapsed)
                 Positioned.fill(
                   child: GestureDetector(
@@ -109,14 +125,9 @@ class _AppLayoutState extends State<AppLayout> {
                 selectedItemColor: Theme.of(context).colorScheme.primary,
                 unselectedItemColor: Colors.grey,
                 onTap: (index) {
-                  // Auto-close menu when switching to any tab (except menu toggle)
-                  if (index != 0 && !globalLayoutState.isCollapsed) {
-                    globalLayoutState.toggleMenu();
-                  }
-
                   switch (index) {
                     case 0:
-                      globalLayoutState.toggleMenu();
+                      globalLayoutState.setCategoryId('categories');
                       break;
                     case 1:
                       globalLayoutState.setCategoryId('home');
@@ -125,17 +136,14 @@ class _AppLayoutState extends State<AppLayout> {
                       globalLayoutState.setCategoryId('library');
                       break;
                     case 3:
-                      globalLayoutState.setCategoryId('discover');
-                      break;
-                    case 4:
                       globalLayoutState.setCategoryId('profile');
                       break;
                   }
                 },
                 items: [
                   BottomNavigationBarItem(
-                    icon: const Icon(Icons.menu),
-                    label: AppLocalizations.of(context)!.categories,
+                    icon: const Icon(Icons.explore),
+                    label: AppLocalizations.of(context)!.discover,
                   ),
                   BottomNavigationBarItem(
                     icon: const Icon(Icons.home),
@@ -144,10 +152,6 @@ class _AppLayoutState extends State<AppLayout> {
                   BottomNavigationBarItem(
                     icon: const Icon(Icons.library_books),
                     label: AppLocalizations.of(context)!.library,
-                  ),
-                  BottomNavigationBarItem(
-                    icon: const Icon(Icons.explore),
-                    label: AppLocalizations.of(context)!.discover,
                   ),
                   BottomNavigationBarItem(
                     icon: const Icon(Icons.person),

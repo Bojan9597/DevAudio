@@ -295,5 +295,8 @@
   "catJavaScript": "JavaScript",
   "catBrowserAndDOM": "Browser & DOM",
   "catNodeJs": "Node.js",
-  "catFrameworks": "Frameworks (React, Vue, Angular)"
+  "catFrameworks": "Frameworks (React, Vue, Angular)",
+
+  "browseByCategory": "Browse audiobooks by category",
+  "noCategoriesFound": "No categories found"
 }

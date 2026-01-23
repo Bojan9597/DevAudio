@@ -574,4 +574,10 @@ class AppLocalizationsSr extends AppLocalizations {
 
   @override
   String get catFrameworks => 'Radni okviri (React, Vue, Angular)';
+
+  @override
+  String get browseByCategory => 'Browse audiobooks by category';
+
+  @override
+  String get noCategoriesFound => 'No categories found';
 }

@@ -576,4 +576,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get catFrameworks => 'Frameworks (React, Vue, Angular)';
+
+  @override
+  String get browseByCategory => 'Browse audiobooks by category';
+
+  @override
+  String get noCategoriesFound => 'No categories found';
 }
