@@ -5,6 +5,7 @@ import '../repositories/book_repository.dart';
 import '../theme/app_theme.dart';
 import 'playlist_screen.dart';
 import '../l10n/generated/app_localizations.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class DiscoverScreen extends StatefulWidget {
   const DiscoverScreen({Key? key}) : super(key: key);
@@ -23,7 +24,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   bool _isLoading = false;
   bool _hasMore = true;
   int _currentPage = 1;
-  final int _limit = 5;
+  final int _limit = 10;
+  bool _isGridView = true;
 
   @override
   void initState() {
@@ -104,79 +106,170 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Determine theme colors (reusing styles from LoginScreen logic broadly)
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final Color textColor = isDark ? Colors.white : Colors.black87;
     final Color cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.discover),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: Column(
-        children: [
-          // Search Bar
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: AppLocalizations.of(context)!.searchByTitle,
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: isDark ? Colors.grey[800] : Colors.grey[200],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide.none,
+    return Column(
+      children: [
+        // Search Bar + View Toggle
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: AppLocalizations.of(context)!.searchByTitle,
+                    prefixIcon: const Icon(Icons.search),
+                    filled: true,
+                    fillColor: isDark ? Colors.grey[800] : Colors.grey[200],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: Icon(_isGridView ? Icons.view_list : Icons.grid_view),
+                onPressed: () => setState(() => _isGridView = !_isGridView),
+                tooltip: _isGridView
+                    ? AppLocalizations.of(context)!.switchToList
+                    : AppLocalizations.of(context)!.switchToGrid,
+              ),
+            ],
           ),
+        ),
 
-          // List
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _resetAndLoad,
-              child: _books.isEmpty && !_isLoading
-                  ? ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.5,
-                          child: Center(
-                            child: Text(
-                              AppLocalizations.of(context)!.noBooksFound,
-                              style: TextStyle(
-                                color: textColor.withOpacity(0.7),
-                              ),
-                            ),
+        // Books Grid/List
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _resetAndLoad,
+            child: _books.isEmpty && !_isLoading
+                ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.5,
+                        child: Center(
+                          child: Text(
+                            AppLocalizations.of(context)!.noBooksFound,
+                            style: TextStyle(color: textColor.withOpacity(0.7)),
                           ),
                         ),
-                      ],
-                    )
-                  : ListView.builder(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      controller: _scrollController,
-                      itemCount: _books.length + (_isLoading ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index == _books.length) {
-                          return const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(16.0),
-                              child: CircularProgressIndicator(),
-                            ),
-                          );
-                        }
+                      ),
+                    ],
+                  )
+                : _isGridView
+                ? _buildGridView(cardColor, textColor)
+                : _buildListView(cardColor, textColor),
+          ),
+        ),
+      ],
+    );
+  }
 
-                        final book = _books[index];
-                        return _buildBookItem(book, cardColor, textColor);
-                      },
+  Widget _buildGridView(Color cardColor, Color textColor) {
+    return GridView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
+      controller: _scrollController,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.7,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: _books.length + (_isLoading ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index == _books.length) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return _buildBookCard(_books[index], cardColor, textColor);
+      },
+    );
+  }
+
+  Widget _buildListView(Color cardColor, Color textColor) {
+    return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
+      controller: _scrollController,
+      itemCount: _books.length + (_isLoading ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index == _books.length) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+        return _buildBookItem(_books[index], cardColor, textColor);
+      },
+    );
+  }
+
+  Widget _buildBookCard(Book book, Color cardColor, Color textColor) {
+    return Card(
+      color: cardColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => _openPlayer(book),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child:
+                  (book.absoluteCoverUrlThumbnail != null &&
+                      book.absoluteCoverUrlThumbnail!.isNotEmpty)
+                  ? CachedNetworkImage(
+                      imageUrl: book.absoluteCoverUrlThumbnail!,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      errorWidget: (context, url, error) => Container(
+                        color: textColor.withOpacity(0.1),
+                        child: Icon(Icons.book, size: 40, color: textColor),
+                      ),
+                    )
+                  : Container(
+                      color: textColor.withOpacity(0.1),
+                      child: Center(
+                        child: Icon(Icons.book, size: 40, color: textColor),
+                      ),
                     ),
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    book.title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    book.author,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: textColor.withOpacity(0.7),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

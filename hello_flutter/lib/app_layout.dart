@@ -125,6 +125,11 @@ class _AppLayoutState extends State<AppLayout> {
                 selectedItemColor: Theme.of(context).colorScheme.primary,
                 unselectedItemColor: Colors.grey,
                 onTap: (index) {
+                  // Auto-close menu when switching to tabs other than Discover
+                  if (index != 0 && !globalLayoutState.isCollapsed) {
+                    globalLayoutState.toggleMenu();
+                  }
+
                   switch (index) {
                     case 0:
                       globalLayoutState.setCategoryId('categories');

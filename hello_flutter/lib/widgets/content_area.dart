@@ -14,7 +14,6 @@ import '../screens/discover_screen.dart';
 import '../screens/upload_book_screen.dart';
 import '../screens/playlist_screen.dart';
 import '../screens/home_screen.dart';
-import '../screens/categories_screen.dart';
 
 class ContentArea extends StatefulWidget {
   const ContentArea({super.key});
@@ -148,8 +147,8 @@ class _ContentAreaState extends State<ContentArea> {
           return const HomeScreen();
         }
 
-        if (categoryId == 'categories') {
-          return const CategoriesScreen();
+        if (categoryId == 'categories' || categoryId == 'discover') {
+          return const DiscoverScreen();
         }
 
         if (categoryId == 'profile') {
@@ -158,10 +157,6 @@ class _ContentAreaState extends State<ContentArea> {
 
         if (_isLoading) {
           return const Center(child: CircularProgressIndicator());
-        }
-
-        if (categoryId == 'discover') {
-          return const DiscoverScreen();
         }
 
         if (categoryId == 'library') {
@@ -216,39 +211,69 @@ class _ContentAreaState extends State<ContentArea> {
           onRefresh: _loadBooks,
           child: Container(
             color: Theme.of(context).scaffoldBackgroundColor,
-            padding: const EdgeInsets.all(20),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        AppLocalizations.of(
-                          context,
-                        )!.booksInCategory(_getCategoryTitle(categoryId)),
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
+                // Search bar at top
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          decoration: InputDecoration(
+                            hintText: AppLocalizations.of(
+                              context,
+                            )!.searchByTitle,
+                            prefixIcon: const Icon(Icons.search),
+                            filled: true,
+                            fillColor:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? Colors.grey[800]
+                                : Colors.grey[200],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(30),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                          onChanged: (value) {
+                            // TODO: Implement local search filtering
+                          },
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        globalLayoutState.isGridView
-                            ? Icons.view_list
-                            : Icons.grid_view,
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: Icon(
+                          globalLayoutState.isGridView
+                              ? Icons.view_list
+                              : Icons.grid_view,
+                        ),
+                        onPressed: () => globalLayoutState.toggleViewMode(),
+                        tooltip: globalLayoutState.isGridView
+                            ? AppLocalizations.of(context)!.switchToList
+                            : AppLocalizations.of(context)!.switchToGrid,
                       ),
-                      onPressed: () => globalLayoutState.toggleViewMode(),
-                      tooltip: globalLayoutState.isGridView
-                          ? AppLocalizations.of(context)!.switchToList
-                          : AppLocalizations.of(context)!.switchToGrid,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 20),
+                // Title
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      AppLocalizations.of(
+                        context,
+                      )!.booksInCategory(_getCategoryTitle(categoryId)),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Book grid/list
                 Expanded(child: _buildBookGridOrList(filteredBooks)),
               ],
             ),
