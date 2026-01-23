@@ -184,7 +184,9 @@ class _ContentAreaState extends State<ContentArea> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  AppLocalizations.of(context)!.noBooksFoundInCategory(_getCategoryTitle(categoryId)),
+                  AppLocalizations.of(
+                    context,
+                  )!.noBooksFoundInCategory(_getCategoryTitle(categoryId)),
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 18,
@@ -206,7 +208,9 @@ class _ContentAreaState extends State<ContentArea> {
                 children: [
                   Expanded(
                     child: Text(
-                      AppLocalizations.of(context)!.booksInCategory(_getCategoryTitle(categoryId)),
+                      AppLocalizations.of(
+                        context,
+                      )!.booksInCategory(_getCategoryTitle(categoryId)),
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -292,7 +296,11 @@ class _ContentAreaState extends State<ContentArea> {
         icon: const Icon(Icons.menu_book),
         text: AppLocalizations.of(context)!.myBooks,
       ),
-      if (_isAdmin) Tab(icon: const Icon(Icons.cloud_upload), text: AppLocalizations.of(context)!.uploaded),
+      if (_isAdmin)
+        Tab(
+          icon: const Icon(Icons.cloud_upload),
+          text: AppLocalizations.of(context)!.uploaded,
+        ),
     ];
 
     // Build tab views - only include Uploaded view for admin
@@ -306,7 +314,9 @@ class _ContentAreaState extends State<ContentArea> {
         Stack(
           children: [
             _uploadedBooks.isEmpty
-                ? Center(child: Text(AppLocalizations.of(context)!.noUploadedBooks))
+                ? Center(
+                    child: Text(AppLocalizations.of(context)!.noUploadedBooks),
+                  )
                 : Padding(
                     padding: const EdgeInsets.only(
                       top: 16.0,
@@ -479,9 +489,10 @@ class _ContentAreaState extends State<ContentArea> {
     final downloadService = DownloadService();
     final downloadedBooks = <Book>[];
     for (final book in books) {
-      // Check if playlist is downloaded for this book
+      // Check if playlist is downloaded for this book (using current userId)
       final isPlaylistDownloaded = await downloadService.isPlaylistDownloaded(
         book.id,
+        userId: _userId,
       );
       // Also check if book itself is downloaded
       final isBookDownloaded = await downloadService.isBookDownloaded(book.id);
@@ -542,7 +553,9 @@ class _ContentAreaState extends State<ContentArea> {
                   color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
                 ),
                 child: Center(
-                  child: (book.absoluteCoverUrlThumbnail != null && book.absoluteCoverUrlThumbnail!.isNotEmpty)
+                  child:
+                      (book.absoluteCoverUrlThumbnail != null &&
+                          book.absoluteCoverUrlThumbnail!.isNotEmpty)
                       ? Image.network(
                           book.absoluteCoverUrlThumbnail!,
                           fit: BoxFit.cover,
@@ -650,7 +663,9 @@ class _ContentAreaState extends State<ContentArea> {
             color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: (book.absoluteCoverUrlThumbnail != null && book.absoluteCoverUrlThumbnail!.isNotEmpty)
+          child:
+              (book.absoluteCoverUrlThumbnail != null &&
+                  book.absoluteCoverUrlThumbnail!.isNotEmpty)
               ? Image.network(
                   book.absoluteCoverUrlThumbnail!,
                   fit: BoxFit.cover,
@@ -694,7 +709,11 @@ class _ContentAreaState extends State<ContentArea> {
   Future<void> _toggleFavorite(Book book) async {
     if (_userId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.pleaseLoginToUseFavorites)),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.pleaseLoginToUseFavorites,
+          ),
+        ),
       );
       return;
     }
@@ -724,7 +743,9 @@ class _ContentAreaState extends State<ContentArea> {
           );
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.failedToUpdateFavorite)),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.failedToUpdateFavorite),
+          ),
         );
       }
     }
@@ -771,7 +792,9 @@ class _ContentAreaState extends State<ContentArea> {
             borderRadius: BorderRadius.circular(8),
             color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
           ),
-          child: (book.absoluteCoverUrlThumbnail != null && book.absoluteCoverUrlThumbnail!.isNotEmpty)
+          child:
+              (book.absoluteCoverUrlThumbnail != null &&
+                  book.absoluteCoverUrlThumbnail!.isNotEmpty)
               ? Image.network(
                   book.absoluteCoverUrlThumbnail!,
                   fit: BoxFit.cover,
@@ -875,7 +898,9 @@ class _ContentAreaState extends State<ContentArea> {
                   color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
                 ),
                 child: Center(
-                  child: (book.absoluteCoverUrlThumbnail != null && book.absoluteCoverUrlThumbnail!.isNotEmpty)
+                  child:
+                      (book.absoluteCoverUrlThumbnail != null &&
+                          book.absoluteCoverUrlThumbnail!.isNotEmpty)
                       ? Image.network(
                           book.absoluteCoverUrlThumbnail!,
                           fit: BoxFit.cover,
@@ -983,7 +1008,9 @@ class _ContentAreaState extends State<ContentArea> {
             color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: (book.absoluteCoverUrlThumbnail != null && book.absoluteCoverUrlThumbnail!.isNotEmpty)
+          child:
+              (book.absoluteCoverUrlThumbnail != null &&
+                  book.absoluteCoverUrlThumbnail!.isNotEmpty)
               ? Image.network(
                   book.absoluteCoverUrlThumbnail!,
                   fit: BoxFit.cover,

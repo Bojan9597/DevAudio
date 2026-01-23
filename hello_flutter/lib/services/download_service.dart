@@ -7,6 +7,7 @@ import 'package:encrypt/encrypt.dart' as enc;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_service.dart';
+import 'connectivity_service.dart';
 
 class DownloadService {
   final Dio _dio = Dio();
@@ -41,7 +42,9 @@ class DownloadService {
     final oldEncPath = '$basePath/$fileKey.enc';
     final oldEncFile = File(oldEncPath);
     if (await oldEncFile.exists()) {
-      print('[DownloadService] Found legacy .enc file, will be re-downloaded: $oldEncPath');
+      print(
+        '[DownloadService] Found legacy .enc file, will be re-downloaded: $oldEncPath',
+      );
       await oldEncFile.delete();
     }
 
@@ -57,7 +60,9 @@ class DownloadService {
   Future<void> downloadBook(String fileKey, String url) async {
     // If download already in progress, wait for it
     if (_activeDownloads.containsKey(fileKey)) {
-      print('[DownloadService] Download already in progress for $fileKey, waiting...');
+      print(
+        '[DownloadService] Download already in progress for $fileKey, waiting...',
+      );
       await _activeDownloads[fileKey];
       return;
     }
@@ -104,11 +109,7 @@ class DownloadService {
       await _dio.download(
         encryptedUrl,
         tempPath,
-        options: Options(
-          headers: {
-            'Authorization': 'Bearer $token',
-          },
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
         onReceiveProgress: (received, total) {
           if (total > 0) {
             final progress = (received / total * 100).toStringAsFixed(1);
@@ -124,7 +125,9 @@ class DownloadService {
       }
 
       final encryptedBytes = await tempFile.readAsBytes();
-      print('[DownloadService] Downloaded encrypted size: ${encryptedBytes.length} bytes');
+      print(
+        '[DownloadService] Downloaded encrypted size: ${encryptedBytes.length} bytes',
+      );
 
       if (encryptedBytes.length <= 16) {
         await tempFile.delete();
@@ -146,7 +149,9 @@ class DownloadService {
 
       // Verify final file
       final finalSize = await outputFile.length();
-      print('[DownloadService] Download complete. Final file size: $finalSize bytes');
+      print(
+        '[DownloadService] Download complete. Final file size: $finalSize bytes',
+      );
 
       if (finalSize == 0) {
         await outputFile.delete();
@@ -175,7 +180,9 @@ class DownloadService {
   List<int> _decryptAudio(Uint8List encryptedBytes, String keyString) {
     // Extract IV (first 16 bytes) and ciphertext
     final iv = enc.IV(Uint8List.fromList(encryptedBytes.sublist(0, 16)));
-    final ciphertext = enc.Encrypted(Uint8List.fromList(encryptedBytes.sublist(16)));
+    final ciphertext = enc.Encrypted(
+      Uint8List.fromList(encryptedBytes.sublist(16)),
+    );
 
     // Create key from base64 string
     final key = enc.Key.fromBase64(keyString);
@@ -214,32 +221,88 @@ class DownloadService {
     }
   }
 
-  /// Get the encryption key for decrypting local files
   Future<String?> getEncryptionKey() async {
     return await AuthService().getEncryptionKey();
+  }
+
+  Future<void> registerServerDownload(String bookId) async {
+    if (ConnectivityService().isOffline) return;
+
+    final authService = AuthService();
+    final userId = await authService.getCurrentUserId();
+    if (userId == null) return;
+
+    try {
+      final uri = Uri.parse('${authService.baseUrl}/register-download');
+      final token = await authService.getAccessToken();
+
+      await _dio.post(
+        uri.toString(),
+        data: {'user_id': userId, 'book_id': int.tryParse(bookId)},
+        options: Options(
+          headers: {if (token != null) 'Authorization': 'Bearer $token'},
+        ),
+      );
+      print('[DownloadService] Registered download on server for book $bookId');
+    } catch (e) {
+      print('Failed to register download on server: $e');
+    }
   }
 
   // --- Playlist Metadata Management ---
 
   Future<void> savePlaylistJson(
     String bookId,
-    Map<String, dynamic> data,
-  ) async {
+    Map<String, dynamic> data, {
+    int? userId,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('offline_playlist_json_$bookId', json.encode(data));
+    // Use user-specific key if userId is provided, otherwise legacy/fallback
+    final key = userId != null
+        ? 'offline_playlist_json_${userId}_$bookId'
+        : 'offline_playlist_json_$bookId';
+    await prefs.setString(key, json.encode(data));
   }
 
-  Future<Map<String, dynamic>?> getPlaylistJson(String bookId) async {
+  Future<Map<String, dynamic>?> getPlaylistJson(
+    String bookId, {
+    int? userId,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
-    final String? data = prefs.getString('offline_playlist_json_$bookId');
+
+    // Try user specific key first
+    String? key;
+    if (userId != null) {
+      key = 'offline_playlist_json_${userId}_$bookId';
+    }
+
+    String? data;
+    if (key != null) {
+      data = prefs.getString(key);
+    }
+
+    // Fallback to legacy key if not found
+    if (data == null) {
+      data = prefs.getString('offline_playlist_json_$bookId');
+    }
+
     if (data != null) {
       return json.decode(data);
     }
     return null;
   }
 
-  Future<bool> isPlaylistDownloaded(String bookId) async {
+  Future<bool> isPlaylistDownloaded(String bookId, {int? userId}) async {
     final prefs = await SharedPreferences.getInstance();
+
+    // Check user specific key
+    if (userId != null) {
+      if (prefs.containsKey('offline_playlist_json_${userId}_$bookId')) {
+        return true;
+      }
+    }
+
+    // Fallback to legacy key
     return prefs.containsKey('offline_playlist_json_$bookId');
   }
 
@@ -249,24 +312,39 @@ class DownloadService {
     String bookId,
     List<dynamic> data, {
     int? playlistItemId,
+    int? userId,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    final key = playlistItemId != null
-        ? 'offline_quiz_json_${bookId}_$playlistItemId'
-        : 'offline_quiz_json_$bookId';
+    final suffix = playlistItemId != null ? '_$playlistItemId' : '';
+
+    final key = userId != null
+        ? 'offline_quiz_json_${userId}_$bookId$suffix'
+        : 'offline_quiz_json_$bookId$suffix';
+
     await prefs.setString(key, json.encode(data));
   }
 
   Future<List<dynamic>?> getQuizJson(
     String bookId, {
     int? playlistItemId,
+    int? userId,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    final key = playlistItemId != null
-        ? 'offline_quiz_json_${bookId}_$playlistItemId'
-        : 'offline_quiz_json_$bookId';
+    final suffix = playlistItemId != null ? '_$playlistItemId' : '';
 
-    final String? data = prefs.getString(key);
+    // Try user specific key
+    String? data;
+    if (userId != null) {
+      final key = 'offline_quiz_json_${userId}_$bookId$suffix';
+      data = prefs.getString(key);
+    }
+
+    // Fallback
+    if (data == null) {
+      final key = 'offline_quiz_json_$bookId$suffix';
+      data = prefs.getString(key);
+    }
+
     if (data != null) {
       return json.decode(data);
     }

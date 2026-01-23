@@ -919,7 +919,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   image: DecorationImage(
                     image: CachedNetworkImageProvider(
                       ApiConstants.baseUrl +
-                          '/static/homeImages/mockup_cover.jpg',
+                          '/static/homeImages/thumbnails/fire.jpg',
                     ),
                     fit: BoxFit.cover,
                   ),

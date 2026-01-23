@@ -119,8 +119,16 @@ class AuthService {
 
     await _googleSignIn.signOut();
 
-    // Clear all shared preferences (tokens, user data, AND caches like books/categories)
-    await prefs.clear();
+    // Clear shared preferences mainly, but PRESERVE offline data
+    final keys = prefs.getKeys();
+    for (final key in keys) {
+      // Keep offline data (downloads/metadata)
+      if (key.startsWith('offline_')) continue;
+
+      // Remove everything else (tokens, user cache, etc.)
+      await prefs.remove(key);
+    }
+
     await _storage.delete(key: _encryptionKeyStorageKey);
   }
 
