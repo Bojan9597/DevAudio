@@ -264,165 +264,177 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // Main Content
             Expanded(
-              child: CustomScrollView(
-                controller: _scrollController,
-                slivers: [
-                  // Hero Section (Only show if not searching)
-                  if (_searchController.text.isEmpty)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
-                        child: Column(
-                          children: [
-                            Text(
-                              AppLocalizations.of(
-                                context,
-                              )!.getYourImaginationGoing,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                color: textColor,
+              child: RefreshIndicator(
+                onRefresh: _resetAndLoad,
+                child: CustomScrollView(
+                  controller: _scrollController,
+                  slivers: [
+                    // Hero Section (Only show if not searching)
+                    if (_searchController.text.isEmpty)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
+                          child: Column(
+                            children: [
+                              Text(
+                                AppLocalizations.of(
+                                  context,
+                                )!.getYourImaginationGoing,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: textColor,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              AppLocalizations.of(context)!.homeHeroDescription,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: textColor.withOpacity(0.8),
-                                height: 1.4,
+                              const SizedBox(height: 12),
+                              Text(
+                                AppLocalizations.of(
+                                  context,
+                                )!.homeHeroDescription,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: textColor.withOpacity(0.8),
+                                  height: 1.4,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 20),
+                              const SizedBox(height: 20),
 
-                            // Dynamic Button and Text
-                            _buildSubscriptionCTA(textColor),
+                              // Dynamic Button and Text
+                              _buildSubscriptionCTA(textColor),
 
-                            const SizedBox(height: 30),
+                              const SizedBox(height: 30),
 
-                            // 2x2 Image Grid
-                            if (_localHeroImagePaths.length >= 4)
-                              _buildHeroImageGrid()
-                            else
-                              const SizedBox(height: 200),
+                              // 2x2 Image Grid
+                              if (_localHeroImagePaths.length >= 4)
+                                _buildHeroImageGrid()
+                              else
+                                const SizedBox(height: 200),
 
-                            const SizedBox(height: 50),
+                              const SizedBox(height: 50),
 
-                            // Feature Highlights
-                            _buildFeatureItem(
-                              context,
-                              Icons.all_inclusive,
-                              AppLocalizations.of(context)!.unlimitedAccess,
-                              AppLocalizations.of(
+                              // Feature Highlights
+                              _buildFeatureItem(
                                 context,
-                              )!.unlimitedAccessDescription,
-                            ),
-                            _buildFeatureItem(
-                              context,
-                              Icons.download_for_offline,
-                              AppLocalizations.of(context)!.listenOffline,
-                              AppLocalizations.of(
+                                Icons.all_inclusive,
+                                AppLocalizations.of(context)!.unlimitedAccess,
+                                AppLocalizations.of(
+                                  context,
+                                )!.unlimitedAccessDescription,
+                              ),
+                              _buildFeatureItem(
                                 context,
-                              )!.listenOfflineDescription,
-                            ),
-                            _buildFeatureItem(
-                              context,
-                              Icons.quiz,
-                              AppLocalizations.of(context)!.interactiveQuizzes,
-                              AppLocalizations.of(
+                                Icons.download_for_offline,
+                                AppLocalizations.of(context)!.listenOffline,
+                                AppLocalizations.of(
+                                  context,
+                                )!.listenOfflineDescription,
+                              ),
+                              _buildFeatureItem(
                                 context,
-                              )!.interactiveQuizzesDescription,
-                            ),
+                                Icons.quiz,
+                                AppLocalizations.of(
+                                  context,
+                                )!.interactiveQuizzes,
+                                AppLocalizations.of(
+                                  context,
+                                )!.interactiveQuizzesDescription,
+                              ),
 
-                            const SizedBox(height: 30),
-                            // Secondary CTA
-                            _buildSubscriptionCTA(textColor),
-                            const SizedBox(height: 20),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                  // New Sections (Replaces Categories & Book List when not searching)
-                  if (_searchController.text.isEmpty) ...[
-                    // Player Feature Carousel
-                    SliverToBoxAdapter(
-                      child: _buildPlayerFeatureSlider(textColor),
-                    ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 30)),
-
-                    _buildSectionHeader(
-                      AppLocalizations.of(context)!.newReleases,
-                      textColor,
-                    ),
-                    _buildHorizontalBookList(cardColor, textColor),
-
-                    const SliverToBoxAdapter(child: SizedBox(height: 20)),
-
-                    _buildSectionHeader(
-                      AppLocalizations.of(context)!.topPicks,
-                      textColor,
-                    ),
-                    _buildHorizontalBookList(
-                      cardColor,
-                      textColor,
-                      reversed: true,
-                    ), // Simulate different content
-
-                    const SliverToBoxAdapter(child: SizedBox(height: 40)),
-                  ],
-
-                  // Search Results (Only when searching)
-                  if (_searchController.text.isNotEmpty) ...[
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16.0,
-                          vertical: 8.0,
-                        ),
-                        child: Text(
-                          AppLocalizations.of(context)!.searchResults,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: textColor,
+                              const SizedBox(height: 30),
+                              // Secondary CTA
+                              _buildSubscriptionCTA(textColor),
+                              const SizedBox(height: 20),
+                            ],
                           ),
                         ),
                       ),
-                    ),
-                    if (_books.isEmpty && !_isLoading)
-                      SliverFillRemaining(
-                        child: Center(
+
+                    // New Sections (Replaces Categories & Book List when not searching)
+                    if (_searchController.text.isEmpty) ...[
+                      // Player Feature Carousel
+                      SliverToBoxAdapter(
+                        child: _buildPlayerFeatureSlider(textColor),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 30)),
+
+                      _buildSectionHeader(
+                        AppLocalizations.of(context)!.newReleases,
+                        textColor,
+                      ),
+                      _buildHorizontalBookList(cardColor, textColor),
+
+                      const SliverToBoxAdapter(child: SizedBox(height: 20)),
+
+                      _buildSectionHeader(
+                        AppLocalizations.of(context)!.topPicks,
+                        textColor,
+                      ),
+                      _buildHorizontalBookList(
+                        cardColor,
+                        textColor,
+                        reversed: true,
+                      ), // Simulate different content
+
+                      const SliverToBoxAdapter(child: SizedBox(height: 40)),
+                    ],
+
+                    // Search Results (Only when searching)
+                    if (_searchController.text.isNotEmpty) ...[
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0,
+                            vertical: 8.0,
+                          ),
                           child: Text(
-                            AppLocalizations.of(context)!.noBooksFound,
-                            style: TextStyle(color: textColor.withOpacity(0.7)),
+                            AppLocalizations.of(context)!.searchResults,
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                            ),
                           ),
                         ),
-                      )
-                    else
-                      SliverList(
-                        delegate: SliverChildBuilderDelegate((context, index) {
-                          if (index == _books.length) {
-                            return _isLoading
-                                ? const Center(
-                                    child: Padding(
-                                      padding: EdgeInsets.all(16),
-                                      child: CircularProgressIndicator(),
-                                    ),
-                                  )
-                                : const SizedBox.shrink();
-                          }
-                          return _buildBookItem(
-                            _books[index],
-                            cardColor,
-                            textColor,
-                          );
-                        }, childCount: _books.length + (_isLoading ? 1 : 0)),
                       ),
+                      if (_books.isEmpty && !_isLoading)
+                        SliverFillRemaining(
+                          child: Center(
+                            child: Text(
+                              AppLocalizations.of(context)!.noBooksFound,
+                              style: TextStyle(
+                                color: textColor.withOpacity(0.7),
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        SliverList(
+                          delegate: SliverChildBuilderDelegate((
+                            context,
+                            index,
+                          ) {
+                            if (index == _books.length) {
+                              return _isLoading
+                                  ? const Center(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(16),
+                                        child: CircularProgressIndicator(),
+                                      ),
+                                    )
+                                  : const SizedBox.shrink();
+                            }
+                            return _buildBookItem(
+                              _books[index],
+                              cardColor,
+                              textColor,
+                            );
+                          }, childCount: _books.length + (_isLoading ? 1 : 0)),
+                        ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ],

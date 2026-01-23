@@ -85,9 +85,13 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.errorLoadingBooks(e.toString()))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.errorLoadingBooks(e.toString()),
+            ),
+          ),
+        );
       }
     }
   }
@@ -133,30 +137,44 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
           // List
           Expanded(
-            child: _books.isEmpty && !_isLoading
-                ? Center(
-                    child: Text(
-                      AppLocalizations.of(context)!.noBooksFound,
-                      style: TextStyle(color: textColor.withOpacity(0.7)),
-                    ),
-                  )
-                : ListView.builder(
-                    controller: _scrollController,
-                    itemCount: _books.length + (_isLoading ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index == _books.length) {
-                        return const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: CircularProgressIndicator(),
+            child: RefreshIndicator(
+              onRefresh: _resetAndLoad,
+              child: _books.isEmpty && !_isLoading
+                  ? ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.5,
+                          child: Center(
+                            child: Text(
+                              AppLocalizations.of(context)!.noBooksFound,
+                              style: TextStyle(
+                                color: textColor.withOpacity(0.7),
+                              ),
+                            ),
                           ),
-                        );
-                      }
+                        ),
+                      ],
+                    )
+                  : ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      controller: _scrollController,
+                      itemCount: _books.length + (_isLoading ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == _books.length) {
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
+                        }
 
-                      final book = _books[index];
-                      return _buildBookItem(book, cardColor, textColor);
-                    },
-                  ),
+                        final book = _books[index];
+                        return _buildBookItem(book, cardColor, textColor);
+                      },
+                    ),
+            ),
           ),
         ],
       ),
@@ -177,7 +195,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           height: 50,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
-          child: (book.absoluteCoverUrlThumbnail != null && book.absoluteCoverUrlThumbnail!.isNotEmpty)
+          child:
+              (book.absoluteCoverUrlThumbnail != null &&
+                  book.absoluteCoverUrlThumbnail!.isNotEmpty)
               ? Image.network(
                   book.absoluteCoverUrlThumbnail!,
                   fit: BoxFit.cover,
@@ -215,7 +235,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  AppLocalizations.of(context)!.postedBy(book.postedBy ?? "Unknown"),
+                  AppLocalizations.of(
+                    context,
+                  )!.postedBy(book.postedBy ?? "Unknown"),
                   style: TextStyle(
                     color: AppTheme.orangeColor,
                     fontSize: 12,

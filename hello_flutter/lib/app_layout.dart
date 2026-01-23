@@ -26,7 +26,9 @@ class _AppLayoutState extends State<AppLayout> {
     ) {
       if (!mounted) return;
 
-      final message = isOffline ? AppLocalizations.of(context)!.enteringOfflineMode : AppLocalizations.of(context)!.backOnline;
+      final message = isOffline
+          ? AppLocalizations.of(context)!.enteringOfflineMode
+          : AppLocalizations.of(context)!.backOnline;
       final color = isOffline ? Colors.redAccent : Colors.green;
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -107,6 +109,11 @@ class _AppLayoutState extends State<AppLayout> {
                 selectedItemColor: Theme.of(context).colorScheme.primary,
                 unselectedItemColor: Colors.grey,
                 onTap: (index) {
+                  // Auto-close menu when switching to any tab (except menu toggle)
+                  if (index != 0 && !globalLayoutState.isCollapsed) {
+                    globalLayoutState.toggleMenu();
+                  }
+
                   switch (index) {
                     case 0:
                       globalLayoutState.toggleMenu();

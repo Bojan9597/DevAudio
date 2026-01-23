@@ -77,7 +77,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           }
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(AppLocalizations.of(context)!.subscriptionActivated),
+              content: Text(
+                AppLocalizations.of(context)!.subscriptionActivated,
+              ),
               backgroundColor: Colors.green,
             ),
           );
@@ -261,11 +263,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                _buildDetailRow(AppLocalizations.of(context)!.planType, sub.planDisplayName),
+                _buildDetailRow(
+                  AppLocalizations.of(context)!.planType,
+                  sub.planDisplayName,
+                ),
                 _buildDetailRow(
                   AppLocalizations.of(context)!.status,
                   sub.isActive
-                      ? (sub.autoRenew ? AppLocalizations.of(context)!.active : AppLocalizations.of(context)!.expiringSoon)
+                      ? (sub.autoRenew
+                            ? AppLocalizations.of(context)!.active
+                            : AppLocalizations.of(context)!.expiringSoon)
                       : AppLocalizations.of(context)!.expired,
                 ),
                 if (sub.startDate != null)
@@ -278,7 +285,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     AppLocalizations.of(context)!.expires,
                     _formatSubscriptionDate(sub.endDate!),
                   ),
-                _buildDetailRow(AppLocalizations.of(context)!.autoRenew, sub.autoRenew ? AppLocalizations.of(context)!.on : AppLocalizations.of(context)!.off),
+                _buildDetailRow(
+                  AppLocalizations.of(context)!.autoRenew,
+                  sub.autoRenew
+                      ? AppLocalizations.of(context)!.on
+                      : AppLocalizations.of(context)!.off,
+                ),
 
                 const SizedBox(height: 24),
 
@@ -294,7 +306,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         backgroundColor: Colors.red.shade100,
                         foregroundColor: Colors.red,
                       ),
-                      child: Text(AppLocalizations.of(context)!.cancelAutoRenewal),
+                      child: Text(
+                        AppLocalizations.of(context)!.cancelAutoRenewal,
+                      ),
                     ),
                   ),
               ],
@@ -564,8 +578,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   const SizedBox(width: 6),
                                   Text(
                                     _subscription!.endDate != null
-                                        ? AppLocalizations.of(context)!.premiumUntil(_formatSubscriptionDate(_subscription!.endDate!))
-                                        : AppLocalizations.of(context)!.lifetimePremium,
+                                        ? AppLocalizations.of(
+                                            context,
+                                          )!.premiumUntil(
+                                            _formatSubscriptionDate(
+                                              _subscription!.endDate!,
+                                            ),
+                                          )
+                                        : AppLocalizations.of(
+                                            context,
+                                          )!.lifetimePremium,
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
@@ -640,9 +662,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ).colorScheme.onSurface.withOpacity(0.6),
               indicatorColor: Theme.of(context).colorScheme.primary,
               tabs: [
-                Tab(icon: const Icon(Icons.history), text: AppLocalizations.of(context)!.listenHistory),
-                Tab(icon: const Icon(Icons.bar_chart), text: AppLocalizations.of(context)!.stats),
-                Tab(icon: const Icon(Icons.emoji_events), text: AppLocalizations.of(context)!.badges),
+                Tab(
+                  icon: const Icon(Icons.history),
+                  text: AppLocalizations.of(context)!.listenHistory,
+                ),
+                Tab(
+                  icon: const Icon(Icons.bar_chart),
+                  text: AppLocalizations.of(context)!.stats,
+                ),
+                Tab(
+                  icon: const Icon(Icons.emoji_events),
+                  text: AppLocalizations.of(context)!.badges,
+                ),
               ],
             ),
           ),
@@ -664,53 +695,70 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildHistoryTab() {
     if (_history.isEmpty) {
-      return Center(child: Text(AppLocalizations.of(context)!.noListeningHistory));
-    }
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _history.length,
-      itemBuilder: (context, index) {
-        final book = _history[index];
-        final position = book.lastPosition ?? 0;
-        final duration = book.durationSeconds ?? 1; // avoid zero div
-        final percent = (position / duration * 100)
-            .clamp(0, 100)
-            .toStringAsFixed(0);
-
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: ListTile(
-            leading: Container(
-              width: 50,
-              height: 50,
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+      return RefreshIndicator(
+        onRefresh: _loadHistory,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.4,
+              child: Center(
+                child: Text(AppLocalizations.of(context)!.noListeningHistory),
               ),
-              child: (book.coverUrl != null && book.coverUrl!.isNotEmpty)
-                  ? Image.network(
-                      book.absoluteCoverUrlThumbnail,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Icon(
+            ),
+          ],
+        ),
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: _loadHistory,
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        itemCount: _history.length,
+        itemBuilder: (context, index) {
+          final book = _history[index];
+          final position = book.lastPosition ?? 0;
+          final duration = book.durationSeconds ?? 1; // avoid zero div
+          final percent = (position / duration * 100)
+              .clamp(0, 100)
+              .toStringAsFixed(0);
+
+          return Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: ListTile(
+              leading: Container(
+                width: 50,
+                height: 50,
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                ),
+                child: (book.coverUrl != null && book.coverUrl!.isNotEmpty)
+                    ? Image.network(
+                        book.absoluteCoverUrlThumbnail,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Icon(
+                          Icons.play_circle_fill,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      )
+                    : Icon(
                         Icons.play_circle_fill,
                         color: Theme.of(context).colorScheme.primary,
                       ),
-                    )
-                  : Icon(
-                      Icons.play_circle_fill,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+              ),
+              title: Text(book.title),
+              subtitle: Text(
+                'Last listened: ${book.lastAccessed?.toString().split('.')[0] ?? '?'}\nProgress: ${_formatDuration(position)} / ${_formatDuration(duration)}',
+              ),
+              trailing: Text('$percent%'),
+              onTap: () => _openBookWithSubscriptionCheck(book),
             ),
-            title: Text(book.title),
-            subtitle: Text(
-              'Last listened: ${book.lastAccessed?.toString().split('.')[0] ?? '?'}\nProgress: ${_formatDuration(position)} / ${_formatDuration(duration)}',
-            ),
-            trailing: Text('$percent%'),
-            onTap: () => _openBookWithSubscriptionCheck(book),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -728,24 +776,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final totalSeconds = _stats['total_listening_time_seconds'] as int? ?? 0;
     final totalBooks = _stats['books_completed'] as int? ?? 0;
 
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+    return RefreshIndicator(
+      onRefresh: _loadStats,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         children: [
-          const Icon(Icons.bar_chart, size: 80, color: Colors.grey),
-          const SizedBox(height: 16),
-          Text(
-            AppLocalizations.of(context)!.listeningStats,
-            style: const TextStyle(fontSize: 20, color: Colors.grey),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            AppLocalizations.of(context)!.totalTime(_formatDuration(totalSeconds)),
-            style: const TextStyle(fontSize: 18),
-          ),
-          Text(
-            AppLocalizations.of(context)!.booksCompleted(totalBooks),
-            style: const TextStyle(fontSize: 18),
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.5,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.bar_chart, size: 80, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  Text(
+                    AppLocalizations.of(context)!.listeningStats,
+                    style: const TextStyle(fontSize: 20, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    AppLocalizations.of(
+                      context,
+                    )!.totalTime(_formatDuration(totalSeconds)),
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                  Text(
+                    AppLocalizations.of(context)!.booksCompleted(totalBooks),
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -754,62 +815,79 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildAchievementsTab() {
     if (_badges.isEmpty) {
-      return Center(child: Text(AppLocalizations.of(context)!.noBadgesYet));
+      return RefreshIndicator(
+        onRefresh: _loadBadges,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.4,
+              child: Center(
+                child: Text(AppLocalizations.of(context)!.noBadgesYet),
+              ),
+            ),
+          ],
+        ),
+      );
     }
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
-        childAspectRatio: 0.8,
-      ),
-      itemCount: _badges.length,
-      itemBuilder: (context, index) {
-        final badge = _badges[index];
-        final isEarned = badge.isEarned;
+    return RefreshIndicator(
+      onRefresh: _loadBadges,
+      child: GridView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 16,
+          childAspectRatio: 0.8,
+        ),
+        itemCount: _badges.length,
+        itemBuilder: (context, index) {
+          final badge = _badges[index];
+          final isEarned = badge.isEarned;
 
-        return InkWell(
-          onTap: () => _showBadgeDetails(badge),
-          borderRadius: BorderRadius.circular(8),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircleAvatar(
-                radius: 30,
-                backgroundColor: isEarned
-                    ? Colors.amber
-                    : Theme.of(context).disabledColor,
-                child: Icon(
-                  Icons.emoji_events,
-                  color: isEarned
-                      ? Colors.white
-                      : Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.5),
-                  size: 30,
+          return InkWell(
+            onTap: () => _showBadgeDetails(badge),
+            borderRadius: BorderRadius.circular(8),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircleAvatar(
+                  radius: 30,
+                  backgroundColor: isEarned
+                      ? Colors.amber
+                      : Theme.of(context).disabledColor,
+                  child: Icon(
+                    Icons.emoji_events,
+                    color: isEarned
+                        ? Colors.white
+                        : Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.5),
+                    size: 30,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                badge.name,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isEarned ? FontWeight.bold : FontWeight.normal,
-                  color: isEarned
-                      ? Theme.of(context).colorScheme.onSurface
-                      : Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.5),
+                const SizedBox(height: 8),
+                Text(
+                  badge.name,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isEarned ? FontWeight.bold : FontWeight.normal,
+                    color: isEarned
+                        ? Theme.of(context).colorScheme.onSurface
+                        : Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.5),
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        );
-      },
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 

@@ -171,25 +171,35 @@ class _ContentAreaState extends State<ContentArea> {
         );
 
         if (filteredBooks.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+          return RefreshIndicator(
+            onRefresh: _loadBooks,
+            child: ListView(
               children: [
-                Icon(
-                  Icons.book_outlined,
-                  size: 60,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withOpacity(0.5),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  AppLocalizations.of(
-                    context,
-                  )!.noBooksFoundInCategory(_getCategoryTitle(categoryId)),
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: 18,
+                SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.5,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.book_outlined,
+                          size: 60,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.5),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          AppLocalizations.of(context)!.noBooksFoundInCategory(
+                            _getCategoryTitle(categoryId),
+                          ),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -197,43 +207,46 @@ class _ContentAreaState extends State<ContentArea> {
           );
         }
 
-        return Container(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      AppLocalizations.of(
-                        context,
-                      )!.booksInCategory(_getCategoryTitle(categoryId)),
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+        return RefreshIndicator(
+          onRefresh: _loadBooks,
+          child: Container(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        AppLocalizations.of(
+                          context,
+                        )!.booksInCategory(_getCategoryTitle(categoryId)),
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  IconButton(
-                    icon: Icon(
-                      globalLayoutState.isGridView
-                          ? Icons.view_list
-                          : Icons.grid_view,
+                    IconButton(
+                      icon: Icon(
+                        globalLayoutState.isGridView
+                            ? Icons.view_list
+                            : Icons.grid_view,
+                      ),
+                      onPressed: () => globalLayoutState.toggleViewMode(),
+                      tooltip: globalLayoutState.isGridView
+                          ? AppLocalizations.of(context)!.switchToList
+                          : AppLocalizations.of(context)!.switchToGrid,
                     ),
-                    onPressed: () => globalLayoutState.toggleViewMode(),
-                    tooltip: globalLayoutState.isGridView
-                        ? AppLocalizations.of(context)!.switchToList
-                        : AppLocalizations.of(context)!.switchToGrid,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Expanded(child: _buildBookGridOrList(filteredBooks)),
-            ],
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Expanded(child: _buildBookGridOrList(filteredBooks)),
+              ],
+            ),
           ),
         );
       },
