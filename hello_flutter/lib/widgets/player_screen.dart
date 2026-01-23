@@ -44,7 +44,8 @@ class PlayerScreen extends StatefulWidget {
   State<PlayerScreen> createState() => _PlayerScreenState();
 }
 
-class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver {
+class _PlayerScreenState extends State<PlayerScreen>
+    with WidgetsBindingObserver {
   // Use global audio handler
   AudioPlayer get _player => audioHandler.player;
   late Book _currentBook;
@@ -104,7 +105,8 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
   bool _isDownloading = false;
   String? _lastError; // Track last error to avoid duplicate messages
   bool _isInitializingPlayer = false; // Prevent concurrent player init
-  bool _isHandlingCompletion = false; // Prevent double-handling of track completion
+  bool _isHandlingCompletion =
+      false; // Prevent double-handling of track completion
 
   final GlobalKey _speedButtonKey = GlobalKey();
   final GlobalKey _moreButtonKey = GlobalKey();
@@ -138,7 +140,9 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
 
         // Mark track as completed in backend
         if (_userId != null && completedTrackId != null) {
-          BookRepository().completeTrack(_userId!, completedTrackId).then((newBadges) {
+          BookRepository().completeTrack(_userId!, completedTrackId).then((
+            newBadges,
+          ) {
             if (mounted && newBadges.isNotEmpty) {
               for (var badge in newBadges) {
                 BadgeDialog.show(context, badge);
@@ -155,10 +159,14 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
         bool hasQuiz = false;
         bool isPassed = false;
 
-        if (widget.playlist != null && widget.trackQuizzes != null && completedTrackId != null) {
+        if (widget.playlist != null &&
+            widget.trackQuizzes != null &&
+            completedTrackId != null) {
           if (widget.trackQuizzes!.containsKey(completedTrackId)) {
-            hasQuiz = widget.trackQuizzes![completedTrackId]['has_quiz'] ?? false;
-            isPassed = widget.trackQuizzes![completedTrackId]['is_passed'] ?? false;
+            hasQuiz =
+                widget.trackQuizzes![completedTrackId]['has_quiz'] ?? false;
+            isPassed =
+                widget.trackQuizzes![completedTrackId]['is_passed'] ?? false;
           }
         }
 
@@ -453,7 +461,9 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
           audioHandler.currentIndex == _currentIndex &&
           _player.processingState != ProcessingState.idle) {
         // Same track is already loaded, don't reload
-        print("[DEBUG][PlayerScreen] Same track already loaded, skipping reload");
+        print(
+          "[DEBUG][PlayerScreen] Same track already loaded, skipping reload",
+        );
         _isInitializingPlayer = false;
         return;
       }
@@ -465,7 +475,8 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
         title: _currentBook.title,
         artist: widget.book.author,
         artUri:
-            (widget.book.absoluteCoverUrl != null && widget.book.absoluteCoverUrl!.isNotEmpty)
+            (widget.book.absoluteCoverUrl != null &&
+                widget.book.absoluteCoverUrl!.isNotEmpty)
             ? Uri.parse(widget.book.absoluteCoverUrl!)
             : null,
       );
@@ -483,9 +494,7 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
 
       final authService = AuthService();
 
-      print(
-        "[DEBUG][PlayerScreen] isDownloaded=$isDownloaded, url=$url",
-      );
+      print("[DEBUG][PlayerScreen] isDownloaded=$isDownloaded, url=$url");
 
       // Always use encryption - get the key
       final key = await authService.getEncryptionKey();
@@ -687,13 +696,13 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
     final RenderBox overlay =
         Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
     // Calculate position to spawn menu right above the button
-    // Offsetting by ~110px (approx menu height) to align bottom of menu with top of button
+    // Offsetting by ~55px (approx single item menu height) to align bottom of menu with top of button
     final buttonRect =
         button.localToGlobal(Offset.zero, ancestor: overlay) & button.size;
     final RelativeRect position = RelativeRect.fromRect(
       Rect.fromLTWH(
         buttonRect.left,
-        buttonRect.top - 110, // Shift up by approx menu height
+        buttonRect.top - 65, // Shift up by approx menu height
         buttonRect.width,
         buttonRect.height,
       ),
@@ -704,16 +713,6 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
       context: context,
       position: position,
       items: [
-        const PopupMenuItem(
-          value: 'download',
-          child: Row(
-            children: [
-              Icon(Icons.download, color: Colors.black54),
-              SizedBox(width: 8),
-              Text('Download'),
-            ],
-          ),
-        ),
         const PopupMenuItem(
           value: 'details',
           child: Row(
@@ -728,20 +727,7 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
       elevation: 8.0,
     );
 
-    if (selectedValue == 'download') {
-      final isDownloaded = await DownloadService().isBookDownloaded(
-        widget.book.id,
-      );
-      if (isDownloaded) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Book is already downloaded.')),
-          );
-        }
-      } else {
-        _downloadBook();
-      }
-    } else if (selectedValue == 'details') {
+    if (selectedValue == 'details') {
       _showBookDetailsDialog();
     }
   }
@@ -1103,13 +1089,18 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
                               onTap: () async {
                                 if (_isPurchased) {
                                   // Check if player has audio loaded
-                                  if (_player.processingState == ProcessingState.idle) {
+                                  if (_player.processingState ==
+                                      ProcessingState.idle) {
                                     // No audio loaded - try to initialize
                                     final storageId = _getUniqueAudioId();
                                     final downloadService = DownloadService();
-                                    final isDownloaded = await downloadService.isBookDownloaded(storageId);
+                                    final isDownloaded = await downloadService
+                                        .isBookDownloaded(storageId);
 
-                                    if (!isDownloaded && !downloadService.isDownloadInProgress(storageId)) {
+                                    if (!isDownloaded &&
+                                        !downloadService.isDownloadInProgress(
+                                          storageId,
+                                        )) {
                                       // Not downloaded and not downloading - start download
                                       if (!_isDownloading) {
                                         _showDownloadingMessage();
