@@ -1111,18 +1111,38 @@ def get_books():
                 # Construct full Cover URL if relative
                 cover_path = row['cover_image_path']
                 cover_thumbnail_path = None
-                if cover_path and not cover_path.startswith('http'):
-                     if not cover_path.startswith('static/') and not cover_path.startswith('/static/'):
-                         cover_path = f"static/BookCovers/{cover_path}"
-                     # Remove leading slash if present to avoid double slashes
-                     if cover_path.startswith('/'):
-                         cover_path = cover_path[1:]
+                if cover_path:
+                    if cover_path.startswith('http'):
+                        # Cover is already an absolute URL - extract filename and create thumbnail URL
+                        import os
+                        server_dir = os.path.dirname(os.path.abspath(__file__))
+                        filename = os.path.basename(cover_path.split('?')[0])  # Remove query params
+                        # Check if thumbnail exists
+                        thumbnail_local = os.path.join(server_dir, 'static', 'BookCovers', 'thumbnails', filename)
+                        if os.path.exists(thumbnail_local):
+                            cover_thumbnail_path = f"{BASE_URL}static/BookCovers/thumbnails/{filename}"
+                        else:
+                            # Try to create thumbnail from original
+                            source_path = os.path.join(server_dir, 'static', 'BookCovers', filename)
+                            if os.path.exists(source_path):
+                                ensure_thumbnail_exists(f"BookCovers/{filename}", os.path.join(server_dir, 'static'))
+                                cover_thumbnail_path = f"{BASE_URL}static/BookCovers/thumbnails/{filename}"
+                            else:
+                                # Can't create thumbnail, use original
+                                cover_thumbnail_path = cover_path
+                    else:
+                        if not cover_path.startswith('static/') and not cover_path.startswith('/static/'):
+                            cover_path = f"static/BookCovers/{cover_path}"
+                        # Remove leading slash if present to avoid double slashes
+                        if cover_path.startswith('/'):
+                            cover_path = cover_path[1:]
 
-                     # Generate thumbnail path
-                     thumbnail_relative = ensure_thumbnail_exists(cover_path, 'static')
-                     cover_thumbnail_path = f"{BASE_URL}{thumbnail_relative}"
+                        # Generate thumbnail path
+                        server_dir = os.path.dirname(os.path.abspath(__file__))
+                        thumbnail_relative = ensure_thumbnail_exists(cover_path, os.path.join(server_dir, 'static'))
+                        cover_thumbnail_path = f"{BASE_URL}{thumbnail_relative}"
 
-                     cover_path = f"{BASE_URL}{cover_path}"
+                        cover_path = f"{BASE_URL}{cover_path}"
                 
                 # Calculate listen percentage if user_id is provided
                 percentage = None
@@ -1468,6 +1488,32 @@ def update_progress():
     finally:
         db.disconnect()
 
+@app.route('/register-download', methods=['POST'])
+def register_download():
+    data = request.json
+    user_id = data.get('user_id')
+    book_id = data.get('book_id')
+
+    if not user_id or not book_id:
+        return jsonify({'error': 'Missing user_id or book_id'}), 400
+
+    db = Database()
+    try:
+        # Insert or update timestamp
+        # Using ON DUPLICATE KEY UPDATE to refresh timestamp on re-download
+        query = """
+        INSERT INTO user_downloads (user_id, book_id, downloaded_at)
+        VALUES (%s, %s, CURRENT_TIMESTAMP)
+        ON DUPLICATE KEY UPDATE downloaded_at = CURRENT_TIMESTAMP
+        """
+        db.execute_query(query, (user_id, book_id))
+        return jsonify({'success': True, 'message': 'Download registered'}), 200
+    except Exception as e:
+        print(f"Error registering download: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.disconnect()
+
 @app.route('/user-stats/<int:user_id>', methods=['GET'])
 @jwt_required
 def get_user_stats(user_id):
@@ -1634,18 +1680,31 @@ def get_listen_history(user_id):
                 # Construct full Cover URL if relative
                 cover_path = book['cover_image_path']
                 cover_thumbnail_path = None
-                if cover_path and not cover_path.startswith('http'):
-                     if not cover_path.startswith('static/') and not cover_path.startswith('/static/'):
-                         cover_path = f"static/BookCovers/{cover_path}"
-                     # Remove leading slash if present to avoid double slashes
-                     if cover_path.startswith('/'):
-                         cover_path = cover_path[1:]
-
-                     # Generate thumbnail path
-                     thumbnail_relative = ensure_thumbnail_exists(cover_path, 'static')
-                     cover_thumbnail_path = f"{BASE_URL}{thumbnail_relative}"
-
-                     cover_path = f"{BASE_URL}{cover_path}"
+                if cover_path:
+                    if cover_path.startswith('http'):
+                        # Cover is already an absolute URL - extract filename and create thumbnail URL
+                        import os
+                        server_dir = os.path.dirname(os.path.abspath(__file__))
+                        filename = os.path.basename(cover_path.split('?')[0])
+                        thumbnail_local = os.path.join(server_dir, 'static', 'BookCovers', 'thumbnails', filename)
+                        if os.path.exists(thumbnail_local):
+                            cover_thumbnail_path = f"{BASE_URL}static/BookCovers/thumbnails/{filename}"
+                        else:
+                            source_path = os.path.join(server_dir, 'static', 'BookCovers', filename)
+                            if os.path.exists(source_path):
+                                ensure_thumbnail_exists(f"BookCovers/{filename}", os.path.join(server_dir, 'static'))
+                                cover_thumbnail_path = f"{BASE_URL}static/BookCovers/thumbnails/{filename}"
+                            else:
+                                cover_thumbnail_path = cover_path
+                    else:
+                        if not cover_path.startswith('static/') and not cover_path.startswith('/static/'):
+                            cover_path = f"static/BookCovers/{cover_path}"
+                        if cover_path.startswith('/'):
+                            cover_path = cover_path[1:]
+                        server_dir = os.path.dirname(os.path.abspath(__file__))
+                        thumbnail_relative = ensure_thumbnail_exists(cover_path, os.path.join(server_dir, 'static'))
+                        cover_thumbnail_path = f"{BASE_URL}{thumbnail_relative}"
+                        cover_path = f"{BASE_URL}{cover_path}"
 
                 # Construct full Audio URL if relative
                 audio_path = book['audio_path']
@@ -2009,18 +2068,31 @@ def get_my_uploads():
              # Construct full Cover URL if relative
              cover_path = row['cover_image_path']
              cover_thumbnail_path = None
-             if cover_path and not cover_path.startswith('http'):
-                 if not cover_path.startswith('static/') and not cover_path.startswith('/static/'):
-                     cover_path = f"static/BookCovers/{cover_path}"
-                 # Remove leading slash if present to avoid double slashes
-                 if cover_path.startswith('/'):
-                     cover_path = cover_path[1:]
-
-                 # Generate thumbnail path
-                 thumbnail_relative = ensure_thumbnail_exists(cover_path, 'static')
-                 cover_thumbnail_path = f"{BASE_URL}{thumbnail_relative}"
-
-                 cover_path = f"{BASE_URL}{cover_path}"
+             if cover_path:
+                 if cover_path.startswith('http'):
+                     # Cover is already an absolute URL - extract filename and create thumbnail URL
+                     import os
+                     server_dir = os.path.dirname(os.path.abspath(__file__))
+                     filename = os.path.basename(cover_path.split('?')[0])
+                     thumbnail_local = os.path.join(server_dir, 'static', 'BookCovers', 'thumbnails', filename)
+                     if os.path.exists(thumbnail_local):
+                         cover_thumbnail_path = f"{BASE_URL}static/BookCovers/thumbnails/{filename}"
+                     else:
+                         source_path = os.path.join(server_dir, 'static', 'BookCovers', filename)
+                         if os.path.exists(source_path):
+                             ensure_thumbnail_exists(f"BookCovers/{filename}", os.path.join(server_dir, 'static'))
+                             cover_thumbnail_path = f"{BASE_URL}static/BookCovers/thumbnails/{filename}"
+                         else:
+                             cover_thumbnail_path = cover_path
+                 else:
+                     if not cover_path.startswith('static/') and not cover_path.startswith('/static/'):
+                         cover_path = f"static/BookCovers/{cover_path}"
+                     if cover_path.startswith('/'):
+                         cover_path = cover_path[1:]
+                     server_dir = os.path.dirname(os.path.abspath(__file__))
+                     thumbnail_relative = ensure_thumbnail_exists(cover_path, os.path.join(server_dir, 'static'))
+                     cover_thumbnail_path = f"{BASE_URL}{thumbnail_relative}"
+                     cover_path = f"{BASE_URL}{cover_path}"
 
              books.append({
                 "id": str(row['id']),

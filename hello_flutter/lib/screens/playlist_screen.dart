@@ -178,7 +178,10 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
 
       // Offline Check
       if (ConnectivityService().isOffline) {
-        final data = await DownloadService().getPlaylistJson(widget.book.id);
+        final data = await DownloadService().getPlaylistJson(
+          widget.book.id,
+          userId: userId, // Try to get user-specific data if we know who we are
+        );
         if (data != null) {
           if (mounted)
             _processPlaylistData(data, skipVideoUpdate: skipVideoUpdate);
@@ -205,7 +208,11 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
         final Map<String, dynamic> data = json.decode(response.body);
 
         // Save for offline
-        await DownloadService().savePlaylistJson(widget.book.id, data);
+        await DownloadService().savePlaylistJson(
+          widget.book.id,
+          data,
+          userId: userId,
+        );
 
         if (mounted) {
           _processPlaylistData(data, skipVideoUpdate: skipVideoUpdate);
@@ -364,7 +371,10 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
         'has_quiz': _hasQuiz,
         'track_quizzes': _trackQuizzes,
         'quiz_passed': _isQuizPassed,
-      });
+      }, userId: _userId);
+
+      // Register download on server (so we know this user has this book downloaded)
+      await DownloadService().registerServerDownload(widget.book.id);
 
       _downloadQuizData();
       _downloadBackgroundAssets();
@@ -386,7 +396,11 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       final response = await http.get(Uri.parse(quizUrl), headers: headers);
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        await DownloadService().saveQuizJson(widget.book.id, data);
+        await DownloadService().saveQuizJson(
+          widget.book.id,
+          data,
+          userId: _userId,
+        );
       }
 
       for (var track in _tracks) {
@@ -404,6 +418,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
               widget.book.id,
               tData,
               playlistItemId: track['id'],
+              userId: _userId,
             );
           }
         }
@@ -560,9 +575,8 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                 '${ApiConstants.baseUrl}/static/Animations/Background.png',
                 fit: BoxFit.cover,
                 alignment: Alignment.center,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  color: const Color(0xFF121212),
-                ),
+                errorBuilder: (context, error, stackTrace) =>
+                    Container(color: const Color(0xFF121212)),
               ),
             ),
 
