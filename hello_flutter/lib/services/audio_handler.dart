@@ -1,10 +1,7 @@
 import 'dart:async';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
-import 'dart:io';
 import '../models/book.dart';
-import 'encrypted_audio_source.dart';
-import 'auth_service.dart';
 import '../utils/api_constants.dart';
 import '../repositories/book_repository.dart';
 
@@ -161,38 +158,10 @@ class MyAudioHandler extends BaseAudioHandler {
     await _player.setUrl(url);
   }
 
-  // Load encrypted audio from URL (downloads to temp first)
-  Future<void> loadEncryptedAudio(
-    String url,
-    MediaItem mediaItem,
-    String key,
-  ) async {
-    this.mediaItem.add(mediaItem);
-    try {
-      final source = EncryptedHttpSource(url, mediaItem.id, key);
-      await _player.setAudioSource(source);
-    } catch (e) {
-      print("Error loading encrypted audio: $e");
-      rethrow;
-    }
-  }
-
   // Custom method to load local file
   Future<void> loadLocalFile(String filePath, MediaItem mediaItem) async {
     this.mediaItem.add(mediaItem);
     await _player.setFilePath(filePath);
-  }
-
-  // Custom method to load encrypted local file
-  Future<void> loadEncryptedLocalFile(
-    String filePath,
-    MediaItem mediaItem,
-    String key,
-  ) async {
-    this.mediaItem.add(mediaItem);
-    final file = File(filePath);
-    final source = EncryptedFileSource(file, mediaItem.id, key);
-    await _player.setAudioSource(source);
   }
 
   // Navigate to next track in playlist
@@ -261,29 +230,10 @@ class MyAudioHandler extends BaseAudioHandler {
     // Load and play
     final cleanUrl = trackUrl.startsWith('http')
         ? trackUrl
-        : '${ApiConstants.baseUrl}$trackUrl'; // Wait, use ApiConstants or hardcoded?
-    // Original code had hardcoded IP: http://10.54.45.89:5000$trackUrl or similar.
-    // I should use ApiConstants if available.
-    // But importing ApiConstants here might be tricky if not imported.
-    // I'll check imports.
+        : '${ApiConstants.baseUrl}$trackUrl';
 
-    // If encrypted, we need the key.
-    // Where do we get the key?
-    // We can fetch it via AuthService here or assume it's passed?
-    // AuthService().getEncryptionKey() is async.
-
-    if (currentBook!.isEncrypted) {
-      final authService = AuthService(); // Ensure AuthService is imported
-      final key = await authService.getEncryptionKey();
-      if (key != null) {
-        await loadEncryptedAudio(cleanUrl, mediaItem, key);
-      } else {
-        print("Error: No encryption key for encrypted track");
-        // Fallback or error
-      }
-    } else {
-      await loadAudio(cleanUrl, mediaItem);
-    }
+    // Stream directly (no encryption)
+    await loadAudio(cleanUrl, mediaItem);
 
     await play();
   }

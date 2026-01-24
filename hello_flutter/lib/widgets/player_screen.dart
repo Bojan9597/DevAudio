@@ -408,12 +408,16 @@ class _PlayerScreenState extends State<PlayerScreen>
     }
   }
 
-  void _showDownloadingMessage() {
+  void _showDownloadingMessage({bool isPlaylist = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Downloading for offline playback...'),
-        duration: Duration(seconds: 2),
+      SnackBar(
+        content: Text(
+          isPlaylist
+              ? 'Downloading full playlist...'
+              : 'Downloading for offline playback...',
+        ),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -421,17 +425,32 @@ class _PlayerScreenState extends State<PlayerScreen>
   Future<void> _downloadBook() async {
     setState(() => _isDownloading = true);
     try {
-      await DownloadService().downloadBook(
-        _getUniqueAudioId(),
-        _currentBook.audioUrl,
-      );
+      if (widget.playlist != null && widget.playlist!.isNotEmpty) {
+        // Download entire playlist
+        _showDownloadingMessage(isPlaylist: true);
+        await DownloadService().downloadPlaylist(
+          widget.playlist!,
+          widget.book.id,
+          userId: _userId,
+        );
+      } else {
+        // Download single book
+        _showDownloadingMessage();
+        await DownloadService().downloadBook(
+          _getUniqueAudioId(),
+          _currentBook.audioUrl,
+          userId: _userId,
+          bookId: widget.book.id,
+        );
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Download Complete! Playing local file.'),
+            content: Text('Download Complete! Available offline.'),
           ),
         );
-        // Re-init player to switch to local file if currently playing placeholder
+        // Re-init player to pickup local file if currently playing
         _initPlayer();
       }
     } catch (e) {
@@ -489,38 +508,65 @@ class _PlayerScreenState extends State<PlayerScreen>
       audioHandler.currentIndex = _currentIndex;
       audioHandler.currentUniqueAudioId = widget.uniqueAudioId;
 
-      // Check for local file
-      final storageId = _getUniqueAudioId();
-      final downloadService = DownloadService();
-      final isDownloaded = await downloadService.isBookDownloaded(storageId);
-
       final authService = AuthService();
 
-      print("[DEBUG][PlayerScreen] isDownloaded=$isDownloaded, url=$url");
+      // Ensure we have userId for user-specific storage lookup
+      // This fixes race condition where _initPlayer runs before _checkOwnership completes
+      _userId ??= await authService.getCurrentUserId();
 
-      // Always use encryption - get the key
-      final key = await authService.getEncryptionKey();
-      print(
-        "[DEBUG][PlayerScreen] Encryption key=${key != null ? '${key.substring(0, 10)}...' : 'NULL'}",
+      // Check for local file (user-specific storage)
+      final storageId = _getUniqueAudioId();
+      final downloadService = DownloadService();
+      final isDownloaded = await downloadService.isBookDownloaded(
+        storageId,
+        userId: _userId,
+        bookId: widget.book.id,
       );
 
-      if (key == null) {
-        throw Exception("Encryption key not found. Please re-login.");
-      }
+      print(
+        "[DEBUG][PlayerScreen] isDownloaded=$isDownloaded, url=$url, userId=$_userId, storageId=$storageId",
+      );
+
+      String playPath;
 
       if (isDownloaded) {
-        // Play from local decrypted file (stored securely in app-private storage)
-        final localPath = await downloadService.getLocalBookPath(storageId);
-        print("[DEBUG][PlayerScreen] Playing from local file: $localPath");
-        await audioHandler.loadLocalFile(localPath, mediaItem);
+        // Play from local file
+        playPath = await downloadService.getLocalBookPath(
+          storageId,
+          userId: _userId,
+          bookId: widget.book.id,
+        );
+        print("[DEBUG][PlayerScreen] Playing from local file: $playPath");
       } else {
-        // Stream from server (encrypted)
-        if (url == 'placeholder.mp3' || url.isEmpty) {
-          throw Exception("Invalid audio URL");
+        // Not downloaded - Auto-download now (Permanent storage)
+        print("[DEBUG][PlayerScreen] Not downloaded. Auto-downloading...");
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Downloading track...'),
+              duration: Duration(milliseconds: 1500),
+            ),
+          );
         }
-        print("[DEBUG][PlayerScreen] Streaming encrypted audio from: $url");
-        await audioHandler.loadEncryptedAudio(url, mediaItem, key);
+
+        await downloadService.downloadBook(
+          storageId,
+          url,
+          userId: _userId,
+          bookId: widget.book.id,
+        );
+
+        playPath = await downloadService.getLocalBookPath(
+          storageId,
+          userId: _userId,
+          bookId: widget.book.id,
+        );
+        print("[DEBUG][PlayerScreen] Downloaded and playing from: $playPath");
       }
+
+      // Play the local file
+      await audioHandler.loadLocalFile(playPath, mediaItem);
 
       // Auto-play
       await audioHandler.play();
@@ -1243,7 +1289,11 @@ class _PlayerScreenState extends State<PlayerScreen>
                                     final storageId = _getUniqueAudioId();
                                     final downloadService = DownloadService();
                                     final isDownloaded = await downloadService
-                                        .isBookDownloaded(storageId);
+                                        .isBookDownloaded(
+                                          storageId,
+                                          userId: _userId,
+                                          bookId: widget.book.id,
+                                        );
 
                                     if (!isDownloaded &&
                                         !downloadService.isDownloadInProgress(

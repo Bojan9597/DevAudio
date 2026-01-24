@@ -559,8 +559,11 @@ class _ContentAreaState extends State<ContentArea> {
         book.id,
         userId: _userId,
       );
-      // Also check if book itself is downloaded
-      final isBookDownloaded = await downloadService.isBookDownloaded(book.id);
+      // Also check if book itself is downloaded (user-specific)
+      final isBookDownloaded = await downloadService.isBookDownloaded(
+        book.id,
+        userId: _userId,
+      );
       if (isPlaylistDownloaded || isBookDownloaded) {
         downloadedBooks.add(book);
       }

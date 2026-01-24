@@ -336,17 +336,17 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       );
     }
 
-    // 2. Download Current Track FIRST (high priority)
+    // 2. Download Current Track FIRST (high priority, user-specific storage)
     try {
       final String trackUrl = _ensureAbsoluteUrl(currentTrack['file_path']);
       final uniqueTrackId = "track_${currentTrack['id']}";
-      await DownloadService().downloadBook(uniqueTrackId, trackUrl);
+      await DownloadService().downloadBook(uniqueTrackId, trackUrl, userId: _userId);
       print("Downloaded current track: ${currentTrack['title']}");
     } catch (e) {
       print("Error downloading current track: $e");
     }
 
-    // 2.5 Download Remaining Tracks (Background)
+    // 2.5 Download Remaining Tracks (Background, user-specific storage)
     for (var track in _tracks) {
       // Skip the current one as we just started/awaited it (or tried to)
       if (track['id'] == currentTrack['id']) continue;
@@ -355,7 +355,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       final tId = "track_${track['id']}";
 
       // Fire and forget, or log errors individually to avoid blocking UI
-      DownloadService().downloadBook(tId, tUrl).catchError((err) {
+      DownloadService().downloadBook(tId, tUrl, userId: _userId).catchError((err) {
         print("Failed to background download track ${track['title']}: $err");
       });
     }
