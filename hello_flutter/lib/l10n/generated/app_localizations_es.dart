@@ -666,4 +666,37 @@ class AppLocalizationsEs extends AppLocalizations {
   String questionNumber(int current, int total) {
     return 'Pregunta $current/$total';
   }
+
+  @override
+  String get planMonthly => 'Mensual';
+
+  @override
+  String get planYearly => 'Anual';
+
+  @override
+  String get planLifetime => 'De por vida';
+
+  @override
+  String get planTestMinute => 'Prueba de 2 minutos';
+
+  @override
+  String badgeReadBooks(int count) {
+    return 'Leer $count libros';
+  }
+
+  @override
+  String badgeListenHours(int count) {
+    return 'Escuchar $count horas';
+  }
+
+  @override
+  String get badgeCompleteQuiz => 'Completar un cuestionario';
+
+  @override
+  String get badgeFirstBook => 'Terminar tu primer libro';
+
+  @override
+  String badgeStreak(int count) {
+    return '$count días seguidos';
+  }
 }

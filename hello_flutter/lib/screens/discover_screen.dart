@@ -448,36 +448,42 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        GestureDetector(
-          onTap: () => _showRatingDialog(book),
-          child: Row(
-            children: [
-              ...List.generate(5, (index) {
-                if (index < book.averageRating.floor()) {
-                  return const Icon(Icons.star, size: 19, color: Colors.amber);
-                } else if (index < book.averageRating) {
-                  return const Icon(
-                    Icons.star_half,
-                    size: 19,
-                    color: Colors.amber,
-                  );
-                } else {
-                  return const Icon(
-                    Icons.star_border,
-                    size: 19,
-                    color: Colors.amber,
-                  );
-                }
-              }),
-              const SizedBox(width: 5),
-              Text(
-                book.ratingCount > 0 ? _formatCount(book.ratingCount) : 'Rate',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: textColor.withOpacity(0.6),
+        Flexible(
+          child: GestureDetector(
+            onTap: () => _showRatingDialog(book),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ...List.generate(5, (index) {
+                  if (index < book.averageRating.floor()) {
+                    return const Icon(Icons.star, size: 16, color: Colors.amber);
+                  } else if (index < book.averageRating) {
+                    return const Icon(
+                      Icons.star_half,
+                      size: 16,
+                      color: Colors.amber,
+                    );
+                  } else {
+                    return const Icon(
+                      Icons.star_border,
+                      size: 16,
+                      color: Colors.amber,
+                    );
+                  }
+                }),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    book.ratingCount > 0 ? _formatCount(book.ratingCount) : AppLocalizations.of(context)!.rate,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: textColor.withOpacity(0.6),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         GestureDetector(

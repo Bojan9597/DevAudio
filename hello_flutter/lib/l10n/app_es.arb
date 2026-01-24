@@ -230,5 +230,16 @@
   "uploadFailed": "Error en la subida: {error}",
 
   "noQuizAvailable": "No hay cuestionario disponible para este elemento.",
-  "questionNumber": "Pregunta {current}/{total}"
+  "questionNumber": "Pregunta {current}/{total}",
+
+  "planMonthly": "Mensual",
+  "planYearly": "Anual",
+  "planLifetime": "De por vida",
+  "planTestMinute": "Prueba de 2 minutos",
+
+  "badgeReadBooks": "Leer {count} libros",
+  "badgeListenHours": "Escuchar {count} horas",
+  "badgeCompleteQuiz": "Completar un cuestionario",
+  "badgeFirstBook": "Terminar tu primer libro",
+  "badgeStreak": "{count} días seguidos"
 }

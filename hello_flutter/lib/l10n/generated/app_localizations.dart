@@ -1309,6 +1309,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Question {current}/{total}'**
   String questionNumber(int current, int total);
+
+  /// No description provided for @planMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly'**
+  String get planMonthly;
+
+  /// No description provided for @planYearly.
+  ///
+  /// In en, this message translates to:
+  /// **'Yearly'**
+  String get planYearly;
+
+  /// No description provided for @planLifetime.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifetime'**
+  String get planLifetime;
+
+  /// No description provided for @planTestMinute.
+  ///
+  /// In en, this message translates to:
+  /// **'2 Minute Test'**
+  String get planTestMinute;
+
+  /// No description provided for @badgeReadBooks.
+  ///
+  /// In en, this message translates to:
+  /// **'Read {count} books'**
+  String badgeReadBooks(int count);
+
+  /// No description provided for @badgeListenHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen for {count} hours'**
+  String badgeListenHours(int count);
+
+  /// No description provided for @badgeCompleteQuiz.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete a quiz'**
+  String get badgeCompleteQuiz;
+
+  /// No description provided for @badgeFirstBook.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish your first book'**
+  String get badgeFirstBook;
+
+  /// No description provided for @badgeStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} day streak'**
+  String badgeStreak(int count);
 }
 
 class _AppLocalizationsDelegate

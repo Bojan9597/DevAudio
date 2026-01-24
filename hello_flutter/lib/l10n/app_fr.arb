@@ -230,5 +230,16 @@
   "uploadFailed": "Échec du téléversement: {error}",
 
   "noQuizAvailable": "Aucun quiz disponible pour cet élément.",
-  "questionNumber": "Question {current}/{total}"
+  "questionNumber": "Question {current}/{total}",
+
+  "planMonthly": "Mensuel",
+  "planYearly": "Annuel",
+  "planLifetime": "À vie",
+  "planTestMinute": "Test de 2 minutes",
+
+  "badgeReadBooks": "Lire {count} livres",
+  "badgeListenHours": "Écouter {count} heures",
+  "badgeCompleteQuiz": "Terminer un quiz",
+  "badgeFirstBook": "Terminer votre premier livre",
+  "badgeStreak": "{count} jours consécutifs"
 }

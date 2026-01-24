@@ -230,5 +230,16 @@
   "uploadFailed": "Otpremanje neuspešno: {error}",
 
   "noQuizAvailable": "Nema dostupnog kviza za ovu stavku.",
-  "questionNumber": "Pitanje {current}/{total}"
+  "questionNumber": "Pitanje {current}/{total}",
+
+  "planMonthly": "Mesečna",
+  "planYearly": "Godišnja",
+  "planLifetime": "Doživotna",
+  "planTestMinute": "2-minutni test",
+
+  "badgeReadBooks": "Pročitaj {count} knjiga",
+  "badgeListenHours": "Slušaj {count} sati",
+  "badgeCompleteQuiz": "Završi kviz",
+  "badgeFirstBook": "Završi svoju prvu knjigu",
+  "badgeStreak": "{count} dana zaredom"
 }

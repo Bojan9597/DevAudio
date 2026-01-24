@@ -230,5 +230,16 @@
   "uploadFailed": "Upload fehlgeschlagen: {error}",
 
   "noQuizAvailable": "Kein Quiz für dieses Element verfügbar.",
-  "questionNumber": "Frage {current}/{total}"
+  "questionNumber": "Frage {current}/{total}",
+
+  "planMonthly": "Monatlich",
+  "planYearly": "Jährlich",
+  "planLifetime": "Lebenslang",
+  "planTestMinute": "2-Minuten-Test",
+
+  "badgeReadBooks": "{count} Bücher lesen",
+  "badgeListenHours": "{count} Stunden hören",
+  "badgeCompleteQuiz": "Ein Quiz abschließen",
+  "badgeFirstBook": "Dein erstes Buch beenden",
+  "badgeStreak": "{count} Tage in Folge"
 }

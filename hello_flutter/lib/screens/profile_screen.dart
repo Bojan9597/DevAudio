@@ -265,14 +265,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 16),
                 _buildDetailRow(
                   AppLocalizations.of(context)!.planType,
-                  sub.planDisplayName,
+                  _getLocalizedPlanName(sub.planType),
                 ),
                 _buildDetailRow(
                   AppLocalizations.of(context)!.status,
                   sub.isActive
-                      ? (sub.autoRenew
-                            ? AppLocalizations.of(context)!.active
-                            : AppLocalizations.of(context)!.expiringSoon)
+                      ? (sub.isExpiringSoon
+                            ? AppLocalizations.of(context)!.expiringSoon
+                            : AppLocalizations.of(context)!.active)
                       : AppLocalizations.of(context)!.expired,
                 ),
                 if (sub.startDate != null)
@@ -335,6 +335,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
+  }
+
+  String _getLocalizedPlanName(String planType) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (planType) {
+      case 'test_minute':
+        return l10n.planTestMinute;
+      case 'monthly':
+        return l10n.planMonthly;
+      case 'yearly':
+        return l10n.planYearly;
+      case 'lifetime':
+        return l10n.planLifetime;
+      default:
+        return planType;
+    }
+  }
+
+  String _getLocalizedBadgeName(Badge badge) {
+    final l10n = AppLocalizations.of(context)!;
+    // Localize based on badge code pattern
+    final code = badge.code.toLowerCase();
+    if (code.contains('read') || code.contains('book')) {
+      return l10n.badgeReadBooks(badge.threshold);
+    } else if (code.contains('listen') || code.contains('hour')) {
+      return l10n.badgeListenHours(badge.threshold);
+    } else if (code.contains('quiz')) {
+      return l10n.badgeCompleteQuiz;
+    } else if (code.contains('first')) {
+      return l10n.badgeFirstBook;
+    } else if (code.contains('streak')) {
+      return l10n.badgeStreak(badge.threshold);
+    }
+    // Fallback to server name
+    return badge.name;
   }
 
   void _confirmCancelSubscription() {
@@ -869,7 +904,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  badge.name,
+                  _getLocalizedBadgeName(badge),
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: isEarned ? FontWeight.bold : FontWeight.normal,
@@ -918,7 +953,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                badge.name,
+                _getLocalizedBadgeName(badge),
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
@@ -951,7 +986,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               if (isEarned) ...[
                 const SizedBox(height: 8),
                 Text(
-                  'Earned on ${badge.earnedAt?.toString().split(" ")[0] ?? ""}',
+                  AppLocalizations.of(context)!.earnedOn(badge.earnedAt?.toString().split(" ")[0] ?? ""),
                   style: const TextStyle(color: Colors.green, fontSize: 12),
                 ),
               ],

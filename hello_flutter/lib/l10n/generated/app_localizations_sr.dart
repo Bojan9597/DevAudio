@@ -662,4 +662,37 @@ class AppLocalizationsSr extends AppLocalizations {
   String questionNumber(int current, int total) {
     return 'Pitanje $current/$total';
   }
+
+  @override
+  String get planMonthly => 'Mesečna';
+
+  @override
+  String get planYearly => 'Godišnja';
+
+  @override
+  String get planLifetime => 'Doživotna';
+
+  @override
+  String get planTestMinute => '2-minutni test';
+
+  @override
+  String badgeReadBooks(int count) {
+    return 'Pročitaj $count knjiga';
+  }
+
+  @override
+  String badgeListenHours(int count) {
+    return 'Slušaj $count sati';
+  }
+
+  @override
+  String get badgeCompleteQuiz => 'Završi kviz';
+
+  @override
+  String get badgeFirstBook => 'Završi svoju prvu knjigu';
+
+  @override
+  String badgeStreak(int count) {
+    return '$count dana zaredom';
+  }
 }

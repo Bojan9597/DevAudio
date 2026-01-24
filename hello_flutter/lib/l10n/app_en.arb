@@ -365,5 +365,37 @@
         "type": "int"
       }
     }
+  },
+
+  "planMonthly": "Monthly",
+  "planYearly": "Yearly",
+  "planLifetime": "Lifetime",
+  "planTestMinute": "2 Minute Test",
+
+  "badgeReadBooks": "Read {count} books",
+  "@badgeReadBooks": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "badgeListenHours": "Listen for {count} hours",
+  "@badgeListenHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "badgeCompleteQuiz": "Complete a quiz",
+  "badgeFirstBook": "Finish your first book",
+  "badgeStreak": "{count} day streak",
+  "@badgeStreak": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }
