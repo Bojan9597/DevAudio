@@ -212,7 +212,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
     return SliverToBoxAdapter(
       child: SizedBox(
-        height: 240,
+        height: 280,
         child: _isLoading && _books.isEmpty
             ? const Center(child: CircularProgressIndicator())
             : ListView.builder(
@@ -222,8 +222,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                 itemBuilder: (context, index) {
                   final book = booksToShow[index];
                   return Container(
-                    width:
-                        140, // Increased width slightly for better proportions
+                    width: 160,
                     margin: const EdgeInsets.only(right: 12),
                     child: _buildBookCard(book, cardColor, textColor),
                   );
