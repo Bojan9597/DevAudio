@@ -502,4 +502,24 @@ class BookRepository {
       return [];
     }
   }
+
+  Future<bool> rateBook(int userId, String bookId, int stars) async {
+    try {
+      if (ConnectivityService().isOffline) throw Exception('Offline mode');
+
+      final headers = await _getHeaders();
+      final body = json.encode({'user_id': userId, 'stars': stars});
+
+      final response = await http.post(
+        Uri.parse('${ApiConstants.baseUrl}/books/$bookId/rate'),
+        headers: headers,
+        body: body,
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Error rating book: $e');
+      return false;
+    }
+  }
 }

@@ -996,24 +996,155 @@ class _ContentAreaState extends State<ContentArea> {
   }
 
   Widget _buildStarRating(Book book, Color textColor) {
-    return Row(
-      children: [
-        ...List.generate(5, (index) {
-          if (index < book.averageRating.floor()) {
-            return const Icon(Icons.star, size: 19, color: Colors.amber);
-          } else if (index < book.averageRating) {
-            return const Icon(Icons.star_half, size: 19, color: Colors.amber);
-          } else {
-            return const Icon(Icons.star_border, size: 19, color: Colors.amber);
-          }
-        }),
-        const SizedBox(width: 5),
-        Text(
-          book.ratingCount > 0 ? _formatCount(book.ratingCount) : '',
-          style: TextStyle(fontSize: 13, color: textColor.withOpacity(0.6)),
-        ),
-      ],
+    return GestureDetector(
+      onTap: () => _showRatingDialog(book),
+      child: Row(
+        children: [
+          ...List.generate(5, (index) {
+            if (index < book.averageRating.floor()) {
+              return const Icon(Icons.star, size: 19, color: Colors.amber);
+            } else if (index < book.averageRating) {
+              return const Icon(Icons.star_half, size: 19, color: Colors.amber);
+            } else {
+              return const Icon(
+                Icons.star_border,
+                size: 19,
+                color: Colors.amber,
+              );
+            }
+          }),
+          const SizedBox(width: 5),
+          Text(
+            book.ratingCount > 0 ? _formatCount(book.ratingCount) : 'Rate',
+            style: TextStyle(fontSize: 13, color: textColor.withOpacity(0.6)),
+          ),
+        ],
+      ),
     );
+  }
+
+  void _showRatingDialog(Book book) {
+    int selectedStars = 0;
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Colors.brown.shade900, Colors.black],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Rate this book',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      book.title,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: List.generate(5, (index) {
+                        return GestureDetector(
+                          onTap: () =>
+                              setDialogState(() => selectedStars = index + 1),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Icon(
+                              index < selectedStars
+                                  ? Icons.star
+                                  : Icons.star_border,
+                              color: Colors.amber,
+                              size: 36,
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(color: Colors.white54),
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: selectedStars > 0
+                              ? () async {
+                                  Navigator.of(ctx).pop();
+                                  await _submitRating(book, selectedStars);
+                                }
+                              : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.amber,
+                            foregroundColor: Colors.black,
+                          ),
+                          child: const Text('Submit'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _submitRating(Book book, int stars) async {
+    final userId = await AuthService().getCurrentUserId();
+    if (userId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please log in to rate books')),
+        );
+      }
+      return;
+    }
+
+    final success = await BookRepository().rateBook(userId, book.id, stars);
+
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Thanks for your $stars-star rating! ⭐')),
+      );
+      _loadBooks();
+    } else if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Failed to submit rating')));
+    }
   }
 
   String _formatCount(int count) {
