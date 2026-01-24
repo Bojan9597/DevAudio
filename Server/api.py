@@ -1167,6 +1167,7 @@ def get_books():
                     "price": float(row['price']) if row['price'] else 0.0,
                     "postedByUserId": str(row['posted_by_user_id']),
                     "isPlaylist": row['playlist_count'] > 0,
+                    "duration": row['duration_seconds'] or 0,
                     "averageRating": round(float(row['average_rating']), 1) if row['average_rating'] else 0.0,
                     "ratingCount": row['rating_count'] or 0
                 }

@@ -212,7 +212,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
     return SliverToBoxAdapter(
       child: SizedBox(
-        height: 200,
+        height: 240,
         child: _isLoading && _books.isEmpty
             ? const Center(child: CircularProgressIndicator())
             : ListView.builder(
@@ -222,74 +222,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                 itemBuilder: (context, index) {
                   final book = booksToShow[index];
                   return Container(
-                    width: 120,
+                    width:
+                        140, // Increased width slightly for better proportions
                     margin: const EdgeInsets.only(right: 12),
-                    child: GestureDetector(
-                      onTap: () => _openPlayer(book),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: book.absoluteCoverUrlThumbnail.isNotEmpty
-                                  ? CachedNetworkImage(
-                                      imageUrl: book.absoluteCoverUrlThumbnail,
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                      errorWidget: (context, url, error) =>
-                                          Container(
-                                            color: textColor.withOpacity(0.1),
-                                            child: const Icon(
-                                              Icons.book,
-                                              size: 30,
-                                            ),
-                                          ),
-                                    )
-                                  : Container(
-                                      color: textColor.withOpacity(0.1),
-                                      child: const Icon(Icons.book, size: 30),
-                                    ),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            book.title,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: textColor,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Row(
-                            children: [
-                              ...List.generate(5, (i) {
-                                if (i < book.averageRating.floor()) {
-                                  return const Icon(
-                                    Icons.star,
-                                    size: 12,
-                                    color: Colors.amber,
-                                  );
-                                } else if (i < book.averageRating) {
-                                  return const Icon(
-                                    Icons.star_half,
-                                    size: 12,
-                                    color: Colors.amber,
-                                  );
-                                }
-                                return const Icon(
-                                  Icons.star_border,
-                                  size: 12,
-                                  color: Colors.amber,
-                                );
-                              }),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
+                    child: _buildBookCard(book, cardColor, textColor),
                   );
                 },
               ),
