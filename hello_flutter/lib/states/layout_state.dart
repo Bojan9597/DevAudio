@@ -3,8 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class LayoutState extends ChangeNotifier {
   bool isCollapsed = false;
-  String selectedCategoryId =
-      'operating_systems'; // Default to 'operating_systems' category
+  String selectedCategoryId = 'home'; // Default to home page on first login
   bool isGridView = true;
   ThemeMode _themeMode = ThemeMode.system;
   Locale? _locale;
