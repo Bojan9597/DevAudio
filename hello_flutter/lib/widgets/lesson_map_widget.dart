@@ -394,6 +394,10 @@ class _IslandImageState extends State<_IslandImage> {
   String? _localPath;
   bool _isLoading = true;
 
+  // Static cache to avoid re-downloading for every node
+  static String? _cachedPath;
+  static bool _cacheChecked = false;
+
   @override
   void initState() {
     super.initState();
@@ -401,39 +405,92 @@ class _IslandImageState extends State<_IslandImage> {
   }
 
   Future<void> _loadIslandImage() async {
+    // Use cached path if already verified
+    if (_cacheChecked && _cachedPath != null) {
+      if (mounted) {
+        setState(() {
+          _localPath = _cachedPath;
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
     try {
       final directory = await getApplicationDocumentsDirectory();
       final filePath = '${directory.path}/island.png';
       final file = File(filePath);
 
       if (await file.exists()) {
-        if (mounted) {
-          setState(() {
-            _localPath = filePath;
-            _isLoading = false;
-          });
-        }
-      } else if (!ConnectivityService().isOffline) {
-        // Download the island image (PNG for transparency support)
-        final imageUrl = '${ApiConstants.baseUrl}/static/Animations/island.png';
-        await Dio().download(imageUrl, filePath);
-
-        if (mounted) {
-          setState(() {
-            _localPath = filePath;
-            _isLoading = false;
-          });
-        }
-      } else {
-        // Offline and no cached image
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
+        // Verify file is not corrupted (has content)
+        final fileSize = await file.length();
+        if (fileSize > 100) {
+          // Valid PNG should be > 100 bytes
+          _cachedPath = filePath;
+          _cacheChecked = true;
+          if (mounted) {
+            setState(() {
+              _localPath = filePath;
+              _isLoading = false;
+            });
+          }
+          return;
+        } else {
+          // Corrupted file, delete and re-download
+          print('[IslandImage] Cached file corrupted (size: $fileSize), re-downloading...');
+          await file.delete();
         }
       }
+
+      if (!ConnectivityService().isOffline) {
+        // Download the island image (PNG for transparency support)
+        final imageUrl = '${ApiConstants.baseUrl}/static/Animations/island.png';
+        print('[IslandImage] Downloading from: $imageUrl');
+
+        await Dio().download(
+          imageUrl,
+          filePath,
+          onReceiveProgress: (received, total) {
+            if (total > 0) {
+              print('[IslandImage] Download progress: ${(received / total * 100).toStringAsFixed(0)}%');
+            }
+          },
+        );
+
+        // Verify download succeeded
+        final downloadedFile = File(filePath);
+        if (await downloadedFile.exists()) {
+          final size = await downloadedFile.length();
+          print('[IslandImage] Downloaded successfully, size: $size bytes');
+          if (size > 100) {
+            _cachedPath = filePath;
+            _cacheChecked = true;
+            if (mounted) {
+              setState(() {
+                _localPath = filePath;
+                _isLoading = false;
+              });
+            }
+            return;
+          } else {
+            print('[IslandImage] Downloaded file too small, might be error response');
+            await downloadedFile.delete();
+          }
+        }
+      } else {
+        print('[IslandImage] Offline and no cached image');
+      }
+
+      // Mark as checked even if failed
+      _cacheChecked = true;
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      print("Error loading island image: $e");
+      print('[IslandImage] Error loading island image: $e');
+      _cacheChecked = true;
       if (mounted) {
         setState(() {
           _isLoading = false;
