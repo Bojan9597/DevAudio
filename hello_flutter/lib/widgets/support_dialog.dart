@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../services/auth_service.dart';
+import '../l10n/generated/app_localizations.dart';
 
 class SupportDialog extends StatefulWidget {
   const SupportDialog({super.key});
@@ -52,10 +53,10 @@ class _SupportDialogState extends State<SupportDialog> {
         // Success
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Message sent successfully!'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.messageSentSuccessfully),
             backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
+            duration: const Duration(seconds: 3),
           ),
         );
       } else {
@@ -82,11 +83,11 @@ class _SupportDialogState extends State<SupportDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Row(
+      title: Row(
         children: [
-          Icon(Icons.support_agent, color: Colors.blue),
-          SizedBox(width: 10),
-          Text('Contact Support'),
+          const Icon(Icons.support_agent, color: Colors.blue),
+          const SizedBox(width: 10),
+          Text(AppLocalizations.of(context)!.contactSupport),
         ],
       ),
       content: Form(
@@ -133,7 +134,7 @@ class _SupportDialogState extends State<SupportDialog> {
       actions: [
         TextButton(
           onPressed: _isSending ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(AppLocalizations.of(context)!.cancel),
         ),
         ElevatedButton(
           onPressed: _isSending ? null : _sendMessage,
@@ -150,7 +151,7 @@ class _SupportDialogState extends State<SupportDialog> {
                     valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   ),
                 )
-              : const Text('Send'),
+              : Text(AppLocalizations.of(context)!.send),
         ),
       ],
     );

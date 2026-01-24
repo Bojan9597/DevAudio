@@ -576,8 +576,90 @@ class AppLocalizationsSr extends AppLocalizations {
   String get catFrameworks => 'Radni okviri (React, Vue, Angular)';
 
   @override
-  String get browseByCategory => 'Browse audiobooks by category';
+  String get browseByCategory => 'Pretražite audio knjige po kategoriji';
 
   @override
-  String get noCategoriesFound => 'No categories found';
+  String get noCategoriesFound => 'Nema pronađenih kategorija';
+
+  @override
+  String get rateThisBook => 'Oceni ovu knjigu';
+
+  @override
+  String get submit => 'Pošalji';
+
+  @override
+  String get cancel => 'Otkaži';
+
+  @override
+  String get pleaseLogInToRateBooks => 'Prijavite se da biste ocenili knjige';
+
+  @override
+  String thanksForRating(int stars) {
+    return 'Hvala na oceni od $stars zvezdica!';
+  }
+
+  @override
+  String get failedToSubmitRating => 'Neuspešno slanje ocene';
+
+  @override
+  String get rate => 'Oceni';
+
+  @override
+  String get pleaseLogInToManageFavorites =>
+      'Prijavite se da biste upravljali omiljenim';
+
+  @override
+  String get downloadingForOffline => 'Preuzimanje za offline reprodukciju...';
+
+  @override
+  String get downloadComplete =>
+      'Preuzimanje završeno! Reprodukujem lokalni fajl.';
+
+  @override
+  String downloadFailed(String error) {
+    return 'Preuzimanje neuspešno: $error';
+  }
+
+  @override
+  String get details => 'Detalji';
+
+  @override
+  String failedToLoadAudio(String error) {
+    return 'Neuspešno učitavanje zvuka: $error';
+  }
+
+  @override
+  String get contactSupport => 'Kontaktirajte podršku';
+
+  @override
+  String get sendUsAMessage => 'Pošaljite nam poruku';
+
+  @override
+  String get messageSentSuccessfully => 'Poruka uspešno poslata!';
+
+  @override
+  String get send => 'Pošalji';
+
+  @override
+  String get pleaseSelectCategory => 'Molimo izaberite kategoriju';
+
+  @override
+  String get pleaseSelectAudioFile =>
+      'Molimo izaberite bar jednu audio datoteku';
+
+  @override
+  String get uploadSuccessful => 'Otpremanje uspešno!';
+
+  @override
+  String uploadFailed(String error) {
+    return 'Otpremanje neuspešno: $error';
+  }
+
+  @override
+  String get noQuizAvailable => 'Nema dostupnog kviza za ovu stavku.';
+
+  @override
+  String questionNumber(int current, int total) {
+    return 'Pitanje $current/$total';
+  }
 }

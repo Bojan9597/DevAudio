@@ -198,5 +198,37 @@
   "catJavaScript": "JavaScript",
   "catBrowserAndDOM": "Pretraživač i DOM",
   "catNodeJs": "Node.js",
-  "catFrameworks": "Radni okviri (React, Vue, Angular)"
+  "catFrameworks": "Radni okviri (React, Vue, Angular)",
+
+  "browseByCategory": "Pretražite audio knjige po kategoriji",
+  "noCategoriesFound": "Nema pronađenih kategorija",
+
+  "rateThisBook": "Oceni ovu knjigu",
+  "submit": "Pošalji",
+  "cancel": "Otkaži",
+  "pleaseLogInToRateBooks": "Prijavite se da biste ocenili knjige",
+  "thanksForRating": "Hvala na oceni od {stars} zvezdica!",
+  "failedToSubmitRating": "Neuspešno slanje ocene",
+  "rate": "Oceni",
+  "pleaseLogInToManageFavorites": "Prijavite se da biste upravljali omiljenim",
+
+  "downloadingForOffline": "Preuzimanje za offline reprodukciju...",
+  "downloadComplete": "Preuzimanje završeno! Reprodukujem lokalni fajl.",
+  "downloadFailed": "Preuzimanje neuspešno: {error}",
+
+  "details": "Detalji",
+  "failedToLoadAudio": "Neuspešno učitavanje zvuka: {error}",
+
+  "contactSupport": "Kontaktirajte podršku",
+  "sendUsAMessage": "Pošaljite nam poruku",
+  "messageSentSuccessfully": "Poruka uspešno poslata!",
+  "send": "Pošalji",
+
+  "pleaseSelectCategory": "Molimo izaberite kategoriju",
+  "pleaseSelectAudioFile": "Molimo izaberite bar jednu audio datoteku",
+  "uploadSuccessful": "Otpremanje uspešno!",
+  "uploadFailed": "Otpremanje neuspešno: {error}",
+
+  "noQuizAvailable": "Nema dostupnog kviza za ovu stavku.",
+  "questionNumber": "Pitanje {current}/{total}"
 }

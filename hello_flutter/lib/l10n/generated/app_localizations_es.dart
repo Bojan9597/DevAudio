@@ -578,8 +578,92 @@ class AppLocalizationsEs extends AppLocalizations {
   String get catFrameworks => 'Frameworks (React, Vue, Angular)';
 
   @override
-  String get browseByCategory => 'Browse audiobooks by category';
+  String get browseByCategory => 'Explorar audiolibros por categoría';
 
   @override
-  String get noCategoriesFound => 'No categories found';
+  String get noCategoriesFound => 'No se encontraron categorías';
+
+  @override
+  String get rateThisBook => 'Calificar este libro';
+
+  @override
+  String get submit => 'Enviar';
+
+  @override
+  String get cancel => 'Cancelar';
+
+  @override
+  String get pleaseLogInToRateBooks => 'Inicia sesión para calificar libros';
+
+  @override
+  String thanksForRating(int stars) {
+    return '¡Gracias por tu calificación de $stars estrellas!';
+  }
+
+  @override
+  String get failedToSubmitRating => 'Error al enviar la calificación';
+
+  @override
+  String get rate => 'Calificar';
+
+  @override
+  String get pleaseLogInToManageFavorites =>
+      'Inicia sesión para gestionar favoritos';
+
+  @override
+  String get downloadingForOffline =>
+      'Descargando para reproducción sin conexión...';
+
+  @override
+  String get downloadComplete =>
+      '¡Descarga completa! Reproduciendo archivo local.';
+
+  @override
+  String downloadFailed(String error) {
+    return 'Error en la descarga: $error';
+  }
+
+  @override
+  String get details => 'Detalles';
+
+  @override
+  String failedToLoadAudio(String error) {
+    return 'Error al cargar el audio: $error';
+  }
+
+  @override
+  String get contactSupport => 'Contactar soporte';
+
+  @override
+  String get sendUsAMessage => 'Envíanos un mensaje';
+
+  @override
+  String get messageSentSuccessfully => '¡Mensaje enviado correctamente!';
+
+  @override
+  String get send => 'Enviar';
+
+  @override
+  String get pleaseSelectCategory => 'Por favor selecciona una categoría';
+
+  @override
+  String get pleaseSelectAudioFile =>
+      'Por favor selecciona al menos un archivo de audio';
+
+  @override
+  String get uploadSuccessful => '¡Subida exitosa!';
+
+  @override
+  String uploadFailed(String error) {
+    return 'Error en la subida: $error';
+  }
+
+  @override
+  String get noQuizAvailable =>
+      'No hay cuestionario disponible para este elemento.';
+
+  @override
+  String questionNumber(int current, int total) {
+    return 'Pregunta $current/$total';
+  }
 }

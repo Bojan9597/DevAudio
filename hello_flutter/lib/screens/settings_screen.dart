@@ -189,8 +189,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // Contact Support - Available for all users
                 ListTile(
                   leading: const Icon(Icons.support_agent, color: Colors.blue),
-                  title: const Text('Contact Support'),
-                  subtitle: const Text('Send us a message'),
+                  title: Text(AppLocalizations.of(context)!.contactSupport),
+                  subtitle: Text(AppLocalizations.of(context)!.sendUsAMessage),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
                     showDialog(

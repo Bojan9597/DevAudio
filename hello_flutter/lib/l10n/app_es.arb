@@ -198,5 +198,37 @@
   "catJavaScript": "JavaScript",
   "catBrowserAndDOM": "Navegador y DOM",
   "catNodeJs": "Node.js",
-  "catFrameworks": "Frameworks (React, Vue, Angular)"
+  "catFrameworks": "Frameworks (React, Vue, Angular)",
+
+  "browseByCategory": "Explorar audiolibros por categoría",
+  "noCategoriesFound": "No se encontraron categorías",
+
+  "rateThisBook": "Calificar este libro",
+  "submit": "Enviar",
+  "cancel": "Cancelar",
+  "pleaseLogInToRateBooks": "Inicia sesión para calificar libros",
+  "thanksForRating": "¡Gracias por tu calificación de {stars} estrellas!",
+  "failedToSubmitRating": "Error al enviar la calificación",
+  "rate": "Calificar",
+  "pleaseLogInToManageFavorites": "Inicia sesión para gestionar favoritos",
+
+  "downloadingForOffline": "Descargando para reproducción sin conexión...",
+  "downloadComplete": "¡Descarga completa! Reproduciendo archivo local.",
+  "downloadFailed": "Error en la descarga: {error}",
+
+  "details": "Detalles",
+  "failedToLoadAudio": "Error al cargar el audio: {error}",
+
+  "contactSupport": "Contactar soporte",
+  "sendUsAMessage": "Envíanos un mensaje",
+  "messageSentSuccessfully": "¡Mensaje enviado correctamente!",
+  "send": "Enviar",
+
+  "pleaseSelectCategory": "Por favor selecciona una categoría",
+  "pleaseSelectAudioFile": "Por favor selecciona al menos un archivo de audio",
+  "uploadSuccessful": "¡Subida exitosa!",
+  "uploadFailed": "Error en la subida: {error}",
+
+  "noQuizAvailable": "No hay cuestionario disponible para este elemento.",
+  "questionNumber": "Pregunta {current}/{total}"
 }

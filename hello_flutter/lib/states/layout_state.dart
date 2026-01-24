@@ -18,6 +18,10 @@ class LayoutState extends ChangeNotifier {
 
   Future<void> updateUser(String? userId) async {
     _currentUserId = userId;
+    // Reset to home screen when user changes (login/logout)
+    selectedCategoryId = 'home';
+    // Ensure side menu is closed
+    isCollapsed = true;
     await _loadSettings();
   }
 

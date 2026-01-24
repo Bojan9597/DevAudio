@@ -198,5 +198,37 @@
   "catJavaScript": "JavaScript",
   "catBrowserAndDOM": "Navigateur et DOM",
   "catNodeJs": "Node.js",
-  "catFrameworks": "Frameworks (React, Vue, Angular)"
+  "catFrameworks": "Frameworks (React, Vue, Angular)",
+
+  "browseByCategory": "Parcourir les livres audio par catégorie",
+  "noCategoriesFound": "Aucune catégorie trouvée",
+
+  "rateThisBook": "Noter ce livre",
+  "submit": "Envoyer",
+  "cancel": "Annuler",
+  "pleaseLogInToRateBooks": "Connectez-vous pour noter les livres",
+  "thanksForRating": "Merci pour votre note de {stars} étoiles!",
+  "failedToSubmitRating": "Échec de l'envoi de la note",
+  "rate": "Noter",
+  "pleaseLogInToManageFavorites": "Connectez-vous pour gérer les favoris",
+
+  "downloadingForOffline": "Téléchargement pour lecture hors ligne...",
+  "downloadComplete": "Téléchargement terminé! Lecture du fichier local.",
+  "downloadFailed": "Échec du téléchargement: {error}",
+
+  "details": "Détails",
+  "failedToLoadAudio": "Échec du chargement audio: {error}",
+
+  "contactSupport": "Contacter le support",
+  "sendUsAMessage": "Envoyez-nous un message",
+  "messageSentSuccessfully": "Message envoyé avec succès!",
+  "send": "Envoyer",
+
+  "pleaseSelectCategory": "Veuillez sélectionner une catégorie",
+  "pleaseSelectAudioFile": "Veuillez sélectionner au moins un fichier audio",
+  "uploadSuccessful": "Téléversement réussi!",
+  "uploadFailed": "Échec du téléversement: {error}",
+
+  "noQuizAvailable": "Aucun quiz disponible pour cet élément.",
+  "questionNumber": "Question {current}/{total}"
 }

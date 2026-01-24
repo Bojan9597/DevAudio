@@ -198,5 +198,37 @@
   "catJavaScript": "JavaScript",
   "catBrowserAndDOM": "Browser & DOM",
   "catNodeJs": "Node.js",
-  "catFrameworks": "Frameworks (React, Vue, Angular)"
+  "catFrameworks": "Frameworks (React, Vue, Angular)",
+
+  "browseByCategory": "Hörbücher nach Kategorie durchsuchen",
+  "noCategoriesFound": "Keine Kategorien gefunden",
+
+  "rateThisBook": "Dieses Buch bewerten",
+  "submit": "Absenden",
+  "cancel": "Abbrechen",
+  "pleaseLogInToRateBooks": "Bitte melden Sie sich an, um Bücher zu bewerten",
+  "thanksForRating": "Danke für Ihre {stars}-Sterne-Bewertung!",
+  "failedToSubmitRating": "Bewertung konnte nicht gesendet werden",
+  "rate": "Bewerten",
+  "pleaseLogInToManageFavorites": "Bitte melden Sie sich an, um Favoriten zu verwalten",
+
+  "downloadingForOffline": "Wird für Offline-Wiedergabe heruntergeladen...",
+  "downloadComplete": "Download abgeschlossen! Lokale Datei wird abgespielt.",
+  "downloadFailed": "Download fehlgeschlagen: {error}",
+
+  "details": "Details",
+  "failedToLoadAudio": "Audio konnte nicht geladen werden: {error}",
+
+  "contactSupport": "Support kontaktieren",
+  "sendUsAMessage": "Senden Sie uns eine Nachricht",
+  "messageSentSuccessfully": "Nachricht erfolgreich gesendet!",
+  "send": "Senden",
+
+  "pleaseSelectCategory": "Bitte wählen Sie eine Kategorie",
+  "pleaseSelectAudioFile": "Bitte wählen Sie mindestens eine Audiodatei",
+  "uploadSuccessful": "Upload erfolgreich!",
+  "uploadFailed": "Upload fehlgeschlagen: {error}",
+
+  "noQuizAvailable": "Kein Quiz für dieses Element verfügbar.",
+  "questionNumber": "Frage {current}/{total}"
 }

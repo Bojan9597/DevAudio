@@ -6,7 +6,8 @@
       "Bash(dir:*)",
       "Bash(findstr:*)",
       "Bash(flutter gen-l10n:*)",
-      "Bash(flutter analyze:*)"
+      "Bash(flutter analyze:*)",
+      "Bash(flutter pub get:*)"
     ]
   }
 }

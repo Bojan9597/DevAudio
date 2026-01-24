@@ -5,6 +5,7 @@ import '../models/category.dart';
 import '../repositories/book_repository.dart';
 import '../repositories/category_repository.dart';
 import '../services/auth_service.dart';
+import '../l10n/generated/app_localizations.dart';
 
 class UploadBookScreen extends StatefulWidget {
   const UploadBookScreen({Key? key}) : super(key: key);
@@ -103,12 +104,12 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
     if (_selectedCategoryId == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Please select a category')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.pleaseSelectCategory)));
       return;
     }
     if (_selectedAudioPaths.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select at least one audio file')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.pleaseSelectAudioFile)),
       );
       return;
     }
@@ -177,14 +178,14 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Upload successful!')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.uploadSuccessful)));
         Navigator.pop(context, true); // Return success
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.uploadFailed(e.toString()))));
       }
     } finally {
       if (mounted) {
@@ -196,7 +197,7 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Upload Audio Book')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.uploadAudioBook)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -301,7 +302,7 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
                         width: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Upload Book', style: TextStyle(fontSize: 16)),
+                    : Text(AppLocalizations.of(context)!.uploadBook, style: const TextStyle(fontSize: 16)),
               ),
             ],
           ),

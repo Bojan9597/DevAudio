@@ -298,5 +298,72 @@
   "catFrameworks": "Frameworks (React, Vue, Angular)",
 
   "browseByCategory": "Browse audiobooks by category",
-  "noCategoriesFound": "No categories found"
+  "noCategoriesFound": "No categories found",
+
+  "rateThisBook": "Rate this book",
+  "submit": "Submit",
+  "cancel": "Cancel",
+  "pleaseLogInToRateBooks": "Please log in to rate books",
+  "thanksForRating": "Thanks for your {stars}-star rating!",
+  "@thanksForRating": {
+    "placeholders": {
+      "stars": {
+        "type": "int"
+      }
+    }
+  },
+  "failedToSubmitRating": "Failed to submit rating",
+  "rate": "Rate",
+  "pleaseLogInToManageFavorites": "Please log in to manage favorites",
+
+  "downloadingForOffline": "Downloading for offline playback...",
+  "downloadComplete": "Download complete! Playing local file.",
+  "downloadFailed": "Download failed: {error}",
+  "@downloadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+
+  "details": "Details",
+  "failedToLoadAudio": "Failed to load audio: {error}",
+  "@failedToLoadAudio": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+
+  "contactSupport": "Contact Support",
+  "sendUsAMessage": "Send us a message",
+  "messageSentSuccessfully": "Message sent successfully!",
+  "send": "Send",
+
+  "pleaseSelectCategory": "Please select a category",
+  "pleaseSelectAudioFile": "Please select at least one audio file",
+  "uploadSuccessful": "Upload successful!",
+  "uploadFailed": "Upload failed: {error}",
+  "@uploadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+
+  "noQuizAvailable": "No quiz available for this item.",
+  "questionNumber": "Question {current}/{total}",
+  "@questionNumber": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  }
 }

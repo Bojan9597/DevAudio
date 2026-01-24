@@ -579,8 +579,91 @@ class AppLocalizationsFr extends AppLocalizations {
   String get catFrameworks => 'Frameworks (React, Vue, Angular)';
 
   @override
-  String get browseByCategory => 'Browse audiobooks by category';
+  String get browseByCategory => 'Parcourir les livres audio par catégorie';
 
   @override
-  String get noCategoriesFound => 'No categories found';
+  String get noCategoriesFound => 'Aucune catégorie trouvée';
+
+  @override
+  String get rateThisBook => 'Noter ce livre';
+
+  @override
+  String get submit => 'Envoyer';
+
+  @override
+  String get cancel => 'Annuler';
+
+  @override
+  String get pleaseLogInToRateBooks => 'Connectez-vous pour noter les livres';
+
+  @override
+  String thanksForRating(int stars) {
+    return 'Merci pour votre note de $stars étoiles!';
+  }
+
+  @override
+  String get failedToSubmitRating => 'Échec de l\'envoi de la note';
+
+  @override
+  String get rate => 'Noter';
+
+  @override
+  String get pleaseLogInToManageFavorites =>
+      'Connectez-vous pour gérer les favoris';
+
+  @override
+  String get downloadingForOffline =>
+      'Téléchargement pour lecture hors ligne...';
+
+  @override
+  String get downloadComplete =>
+      'Téléchargement terminé! Lecture du fichier local.';
+
+  @override
+  String downloadFailed(String error) {
+    return 'Échec du téléchargement: $error';
+  }
+
+  @override
+  String get details => 'Détails';
+
+  @override
+  String failedToLoadAudio(String error) {
+    return 'Échec du chargement audio: $error';
+  }
+
+  @override
+  String get contactSupport => 'Contacter le support';
+
+  @override
+  String get sendUsAMessage => 'Envoyez-nous un message';
+
+  @override
+  String get messageSentSuccessfully => 'Message envoyé avec succès!';
+
+  @override
+  String get send => 'Envoyer';
+
+  @override
+  String get pleaseSelectCategory => 'Veuillez sélectionner une catégorie';
+
+  @override
+  String get pleaseSelectAudioFile =>
+      'Veuillez sélectionner au moins un fichier audio';
+
+  @override
+  String get uploadSuccessful => 'Téléversement réussi!';
+
+  @override
+  String uploadFailed(String error) {
+    return 'Échec du téléversement: $error';
+  }
+
+  @override
+  String get noQuizAvailable => 'Aucun quiz disponible pour cet élément.';
+
+  @override
+  String questionNumber(int current, int total) {
+    return 'Question $current/$total';
+  }
 }

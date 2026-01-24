@@ -578,4 +578,84 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noCategoriesFound => 'No categories found';
+
+  @override
+  String get rateThisBook => 'Rate this book';
+
+  @override
+  String get submit => 'Submit';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get pleaseLogInToRateBooks => 'Please log in to rate books';
+
+  @override
+  String thanksForRating(int stars) {
+    return 'Thanks for your $stars-star rating!';
+  }
+
+  @override
+  String get failedToSubmitRating => 'Failed to submit rating';
+
+  @override
+  String get rate => 'Rate';
+
+  @override
+  String get pleaseLogInToManageFavorites =>
+      'Please log in to manage favorites';
+
+  @override
+  String get downloadingForOffline => 'Downloading for offline playback...';
+
+  @override
+  String get downloadComplete => 'Download complete! Playing local file.';
+
+  @override
+  String downloadFailed(String error) {
+    return 'Download failed: $error';
+  }
+
+  @override
+  String get details => 'Details';
+
+  @override
+  String failedToLoadAudio(String error) {
+    return 'Failed to load audio: $error';
+  }
+
+  @override
+  String get contactSupport => 'Contact Support';
+
+  @override
+  String get sendUsAMessage => 'Send us a message';
+
+  @override
+  String get messageSentSuccessfully => 'Message sent successfully!';
+
+  @override
+  String get send => 'Send';
+
+  @override
+  String get pleaseSelectCategory => 'Please select a category';
+
+  @override
+  String get pleaseSelectAudioFile => 'Please select at least one audio file';
+
+  @override
+  String get uploadSuccessful => 'Upload successful!';
+
+  @override
+  String uploadFailed(String error) {
+    return 'Upload failed: $error';
+  }
+
+  @override
+  String get noQuizAvailable => 'No quiz available for this item.';
+
+  @override
+  String questionNumber(int current, int total) {
+    return 'Question $current/$total';
+  }
 }

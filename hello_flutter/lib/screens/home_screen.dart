@@ -669,7 +669,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (userId == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please log in to manage favorites')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.pleaseLogInToManageFavorites)),
         );
       }
       return;
@@ -692,7 +692,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _updateBookInLists(book.id);
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to update favorite')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.failedToUpdateFavorite)),
       );
     }
   }
@@ -734,7 +734,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Rate this book',
+                      AppLocalizations.of(context)!.rateThisBook,
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.9),
                         fontSize: 18,
@@ -779,9 +779,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         TextButton(
                           onPressed: () => Navigator.of(ctx).pop(),
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(color: Colors.white54),
+                          child: Text(
+                            AppLocalizations.of(context)!.cancel,
+                            style: const TextStyle(color: Colors.white54),
                           ),
                         ),
                         ElevatedButton(
@@ -795,7 +795,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             backgroundColor: Colors.amber,
                             foregroundColor: Colors.black,
                           ),
-                          child: const Text('Submit'),
+                          child: Text(AppLocalizations.of(context)!.submit),
                         ),
                       ],
                     ),
@@ -814,23 +814,28 @@ class _HomeScreenState extends State<HomeScreen> {
     if (userId == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please log in to rate books')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.pleaseLogInToRateBooks)),
         );
+        // Navigate to login screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        ).then((_) => _checkLoginStatus());
       }
       return;
     }
 
-    final success = await _bookRepository.rateBook(userId, book.id, stars);
+    final error = await _bookRepository.rateBook(userId, book.id, stars);
 
-    if (success && mounted) {
+    if (error == null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Thanks for your $stars-star rating! ⭐')),
+        SnackBar(content: Text('${AppLocalizations.of(context)!.thanksForRating(stars)} ⭐')),
       );
       _resetAndLoad();
     } else if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to submit rating')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error ?? AppLocalizations.of(context)!.failedToSubmitRating)),
+      );
     }
   }
 

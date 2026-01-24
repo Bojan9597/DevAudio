@@ -119,11 +119,14 @@ class AuthService {
 
     await _googleSignIn.signOut();
 
-    // Clear shared preferences mainly, but PRESERVE offline data
+    // Clear shared preferences mainly, but PRESERVE offline data and user settings
     final keys = prefs.getKeys();
     for (final key in keys) {
       // Keep offline data (downloads/metadata)
       if (key.startsWith('offline_')) continue;
+      // Keep user-specific theme and locale settings (per-account preferences)
+      if (key.startsWith('theme_mode_')) continue;
+      if (key.startsWith('locale_')) continue;
 
       // Remove everything else (tokens, user cache, etc.)
       await prefs.remove(key);

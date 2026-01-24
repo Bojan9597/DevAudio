@@ -511,9 +511,12 @@ class BookRepository {
     }
   }
 
-  Future<bool> rateBook(int userId, String bookId, int stars) async {
+  /// Returns null on success, or an error message string on failure
+  Future<String?> rateBook(int userId, String bookId, int stars) async {
     try {
-      if (ConnectivityService().isOffline) throw Exception('Offline mode');
+      if (ConnectivityService().isOffline) {
+        return 'Cannot rate while offline';
+      }
 
       final headers = await _getHeaders();
       final body = json.encode({'user_id': userId, 'stars': stars});
@@ -524,10 +527,15 @@ class BookRepository {
         body: body,
       );
 
-      return response.statusCode == 200;
+      if (response.statusCode == 200) {
+        return null; // Success
+      } else {
+        final data = json.decode(response.body);
+        return data['message'] ?? data['error'] ?? 'Failed to submit rating';
+      }
     } catch (e) {
       print('Error rating book: $e');
-      return false;
+      return 'Error: $e';
     }
   }
 }

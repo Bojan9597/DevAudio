@@ -1171,6 +1171,144 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No categories found'**
   String get noCategoriesFound;
+
+  /// No description provided for @rateThisBook.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate this book'**
+  String get rateThisBook;
+
+  /// No description provided for @submit.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit'**
+  String get submit;
+
+  /// No description provided for @cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
+
+  /// No description provided for @pleaseLogInToRateBooks.
+  ///
+  /// In en, this message translates to:
+  /// **'Please log in to rate books'**
+  String get pleaseLogInToRateBooks;
+
+  /// No description provided for @thanksForRating.
+  ///
+  /// In en, this message translates to:
+  /// **'Thanks for your {stars}-star rating!'**
+  String thanksForRating(int stars);
+
+  /// No description provided for @failedToSubmitRating.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to submit rating'**
+  String get failedToSubmitRating;
+
+  /// No description provided for @rate.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate'**
+  String get rate;
+
+  /// No description provided for @pleaseLogInToManageFavorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Please log in to manage favorites'**
+  String get pleaseLogInToManageFavorites;
+
+  /// No description provided for @downloadingForOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading for offline playback...'**
+  String get downloadingForOffline;
+
+  /// No description provided for @downloadComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Download complete! Playing local file.'**
+  String get downloadComplete;
+
+  /// No description provided for @downloadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Download failed: {error}'**
+  String downloadFailed(String error);
+
+  /// No description provided for @details.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get details;
+
+  /// No description provided for @failedToLoadAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load audio: {error}'**
+  String failedToLoadAudio(String error);
+
+  /// No description provided for @contactSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Support'**
+  String get contactSupport;
+
+  /// No description provided for @sendUsAMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Send us a message'**
+  String get sendUsAMessage;
+
+  /// No description provided for @messageSentSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Message sent successfully!'**
+  String get messageSentSuccessfully;
+
+  /// No description provided for @send.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get send;
+
+  /// No description provided for @pleaseSelectCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a category'**
+  String get pleaseSelectCategory;
+
+  /// No description provided for @pleaseSelectAudioFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select at least one audio file'**
+  String get pleaseSelectAudioFile;
+
+  /// No description provided for @uploadSuccessful.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload successful!'**
+  String get uploadSuccessful;
+
+  /// No description provided for @uploadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload failed: {error}'**
+  String uploadFailed(String error);
+
+  /// No description provided for @noQuizAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No quiz available for this item.'**
+  String get noQuizAvailable;
+
+  /// No description provided for @questionNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Question {current}/{total}'**
+  String questionNumber(int current, int total);
 }
 
 class _AppLocalizationsDelegate

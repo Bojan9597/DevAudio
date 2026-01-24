@@ -22,13 +22,13 @@ class Subscription {
   /// Check if subscription grants access to content
   bool get hasAccess => isActive;
 
-  /// Check if subscription is expiring soon (within 7 days)
+  /// Check if subscription is expiring soon (within 1 day)
   bool get isExpiringSoon {
     if (endDate == null || !isActive) return false;
     final nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final secondsUntilExpiry = endDate! - nowSeconds;
     final daysUntilExpiry = secondsUntilExpiry / (24 * 3600);
-    return daysUntilExpiry <= 7 && daysUntilExpiry > 0;
+    return daysUntilExpiry <= 1 && daysUntilExpiry > 0;
   }
 
   /// Get human-readable plan name

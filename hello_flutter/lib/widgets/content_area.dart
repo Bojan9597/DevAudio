@@ -15,6 +15,7 @@ import '../screens/discover_screen.dart';
 import '../screens/upload_book_screen.dart';
 import '../screens/playlist_screen.dart';
 import '../screens/home_screen.dart';
+import '../screens/login_screen.dart';
 
 class ContentArea extends StatefulWidget {
   const ContentArea({super.key});
@@ -887,7 +888,7 @@ class _ContentAreaState extends State<ContentArea> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Rate this book',
+                      AppLocalizations.of(context)!.rateThisBook,
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.9),
                         fontSize: 18,
@@ -932,9 +933,9 @@ class _ContentAreaState extends State<ContentArea> {
                       children: [
                         TextButton(
                           onPressed: () => Navigator.of(ctx).pop(),
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(color: Colors.white54),
+                          child: Text(
+                            AppLocalizations.of(context)!.cancel,
+                            style: const TextStyle(color: Colors.white54),
                           ),
                         ),
                         ElevatedButton(
@@ -948,7 +949,7 @@ class _ContentAreaState extends State<ContentArea> {
                             backgroundColor: Colors.amber,
                             foregroundColor: Colors.black,
                           ),
-                          child: const Text('Submit'),
+                          child: Text(AppLocalizations.of(context)!.submit),
                         ),
                       ],
                     ),
@@ -967,23 +968,28 @@ class _ContentAreaState extends State<ContentArea> {
     if (userId == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please log in to rate books')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.pleaseLogInToRateBooks)),
         );
+        // Navigate to login screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        ).then((_) => _loadBooks());
       }
       return;
     }
 
-    final success = await BookRepository().rateBook(userId, book.id, stars);
+    final error = await BookRepository().rateBook(userId, book.id, stars);
 
-    if (success && mounted) {
+    if (error == null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Thanks for your $stars-star rating! ⭐')),
+        SnackBar(content: Text('${AppLocalizations.of(context)!.thanksForRating(stars)} ⭐')),
       );
       _loadBooks();
     } else if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to submit rating')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error ?? AppLocalizations.of(context)!.failedToSubmitRating)),
+      );
     }
   }
 

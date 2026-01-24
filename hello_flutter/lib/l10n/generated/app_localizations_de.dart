@@ -578,8 +578,92 @@ class AppLocalizationsDe extends AppLocalizations {
   String get catFrameworks => 'Frameworks (React, Vue, Angular)';
 
   @override
-  String get browseByCategory => 'Browse audiobooks by category';
+  String get browseByCategory => 'Hörbücher nach Kategorie durchsuchen';
 
   @override
-  String get noCategoriesFound => 'No categories found';
+  String get noCategoriesFound => 'Keine Kategorien gefunden';
+
+  @override
+  String get rateThisBook => 'Dieses Buch bewerten';
+
+  @override
+  String get submit => 'Absenden';
+
+  @override
+  String get cancel => 'Abbrechen';
+
+  @override
+  String get pleaseLogInToRateBooks =>
+      'Bitte melden Sie sich an, um Bücher zu bewerten';
+
+  @override
+  String thanksForRating(int stars) {
+    return 'Danke für Ihre $stars-Sterne-Bewertung!';
+  }
+
+  @override
+  String get failedToSubmitRating => 'Bewertung konnte nicht gesendet werden';
+
+  @override
+  String get rate => 'Bewerten';
+
+  @override
+  String get pleaseLogInToManageFavorites =>
+      'Bitte melden Sie sich an, um Favoriten zu verwalten';
+
+  @override
+  String get downloadingForOffline =>
+      'Wird für Offline-Wiedergabe heruntergeladen...';
+
+  @override
+  String get downloadComplete =>
+      'Download abgeschlossen! Lokale Datei wird abgespielt.';
+
+  @override
+  String downloadFailed(String error) {
+    return 'Download fehlgeschlagen: $error';
+  }
+
+  @override
+  String get details => 'Details';
+
+  @override
+  String failedToLoadAudio(String error) {
+    return 'Audio konnte nicht geladen werden: $error';
+  }
+
+  @override
+  String get contactSupport => 'Support kontaktieren';
+
+  @override
+  String get sendUsAMessage => 'Senden Sie uns eine Nachricht';
+
+  @override
+  String get messageSentSuccessfully => 'Nachricht erfolgreich gesendet!';
+
+  @override
+  String get send => 'Senden';
+
+  @override
+  String get pleaseSelectCategory => 'Bitte wählen Sie eine Kategorie';
+
+  @override
+  String get pleaseSelectAudioFile =>
+      'Bitte wählen Sie mindestens eine Audiodatei';
+
+  @override
+  String get uploadSuccessful => 'Upload erfolgreich!';
+
+  @override
+  String uploadFailed(String error) {
+    return 'Upload fehlgeschlagen: $error';
+  }
+
+  @override
+  String get noQuizAvailable => 'Kein Quiz für dieses Element verfügbar.';
+
+  @override
+  String questionNumber(int current, int total) {
+    return 'Frage $current/$total';
+  }
 }
