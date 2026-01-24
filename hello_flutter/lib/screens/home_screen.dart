@@ -36,6 +36,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Timer? _debounce;
 
   List<Book> _books = [];
+  List<Book> _newReleases = [];
+  List<Book> _topPicks = [];
   List<Category> _categories = [];
   bool _isLoading = false;
   bool _isLoadingCategories = true;
@@ -171,9 +173,31 @@ class _HomeScreenState extends State<HomeScreen> {
         query: _searchController.text,
       );
 
+      List<Book> newReleases = _newReleases;
+      List<Book> topPicks = _topPicks;
+
+      if (_currentPage == 1) {
+        newReleases = await _bookRepository.getDiscoverBooks(
+          limit: 5,
+          sort: 'newest',
+          query: _searchController.text,
+        );
+        topPicks = await _bookRepository.getDiscoverBooks(
+          limit: 5,
+          sort: 'popular',
+          query: _searchController.text,
+        );
+      }
+
       if (mounted) {
         setState(() {
-          _books.addAll(newBooks);
+          if (_currentPage == 1) {
+            _books = newBooks;
+            _newReleases = newReleases;
+            _topPicks = topPicks;
+          } else {
+            _books.addAll(newBooks);
+          }
           _hasMore = newBooks.length == _limit;
           _isLoading = false;
         });
@@ -363,7 +387,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         AppLocalizations.of(context)!.newReleases,
                         textColor,
                       ),
-                      _buildHorizontalBookList(cardColor, textColor),
+                      _buildHorizontalBookList(
+                        _newReleases,
+                        cardColor,
+                        textColor,
+                      ),
 
                       const SliverToBoxAdapter(child: SizedBox(height: 20)),
 
@@ -372,9 +400,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         textColor,
                       ),
                       _buildHorizontalBookList(
+                        _topPicks,
                         cardColor,
                         textColor,
-                        reversed: true,
                       ), // Simulate different content
 
                       const SliverToBoxAdapter(child: SizedBox(height: 40)),
@@ -470,132 +498,260 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHorizontalBookList(
+    List<Book> books,
     Color cardColor,
-    Color textColor, {
-    bool reversed = false,
-  }) {
-    // Just for demo, show existing books horizontally
-    final booksToShow = reversed ? _books.reversed.toList() : _books;
-    final bool isOffline = ConnectivityService().isOffline;
-
-    if (_books.isEmpty && !_isLoading) {
-      return SliverToBoxAdapter(
-        child: SizedBox(
-          height: 220,
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  isOffline ? Icons.wifi_off : Icons.error_outline,
-                  color: textColor.withOpacity(0.5),
-                  size: 40,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  isOffline
-                      ? AppLocalizations.of(context)!.notAvailableOffline
-                      : AppLocalizations.of(context)!.noBooksFound,
-                  style: TextStyle(
-                    color: textColor.withOpacity(0.5),
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
+    Color textColor,
+  ) {
+    if (books.isEmpty && !_isLoading) {
+      return SliverToBoxAdapter(child: SizedBox(height: 0));
     }
 
     return SliverToBoxAdapter(
       child: SizedBox(
-        height: 220,
-        child: _isLoading && _books.isEmpty
+        height: 280,
+        child: _isLoading && books.isEmpty
             ? const Center(child: CircularProgressIndicator())
             : ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: booksToShow.length,
+                itemCount: books.length,
                 itemBuilder: (context, index) {
-                  final book = booksToShow[index];
+                  final book = books[index];
                   return Container(
-                    width: 140,
+                    width: 160,
                     margin: const EdgeInsets.only(right: 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Card(
-                            margin: EdgeInsets.zero,
-                            elevation: 2,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            color: cardColor,
-                            clipBehavior: Clip.antiAlias,
-                            child: InkWell(
-                              onTap: () => _openPlayer(book),
-                              child:
-                                  (book.absoluteCoverUrlThumbnail != null &&
-                                      book
-                                          .absoluteCoverUrlThumbnail!
-                                          .isNotEmpty)
-                                  ? CachedNetworkImage(
-                                      imageUrl: book.absoluteCoverUrlThumbnail!,
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                      height: double.infinity,
-                                      errorWidget: (context, url, error) =>
-                                          Container(
-                                            color: textColor.withOpacity(0.1),
-                                            alignment: Alignment.center,
-                                            child: Icon(
-                                              Icons.book,
-                                              size: 40,
-                                              color: textColor,
-                                            ),
-                                          ),
-                                    )
-                                  : Container(
-                                      color: textColor.withOpacity(0.1),
-                                      alignment: Alignment.center,
-                                      child: Icon(
-                                        Icons.book,
-                                        size: 40,
-                                        color: textColor,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          book.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: textColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                        Text(
-                          book.author,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: textColor.withOpacity(0.7),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
+                    child: _buildBookCard(book, cardColor, textColor),
                   );
                 },
               ),
       ),
     );
+  }
+
+  Widget _buildBookCard(Book book, Color cardColor, Color textColor) {
+    return GestureDetector(
+      onTap: () => _openPlayer(book),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AspectRatio(
+            aspectRatio: 1.0,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: book.absoluteCoverUrlThumbnail.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: book.absoluteCoverUrlThumbnail!,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      errorWidget: (context, url, error) => Container(
+                        color: textColor.withOpacity(0.1),
+                        child: Icon(Icons.book, size: 40, color: textColor),
+                      ),
+                    )
+                  : Container(
+                      color: textColor.withOpacity(0.1),
+                      child: Center(
+                        child: Icon(Icons.book, size: 40, color: textColor),
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            book.title,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+              color: textColor,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          _buildDurationText(book, textColor),
+          const SizedBox(height: 4),
+          _buildStarRating(book, textColor),
+        ],
+      ),
+    );
+  }
+
+  String _formatBookDuration(int? totalSeconds) {
+    if (totalSeconds == null || totalSeconds == 0) return '';
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    if (hours > 0) {
+      return '${hours}h ${minutes}m';
+    }
+    return '${minutes} min';
+  }
+
+  Widget _buildDurationText(Book book, Color textColor) {
+    final durationText = _formatBookDuration(book.durationSeconds);
+    if (durationText.isEmpty) return const SizedBox.shrink();
+    return Text(
+      durationText,
+      style: TextStyle(fontSize: 11, color: textColor.withOpacity(0.6)),
+    );
+  }
+
+  Widget _buildStarRating(Book book, Color textColor) {
+    return GestureDetector(
+      onTap: () => _showRatingDialog(book),
+      child: Row(
+        children: [
+          ...List.generate(5, (index) {
+            if (index < book.averageRating.floor()) {
+              return const Icon(Icons.star, size: 19, color: Colors.amber);
+            } else if (index < book.averageRating) {
+              return const Icon(Icons.star_half, size: 19, color: Colors.amber);
+            } else {
+              return const Icon(
+                Icons.star_border,
+                size: 19,
+                color: Colors.amber,
+              );
+            }
+          }),
+          const SizedBox(width: 5),
+          Text(
+            book.ratingCount > 0 ? _formatCount(book.ratingCount) : 'Rate',
+            style: TextStyle(fontSize: 13, color: textColor.withOpacity(0.6)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRatingDialog(Book book) {
+    int selectedStars = 0;
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Colors.brown.shade900, Colors.black],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Rate this book',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      book.title,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: List.generate(5, (index) {
+                        return GestureDetector(
+                          onTap: () =>
+                              setDialogState(() => selectedStars = index + 1),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Icon(
+                              index < selectedStars
+                                  ? Icons.star
+                                  : Icons.star_border,
+                              color: Colors.amber,
+                              size: 36,
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(color: Colors.white54),
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: selectedStars > 0
+                              ? () async {
+                                  Navigator.of(ctx).pop();
+                                  await _submitRating(book, selectedStars);
+                                }
+                              : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.amber,
+                            foregroundColor: Colors.black,
+                          ),
+                          child: const Text('Submit'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _submitRating(Book book, int stars) async {
+    final userId = await AuthService().getCurrentUserId();
+    if (userId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please log in to rate books')),
+        );
+      }
+      return;
+    }
+
+    final success = await _bookRepository.rateBook(userId, book.id, stars);
+
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Thanks for your $stars-star rating! ⭐')),
+      );
+      _resetAndLoad();
+    } else if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Failed to submit rating')));
+    }
+  }
+
+  String _formatCount(int count) {
+    if (count >= 1000) {
+      return '${(count / 1000).toStringAsFixed(1)}k';
+    }
+    return count.toString();
   }
 
   Widget _buildHeroImageGrid() {
