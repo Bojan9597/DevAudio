@@ -53,6 +53,7 @@ class BookRepository {
     int page = 1,
     int limit = 5,
     String query = '',
+    String? sort,
   }) async {
     try {
       final uri = Uri.parse('${ApiConstants.baseUrl}/books').replace(
@@ -60,6 +61,7 @@ class BookRepository {
           'page': page.toString(),
           'limit': limit.toString(),
           if (query.isNotEmpty) 'q': query,
+          if (sort != null) 'sort': sort,
         },
       );
 

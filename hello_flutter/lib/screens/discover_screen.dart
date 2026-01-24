@@ -22,6 +22,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   Timer? _debounce;
 
   List<Book> _books = [];
+  List<Book> _newReleases = [];
+  List<Book> _topPicks = [];
   bool _isLoading = false;
   bool _hasMore = true;
   int _currentPage = 1;
@@ -78,9 +80,32 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         query: _searchController.text,
       );
 
+      List<Book> newReleases = _newReleases;
+      List<Book> topPicks = _topPicks;
+
+      if (_currentPage == 1) {
+        // Fetch specific lists only on initial load/refresh
+        newReleases = await _bookRepository.getDiscoverBooks(
+          limit: 5,
+          sort: 'newest',
+          query: _searchController.text,
+        );
+        topPicks = await _bookRepository.getDiscoverBooks(
+          limit: 5,
+          sort: 'popular',
+          query: _searchController.text,
+        );
+      }
+
       if (mounted) {
         setState(() {
-          _books.addAll(newBooks);
+          if (_currentPage == 1) {
+            _books = newBooks;
+            _newReleases = newReleases;
+            _topPicks = topPicks;
+          } else {
+            _books.addAll(newBooks);
+          }
           _hasMore = newBooks.length == _limit;
           _isLoading = false;
         });
@@ -155,11 +180,11 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
               slivers: [
                 // New Releases Section
                 _buildSectionHeader('New Releases', textColor),
-                _buildHorizontalBookList(cardColor, textColor, reversed: false),
+                _buildHorizontalBookList(_newReleases, cardColor, textColor),
 
                 // Top Picks Section
                 _buildSectionHeader('Top Picks', textColor),
-                _buildHorizontalBookList(cardColor, textColor, reversed: true),
+                _buildHorizontalBookList(_topPicks, cardColor, textColor),
 
                 // All Books Grid/List
                 _buildSectionHeader('All Books', textColor),
@@ -191,13 +216,11 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   }
 
   Widget _buildHorizontalBookList(
+    List<Book> booksToShow,
     Color cardColor,
-    Color textColor, {
-    bool reversed = false,
-  }) {
-    final booksToShow = reversed ? _books.reversed.toList() : _books;
-
-    if (_books.isEmpty && !_isLoading) {
+    Color textColor,
+  ) {
+    if (booksToShow.isEmpty && !_isLoading) {
       return SliverToBoxAdapter(
         child: SizedBox(
           height: 180,

@@ -1074,14 +1074,22 @@ def get_books():
             LEFT JOIN users u ON b.posted_by_user_id = u.id
         """
         
+        sort_by = request.args.get('sort', 'newest', type=str)
+
         if search_query:
              query = base_select + " WHERE b.title LIKE %s"
              params.append(f"%{search_query}%")
         else:
             query = base_select
             
-        # Add ordering (optional but good for consistency)
-        query += " ORDER BY b.id DESC" 
+        if sort_by == 'popular':
+            # Sort by total rating score (average * count)
+            # We use the subqueries from SELECT via alias if supported, or repeat logic.
+            # MySQL supports aliases in ORDER BY.
+            query += " ORDER BY (average_rating * rating_count) DESC, b.id DESC"
+        else:
+            # Default to newest
+            query += " ORDER BY b.id DESC" 
         
         query += " LIMIT %s OFFSET %s"
         params.extend([limit, offset])
