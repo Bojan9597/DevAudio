@@ -411,7 +411,13 @@ class BookRepository {
         response = await http.post(url, headers: headers, body: body);
       }
 
-      return response.statusCode == 200;
+      if (response.statusCode == 200) {
+        // Invalidate cache so next fetch gets updated list
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('cached_favorites_$userId');
+        return true;
+      }
+      return false;
     } catch (e) {
       print('Error toggling favorite: $e');
       return false;

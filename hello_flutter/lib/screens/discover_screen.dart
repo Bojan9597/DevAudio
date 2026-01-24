@@ -74,27 +74,45 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final newBooks = await _bookRepository.getDiscoverBooks(
+      final userId = await AuthService().getCurrentUserId();
+      List<int> favIds = [];
+      if (userId != null) {
+        favIds = await _bookRepository.getFavoriteBookIds(userId);
+      }
+
+      final newBooksRaw = await _bookRepository.getDiscoverBooks(
         page: _currentPage,
         limit: _limit,
         query: _searchController.text,
       );
+
+      List<Book> mergeFavs(List<Book> list) {
+        return list.map((b) {
+          final isFav = favIds.contains(int.tryParse(b.id) ?? -1);
+          return b.copyWith(isFavorite: isFav);
+        }).toList();
+      }
+
+      final newBooks = mergeFavs(newBooksRaw);
 
       List<Book> newReleases = _newReleases;
       List<Book> topPicks = _topPicks;
 
       if (_currentPage == 1) {
         // Fetch specific lists only on initial load/refresh
-        newReleases = await _bookRepository.getDiscoverBooks(
+        final newReleasesRaw = await _bookRepository.getDiscoverBooks(
           limit: 5,
           sort: 'newest',
           query: _searchController.text,
         );
-        topPicks = await _bookRepository.getDiscoverBooks(
+        newReleases = mergeFavs(newReleasesRaw);
+
+        final topPicksRaw = await _bookRepository.getDiscoverBooks(
           limit: 5,
           sort: 'popular',
           query: _searchController.text,
         );
+        topPicks = mergeFavs(topPicksRaw);
       }
 
       if (mounted) {
@@ -426,31 +444,100 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   }
 
   Widget _buildStarRating(Book book, Color textColor) {
-    return GestureDetector(
-      onTap: () => _showRatingDialog(book),
-      child: Row(
-        children: [
-          ...List.generate(5, (index) {
-            if (index < book.averageRating.floor()) {
-              return const Icon(Icons.star, size: 19, color: Colors.amber);
-            } else if (index < book.averageRating) {
-              return const Icon(Icons.star_half, size: 19, color: Colors.amber);
-            } else {
-              return const Icon(
-                Icons.star_border,
-                size: 19,
-                color: Colors.amber,
-              );
-            }
-          }),
-          const SizedBox(width: 5),
-          Text(
-            book.ratingCount > 0 ? _formatCount(book.ratingCount) : 'Rate',
-            style: TextStyle(fontSize: 13, color: textColor.withOpacity(0.6)),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        GestureDetector(
+          onTap: () => _showRatingDialog(book),
+          child: Row(
+            children: [
+              ...List.generate(5, (index) {
+                if (index < book.averageRating.floor()) {
+                  return const Icon(Icons.star, size: 19, color: Colors.amber);
+                } else if (index < book.averageRating) {
+                  return const Icon(
+                    Icons.star_half,
+                    size: 19,
+                    color: Colors.amber,
+                  );
+                } else {
+                  return const Icon(
+                    Icons.star_border,
+                    size: 19,
+                    color: Colors.amber,
+                  );
+                }
+              }),
+              const SizedBox(width: 5),
+              Text(
+                book.ratingCount > 0 ? _formatCount(book.ratingCount) : 'Rate',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: textColor.withOpacity(0.6),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+        GestureDetector(
+          onTap: () => _toggleFavorite(book),
+          child: Padding(
+            padding: const EdgeInsets.only(right: 4.0),
+            child: Icon(
+              book.isFavorite ? Icons.favorite : Icons.favorite_border,
+              color: book.isFavorite ? Colors.red : textColor.withOpacity(0.5),
+              size: 20,
+            ),
+          ),
+        ),
+      ],
     );
+  }
+
+  Future<void> _toggleFavorite(Book book) async {
+    final userId = await AuthService().getCurrentUserId();
+    if (userId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please log in to manage favorites')),
+        );
+      }
+      return;
+    }
+
+    // Optimistic update
+    setState(() {
+      _updateBookInLists(book.id);
+    });
+
+    final success = await _bookRepository.toggleFavorite(
+      userId,
+      book.id,
+      book.isFavorite, // Pass OLD state (logic: if isFavorite, we delete)
+    );
+
+    if (!success && mounted) {
+      // Revert if failed
+      setState(() {
+        _updateBookInLists(book.id);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update favorite')),
+      );
+    }
+  }
+
+  void _updateBookInLists(String bookId) {
+    void updateList(List<Book> list) {
+      final index = list.indexWhere((b) => b.id == bookId);
+      if (index != -1) {
+        list[index] = list[index].copyWith(isFavorite: !list[index].isFavorite);
+      }
+    }
+
+    updateList(_books);
+    updateList(_newReleases);
+    updateList(_topPicks);
   }
 
   void _showRatingDialog(Book book) {

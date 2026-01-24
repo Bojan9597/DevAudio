@@ -37,6 +37,7 @@ class _ContentAreaState extends State<ContentArea> {
   int? _userId;
 
   int _lastRefreshVersion = 0;
+  String _lastCategoryId = '';
 
   @override
   void initState() {
@@ -48,6 +49,7 @@ class _ContentAreaState extends State<ContentArea> {
     // Listen for refresh triggers
     globalLayoutState.addListener(_handleLayoutChange);
     _lastRefreshVersion = globalLayoutState.refreshVersion;
+    _lastCategoryId = globalLayoutState.selectedCategoryId;
   }
 
   Future<void> _checkAdminStatus() async {
@@ -64,9 +66,21 @@ class _ContentAreaState extends State<ContentArea> {
   }
 
   void _handleLayoutChange() {
+    bool shouldReload = false;
+    // Check for explicit refresh trigger
     if (globalLayoutState.refreshVersion != _lastRefreshVersion) {
       _lastRefreshVersion = globalLayoutState.refreshVersion;
-      // Show loading state to indicate refresh
+      shouldReload = true;
+    }
+    // Check if switching TO library from something else
+    // We want to ensure library data (favorites/downloads) is fresh
+    if (globalLayoutState.selectedCategoryId == 'library' &&
+        _lastCategoryId != 'library') {
+      shouldReload = true;
+    }
+    _lastCategoryId = globalLayoutState.selectedCategoryId;
+
+    if (shouldReload) {
       if (mounted) setState(() => _isLoading = true);
       _loadBooks(); // Reload data
       _loadCategories(); // Reload categories
@@ -996,30 +1010,53 @@ class _ContentAreaState extends State<ContentArea> {
   }
 
   Widget _buildStarRating(Book book, Color textColor) {
-    return GestureDetector(
-      onTap: () => _showRatingDialog(book),
-      child: Row(
-        children: [
-          ...List.generate(5, (index) {
-            if (index < book.averageRating.floor()) {
-              return const Icon(Icons.star, size: 19, color: Colors.amber);
-            } else if (index < book.averageRating) {
-              return const Icon(Icons.star_half, size: 19, color: Colors.amber);
-            } else {
-              return const Icon(
-                Icons.star_border,
-                size: 19,
-                color: Colors.amber,
-              );
-            }
-          }),
-          const SizedBox(width: 5),
-          Text(
-            book.ratingCount > 0 ? _formatCount(book.ratingCount) : 'Rate',
-            style: TextStyle(fontSize: 13, color: textColor.withOpacity(0.6)),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        GestureDetector(
+          onTap: () => _showRatingDialog(book),
+          child: Row(
+            children: [
+              ...List.generate(5, (index) {
+                if (index < book.averageRating.floor()) {
+                  return const Icon(Icons.star, size: 19, color: Colors.amber);
+                } else if (index < book.averageRating) {
+                  return const Icon(
+                    Icons.star_half,
+                    size: 19,
+                    color: Colors.amber,
+                  );
+                } else {
+                  return const Icon(
+                    Icons.star_border,
+                    size: 19,
+                    color: Colors.amber,
+                  );
+                }
+              }),
+              const SizedBox(width: 5),
+              Text(
+                book.ratingCount > 0 ? _formatCount(book.ratingCount) : 'Rate',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: textColor.withOpacity(0.6),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+        GestureDetector(
+          onTap: () => _toggleFavorite(book),
+          child: Padding(
+            padding: const EdgeInsets.only(right: 4.0),
+            child: Icon(
+              book.isFavorite ? Icons.favorite : Icons.favorite_border,
+              color: book.isFavorite ? Colors.red : textColor.withOpacity(0.5),
+              size: 20,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
