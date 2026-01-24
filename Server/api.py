@@ -1062,11 +1062,13 @@ def get_books():
         offset = (page - 1) * limit
 
         params = []
-        # Updated query to check for playlist items existence and get duration
+        # Updated query to check for playlist items existence, get duration, and ratings
         base_select = """
             SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug, 
                    u.name as posted_by_name, b.description, b.price, b.posted_by_user_id, b.duration_seconds,
-                   (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count
+                   (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count,
+                   (SELECT AVG(stars) FROM book_ratings WHERE book_id = b.id) as average_rating,
+                   (SELECT COUNT(*) FROM book_ratings WHERE book_id = b.id) as rating_count
             FROM books b 
             LEFT JOIN categories c ON b.primary_category_id = c.id
             LEFT JOIN users u ON b.posted_by_user_id = u.id
@@ -1164,7 +1166,9 @@ def get_books():
                     "description": row['description'],
                     "price": float(row['price']) if row['price'] else 0.0,
                     "postedByUserId": str(row['posted_by_user_id']),
-                    "isPlaylist": row['playlist_count'] > 0
+                    "isPlaylist": row['playlist_count'] > 0,
+                    "averageRating": round(float(row['average_rating']), 1) if row['average_rating'] else 0.0,
+                    "ratingCount": row['rating_count'] or 0
                 }
                 
                 # Add percentage if calculated
@@ -2609,6 +2613,140 @@ def send_support_email_endpoint():
         return jsonify({"error": str(e)}), 500
     finally:
         db.disconnect()
+
+
+# ==================== BOOK RATINGS ====================
+
+@app.route('/books/<int:book_id>/rate', methods=['POST'])
+@jwt_required
+def rate_book(book_id):
+    """Submit or update a rating for a book (1-5 stars). Subscribers only."""
+    data = request.get_json()
+    user_id = data.get('user_id')
+    stars = data.get('stars')
+    
+    if not user_id or stars is None:
+        return jsonify({"error": "user_id and stars are required"}), 400
+    
+    if not isinstance(stars, int) or stars < 1 or stars > 5:
+        return jsonify({"error": "stars must be an integer from 1 to 5"}), 400
+    
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        # Check if user is a subscriber
+        if not is_subscriber(user_id, db):
+            return jsonify({"error": "Only subscribers can rate books"}), 403
+        
+        # Create table if not exists
+        create_table_query = """
+            CREATE TABLE IF NOT EXISTS book_ratings (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                book_id INT NOT NULL,
+                user_id INT NOT NULL,
+                stars INT NOT NULL CHECK (stars >= 1 AND stars <= 5),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_user_book (user_id, book_id),
+                FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """
+        cursor = db.connection.cursor()
+        cursor.execute(create_table_query)
+        db.connection.commit()
+        
+        # Insert or update rating
+        upsert_query = """
+            INSERT INTO book_ratings (book_id, user_id, stars)
+            VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE stars = VALUES(stars), updated_at = CURRENT_TIMESTAMP
+        """
+        cursor.execute(upsert_query, (book_id, user_id, stars))
+        db.connection.commit()
+        cursor.close()
+        
+        # Return updated rating stats
+        stats_query = """
+            SELECT AVG(stars) as average_rating, COUNT(*) as rating_count
+            FROM book_ratings WHERE book_id = %s
+        """
+        stats = db.execute_query(stats_query, (book_id,))
+        avg = round(float(stats[0]['average_rating']), 1) if stats and stats[0]['average_rating'] else 0
+        count = stats[0]['rating_count'] if stats else 0
+        
+        return jsonify({
+            "message": "Rating submitted",
+            "averageRating": avg,
+            "ratingCount": count
+        }), 200
+        
+    except Exception as e:
+        print(f"Rating error: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
+
+
+@app.route('/books/<int:book_id>/rating', methods=['GET'])
+def get_book_rating(book_id):
+    """Get average rating and count for a book."""
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        query = """
+            SELECT AVG(stars) as average_rating, COUNT(*) as rating_count
+            FROM book_ratings WHERE book_id = %s
+        """
+        result = db.execute_query(query, (book_id,))
+        
+        if result and result[0]['average_rating']:
+            return jsonify({
+                "averageRating": round(float(result[0]['average_rating']), 1),
+                "ratingCount": result[0]['rating_count']
+            }), 200
+        else:
+            return jsonify({
+                "averageRating": 0,
+                "ratingCount": 0
+            }), 200
+            
+    except Exception as e:
+        # Table might not exist yet - return empty
+        return jsonify({
+            "averageRating": 0,
+            "ratingCount": 0
+        }), 200
+    finally:
+        db.disconnect()
+
+
+@app.route('/books/<int:book_id>/user-rating/<int:user_id>', methods=['GET'])
+@jwt_required
+def get_user_book_rating(book_id, user_id):
+    """Get a specific user's rating for a book."""
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        query = "SELECT stars FROM book_ratings WHERE book_id = %s AND user_id = %s"
+        result = db.execute_query(query, (book_id, user_id))
+        
+        if result:
+            return jsonify({"stars": result[0]['stars']}), 200
+        else:
+            return jsonify({"stars": None}), 200
+            
+    except Exception as e:
+        return jsonify({"stars": None}), 200
+    finally:
+        db.disconnect()
+
 
 # Register new encryption endpoints (v2)
 from api_encryption_endpoints import register_encryption_endpoints

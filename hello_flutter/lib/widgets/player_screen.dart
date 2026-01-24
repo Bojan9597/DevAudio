@@ -14,6 +14,8 @@ import 'subscription_bottom_sheet.dart';
 import '../services/download_service.dart';
 import '../utils/api_constants.dart';
 import '../screens/quiz_taker_screen.dart'; // Import QuizTakerScreen
+import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../main.dart'; // Import for audioHandler
 
@@ -690,19 +692,17 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 
   void _showMoreMenu() async {
-    // ... (keep existing)
     final RenderBox button =
         _moreButtonKey.currentContext!.findRenderObject() as RenderBox;
     final RenderBox overlay =
         Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
     // Calculate position to spawn menu right above the button
-    // Offsetting by ~55px (approx single item menu height) to align bottom of menu with top of button
     final buttonRect =
         button.localToGlobal(Offset.zero, ancestor: overlay) & button.size;
     final RelativeRect position = RelativeRect.fromRect(
       Rect.fromLTWH(
         buttonRect.left,
-        buttonRect.top - 65, // Shift up by approx menu height
+        buttonRect.top - 110, // Shift up by approx menu height (2 items)
         buttonRect.width,
         buttonRect.height,
       ),
@@ -713,6 +713,17 @@ class _PlayerScreenState extends State<PlayerScreen>
       context: context,
       position: position,
       items: [
+        if (_isPurchased) // Only show Rate for subscribed users
+          const PopupMenuItem(
+            value: 'rate',
+            child: Row(
+              children: [
+                Icon(Icons.star, color: Colors.amber),
+                SizedBox(width: 8),
+                Text('Rate'),
+              ],
+            ),
+          ),
         const PopupMenuItem(
           value: 'details',
           child: Row(
@@ -727,9 +738,146 @@ class _PlayerScreenState extends State<PlayerScreen>
       elevation: 8.0,
     );
 
-    if (selectedValue == 'details') {
+    if (selectedValue == 'rate') {
+      _showRatingDialog();
+    } else if (selectedValue == 'details') {
       _showBookDetailsDialog();
     }
+  }
+
+  void _showRatingDialog() {
+    int selectedStars = 0;
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Colors.brown.shade900, Colors.black],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Rate this book',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      widget.book.title,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(5, (index) {
+                        return GestureDetector(
+                          onTap: () {
+                            setDialogState(() {
+                              selectedStars = index + 1;
+                            });
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Icon(
+                              index < selectedStars
+                                  ? Icons.star
+                                  : Icons.star_border,
+                              color: Colors.amber,
+                              size: 40,
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(color: Colors.white54),
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: selectedStars > 0
+                              ? () async {
+                                  Navigator.of(context).pop();
+                                  await _submitRating(selectedStars);
+                                }
+                              : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.amber,
+                            foregroundColor: Colors.black,
+                          ),
+                          child: const Text('Submit'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _submitRating(int stars) async {
+    try {
+      final userId = await _getUserId();
+      if (userId == null) return;
+
+      final response = await Dio().post(
+        '${ApiConstants.baseUrl}/books/${widget.book.id}/rate',
+        data: {'user_id': userId, 'stars': stars},
+        options: Options(headers: await _getAuthHeaders()),
+      );
+
+      if (response.statusCode == 200 && mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Thanks for rating! ⭐' * stars)));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to submit rating: $e')));
+      }
+    }
+  }
+
+  Future<int?> _getUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('user_id');
+  }
+
+  Future<Map<String, String>> _getAuthHeaders() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token') ?? '';
+    return {'Authorization': 'Bearer $token'};
   }
 
   void _showBookDetailsDialog() {

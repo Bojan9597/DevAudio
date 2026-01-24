@@ -179,7 +179,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 0.7,
+        childAspectRatio: 0.6,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
@@ -213,21 +213,17 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   }
 
   Widget _buildBookCard(Book book, Color cardColor, Color textColor) {
-    return Card(
-      color: cardColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => _openPlayer(book),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child:
-                  (book.absoluteCoverUrlThumbnail != null &&
-                      book.absoluteCoverUrlThumbnail!.isNotEmpty)
+    return GestureDetector(
+      onTap: () => _openPlayer(book),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: book.absoluteCoverUrlThumbnail.isNotEmpty
                   ? CachedNetworkImage(
-                      imageUrl: book.absoluteCoverUrlThumbnail!,
+                      imageUrl: book.absoluteCoverUrlThumbnail,
                       fit: BoxFit.cover,
                       width: double.infinity,
                       errorWidget: (context, url, error) => Container(
@@ -242,36 +238,58 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                       ),
                     ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    book.title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: textColor,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    book.author,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: textColor.withOpacity(0.7),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            book.title,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+              color: textColor,
             ),
-          ],
-        ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            book.author,
+            style: TextStyle(fontSize: 11, color: textColor.withOpacity(0.7)),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          _buildStarRating(book.averageRating, book.ratingCount, textColor),
+        ],
       ),
     );
+  }
+
+  Widget _buildStarRating(double rating, int count, Color textColor) {
+    return Row(
+      children: [
+        ...List.generate(5, (index) {
+          if (index < rating.floor()) {
+            return Icon(Icons.star, size: 14, color: Colors.amber);
+          } else if (index < rating) {
+            return Icon(Icons.star_half, size: 14, color: Colors.amber);
+          } else {
+            return Icon(Icons.star_border, size: 14, color: Colors.amber);
+          }
+        }),
+        const SizedBox(width: 4),
+        Text(
+          count > 0 ? _formatCount(count) : '',
+          style: TextStyle(fontSize: 11, color: textColor.withOpacity(0.6)),
+        ),
+      ],
+    );
+  }
+
+  String _formatCount(int count) {
+    if (count >= 1000) {
+      return '${(count / 1000).toStringAsFixed(1)}k';
+    }
+    return count.toString();
   }
 
   Widget _buildBookItem(Book book, Color cardColor, Color textColor) {

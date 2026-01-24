@@ -19,12 +19,15 @@ class Book {
   final String? coverUrlThumbnail;
   final bool isPlaylist;
   final bool isEncrypted; // Added isEncrypted field
+  final double averageRating;
+  final int ratingCount;
 
   /// Returns the absolute cover URL with base URL prepended if needed
   String get absoluteCoverUrl => ensureAbsoluteUrl(coverUrl);
 
   /// Returns the absolute thumbnail URL with base URL prepended if needed
-  String get absoluteCoverUrlThumbnail => ensureAbsoluteUrl(coverUrlThumbnail ?? coverUrl);
+  String get absoluteCoverUrlThumbnail =>
+      ensureAbsoluteUrl(coverUrlThumbnail ?? coverUrl);
 
   const Book({
     required this.id,
@@ -45,6 +48,8 @@ class Book {
     this.coverUrlThumbnail,
     this.isPlaylist = false,
     this.isEncrypted = false, // Added to constructor
+    this.averageRating = 0.0,
+    this.ratingCount = 0,
   });
 
   factory Book.fromJson(Map<String, dynamic> json) {
@@ -73,6 +78,8 @@ class Book {
       coverUrlThumbnail: json['coverUrlThumbnail'] as String?,
       isPlaylist: json['isPlaylist'] as bool? ?? false,
       isEncrypted: json['isEncrypted'] as bool? ?? false, // Added to fromJson
+      averageRating: (json['averageRating'] as num?)?.toDouble() ?? 0.0,
+      ratingCount: json['ratingCount'] as int? ?? 0,
     );
   }
 
@@ -106,6 +113,8 @@ class Book {
       coverUrl: coverUrl ?? this.coverUrl,
       coverUrlThumbnail: coverUrlThumbnail,
       isEncrypted: isEncrypted ?? this.isEncrypted,
+      averageRating: averageRating,
+      ratingCount: ratingCount,
     );
   }
 }
