@@ -148,31 +148,218 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           ),
         ),
 
-        // Books Grid/List
+        // Books Section with horizontal carousels + grid/list
         Expanded(
           child: RefreshIndicator(
             onRefresh: _resetAndLoad,
-            child: _books.isEmpty && !_isLoading
-                ? ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    children: [
-                      SizedBox(
-                        height: MediaQuery.of(context).size.height * 0.5,
-                        child: Center(
-                          child: Text(
-                            AppLocalizations.of(context)!.noBooksFound,
-                            style: TextStyle(color: textColor.withOpacity(0.7)),
-                          ),
-                        ),
-                      ),
-                    ],
-                  )
-                : _isGridView
-                ? _buildGridView(cardColor, textColor)
-                : _buildListView(cardColor, textColor),
+            child: CustomScrollView(
+              controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                // New Releases Section
+                _buildSectionHeader('New Releases', textColor),
+                _buildHorizontalBookList(cardColor, textColor, reversed: false),
+
+                // Top Picks Section
+                _buildSectionHeader('Top Picks', textColor),
+                _buildHorizontalBookList(cardColor, textColor, reversed: true),
+
+                // All Books Grid/List
+                _buildSectionHeader('All Books', textColor),
+                _isGridView
+                    ? _buildSliverGrid(cardColor, textColor)
+                    : _buildSliverList(cardColor, textColor),
+              ],
+            ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSectionHeader(String title, Color textColor) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        child: Text(
+          title,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: textColor,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHorizontalBookList(
+    Color cardColor,
+    Color textColor, {
+    bool reversed = false,
+  }) {
+    final booksToShow = reversed ? _books.reversed.toList() : _books;
+
+    if (_books.isEmpty && !_isLoading) {
+      return SliverToBoxAdapter(
+        child: SizedBox(
+          height: 180,
+          child: Center(
+            child: Text(
+              AppLocalizations.of(context)!.noBooksFound,
+              style: TextStyle(color: textColor.withOpacity(0.5)),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return SliverToBoxAdapter(
+      child: SizedBox(
+        height: 200,
+        child: _isLoading && _books.isEmpty
+            ? const Center(child: CircularProgressIndicator())
+            : ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: booksToShow.length,
+                itemBuilder: (context, index) {
+                  final book = booksToShow[index];
+                  return Container(
+                    width: 120,
+                    margin: const EdgeInsets.only(right: 12),
+                    child: GestureDetector(
+                      onTap: () => _openPlayer(book),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: book.absoluteCoverUrlThumbnail.isNotEmpty
+                                  ? CachedNetworkImage(
+                                      imageUrl: book.absoluteCoverUrlThumbnail,
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                      errorWidget: (context, url, error) =>
+                                          Container(
+                                            color: textColor.withOpacity(0.1),
+                                            child: const Icon(
+                                              Icons.book,
+                                              size: 30,
+                                            ),
+                                          ),
+                                    )
+                                  : Container(
+                                      color: textColor.withOpacity(0.1),
+                                      child: const Icon(Icons.book, size: 30),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            book.title,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: textColor,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Row(
+                            children: [
+                              ...List.generate(5, (i) {
+                                if (i < book.averageRating.floor()) {
+                                  return const Icon(
+                                    Icons.star,
+                                    size: 10,
+                                    color: Colors.amber,
+                                  );
+                                } else if (i < book.averageRating) {
+                                  return const Icon(
+                                    Icons.star_half,
+                                    size: 10,
+                                    color: Colors.amber,
+                                  );
+                                }
+                                return const Icon(
+                                  Icons.star_border,
+                                  size: 10,
+                                  color: Colors.amber,
+                                );
+                              }),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+      ),
+    );
+  }
+
+  Widget _buildSliverGrid(Color cardColor, Color textColor) {
+    if (_books.isEmpty && !_isLoading) {
+      return SliverToBoxAdapter(
+        child: SizedBox(
+          height: 200,
+          child: Center(
+            child: Text(
+              AppLocalizations.of(context)!.noBooksFound,
+              style: TextStyle(color: textColor.withOpacity(0.7)),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      sliver: SliverGrid(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 0.6,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+        ),
+        delegate: SliverChildBuilderDelegate((context, index) {
+          if (index == _books.length) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return _buildBookCard(_books[index], cardColor, textColor);
+        }, childCount: _books.length + (_isLoading ? 1 : 0)),
+      ),
+    );
+  }
+
+  Widget _buildSliverList(Color cardColor, Color textColor) {
+    if (_books.isEmpty && !_isLoading) {
+      return SliverToBoxAdapter(
+        child: SizedBox(
+          height: 200,
+          child: Center(
+            child: Text(
+              AppLocalizations.of(context)!.noBooksFound,
+              style: TextStyle(color: textColor.withOpacity(0.7)),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return SliverList(
+      delegate: SliverChildBuilderDelegate((context, index) {
+        if (index == _books.length) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        return _buildBookItem(_books[index], cardColor, textColor);
+      }, childCount: _books.length + (_isLoading ? 1 : 0)),
     );
   }
 
