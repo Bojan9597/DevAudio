@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../models/book.dart';
 import '../repositories/book_repository.dart';
@@ -7,9 +6,6 @@ import '../theme/app_theme.dart';
 import 'playlist_screen.dart';
 import '../l10n/generated/app_localizations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../utils/api_constants.dart';
 
 class DiscoverScreen extends StatefulWidget {
   const DiscoverScreen({Key? key}) : super(key: key);
@@ -273,19 +269,19 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                                 if (i < book.averageRating.floor()) {
                                   return const Icon(
                                     Icons.star,
-                                    size: 10,
+                                    size: 12,
                                     color: Colors.amber,
                                   );
                                 } else if (i < book.averageRating) {
                                   return const Icon(
                                     Icons.star_half,
-                                    size: 10,
+                                    size: 12,
                                     color: Colors.amber,
                                   );
                                 }
                                 return const Icon(
                                   Icons.star_border,
-                                  size: 10,
+                                  size: 12,
                                   color: Colors.amber,
                                 );
                               }),
@@ -321,7 +317,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       sliver: SliverGrid(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 0.6,
+          childAspectRatio: 0.55,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
         ),
@@ -370,7 +366,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 0.6,
+        childAspectRatio: 0.55,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
@@ -409,7 +405,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
+          AspectRatio(
+            aspectRatio: 1.0,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: book.absoluteCoverUrlThumbnail.isNotEmpty
@@ -442,12 +439,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 2),
-          Text(
-            book.author,
-            style: TextStyle(fontSize: 11, color: textColor.withOpacity(0.7)),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+          _buildDurationText(book, textColor),
           const SizedBox(height: 4),
           _buildStarRating(book, textColor),
         ],
@@ -455,179 +447,44 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     );
   }
 
-  Widget _buildStarRating(Book book, Color textColor) {
-    return GestureDetector(
-      onTap: () => _showRatingDialog(book),
-      child: Row(
-        children: [
-          ...List.generate(5, (index) {
-            if (index < book.averageRating.floor()) {
-              return const Icon(Icons.star, size: 16, color: Colors.amber);
-            } else if (index < book.averageRating) {
-              return const Icon(Icons.star_half, size: 16, color: Colors.amber);
-            } else {
-              return const Icon(
-                Icons.star_border,
-                size: 16,
-                color: Colors.amber,
-              );
-            }
-          }),
-          const SizedBox(width: 4),
-          Text(
-            book.ratingCount > 0 ? _formatCount(book.ratingCount) : 'Rate',
-            style: TextStyle(fontSize: 11, color: textColor.withOpacity(0.6)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showRatingDialog(Book book) {
-    int selectedStars = 0;
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setDialogState) {
-            return Dialog(
-              backgroundColor: Colors.transparent,
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Colors.brown.shade900, Colors.black],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white24),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Rate this book',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      book.title,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: List.generate(5, (index) {
-                        return GestureDetector(
-                          onTap: () =>
-                              setDialogState(() => selectedStars = index + 1),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            child: Icon(
-                              index < selectedStars
-                                  ? Icons.star
-                                  : Icons.star_border,
-                              color: Colors.amber,
-                              size: 36,
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(),
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(color: Colors.white54),
-                          ),
-                        ),
-                        ElevatedButton(
-                          onPressed: selectedStars > 0
-                              ? () async {
-                                  Navigator.of(ctx).pop();
-                                  await _submitRating(book, selectedStars);
-                                }
-                              : null,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.amber,
-                            foregroundColor: Colors.black,
-                          ),
-                          child: const Text('Submit'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _submitRating(Book book, int stars) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('access_token') ?? '';
-
-      // Get user ID from stored user_data JSON
-      final userDataStr = prefs.getString('user_data');
-      int? userId;
-      if (userDataStr != null) {
-        final userData = jsonDecode(userDataStr);
-        userId = userData['id'] as int?;
-      }
-
-      if (userId == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please log in to rate books')),
-          );
-        }
-        return;
-      }
-
-      final response = await Dio().post(
-        '${ApiConstants.baseUrl}/books/${book.id}/rate',
-        data: {'user_id': userId, 'stars': stars},
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
-      );
-
-      if (response.statusCode == 200 && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Thanks for your $stars-star rating! ⭐')),
-        );
-        // Refresh to show updated rating
-        _resetAndLoad();
-      }
-    } catch (e) {
-      if (mounted) {
-        String message = 'Failed to submit rating';
-        if (e is DioException && e.response?.statusCode == 403) {
-          message = 'Only subscribers can rate books';
-        }
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
-      }
+  String _formatDuration(int? totalSeconds) {
+    if (totalSeconds == null || totalSeconds == 0) return '';
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    if (hours > 0) {
+      return '${hours}h ${minutes}m';
     }
+    return '${minutes} min';
+  }
+
+  Widget _buildDurationText(Book book, Color textColor) {
+    final durationText = _formatDuration(book.durationSeconds);
+    if (durationText.isEmpty) return const SizedBox.shrink();
+    return Text(
+      durationText,
+      style: TextStyle(fontSize: 11, color: textColor.withOpacity(0.6)),
+    );
+  }
+
+  Widget _buildStarRating(Book book, Color textColor) {
+    return Row(
+      children: [
+        ...List.generate(5, (index) {
+          if (index < book.averageRating.floor()) {
+            return const Icon(Icons.star, size: 19, color: Colors.amber);
+          } else if (index < book.averageRating) {
+            return const Icon(Icons.star_half, size: 19, color: Colors.amber);
+          } else {
+            return const Icon(Icons.star_border, size: 19, color: Colors.amber);
+          }
+        }),
+        const SizedBox(width: 5),
+        Text(
+          book.ratingCount > 0 ? _formatCount(book.ratingCount) : '',
+          style: TextStyle(fontSize: 13, color: textColor.withOpacity(0.6)),
+        ),
+      ],
+    );
   }
 
   String _formatCount(int count) {

@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 import '../services/download_service.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../utils/category_translations.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../screens/profile_screen.dart';
 import '../screens/discover_screen.dart';
@@ -803,8 +804,8 @@ class _ContentAreaState extends State<ContentArea> {
         return GridView.builder(
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            childAspectRatio: 0.75,
-            crossAxisSpacing: 20,
+            childAspectRatio: 0.55,
+            crossAxisSpacing: 12,
             mainAxisSpacing: 20,
           ),
           itemCount: books.length,
@@ -887,8 +888,8 @@ class _ContentAreaState extends State<ContentArea> {
           return GridView.builder(
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
-              childAspectRatio: 0.75,
-              crossAxisSpacing: 20,
+              childAspectRatio: 0.55,
+              crossAxisSpacing: 12,
               mainAxisSpacing: 20,
             ),
             itemCount: books.length,
@@ -925,115 +926,101 @@ class _ContentAreaState extends State<ContentArea> {
   }
 
   Widget _buildBookCard(Book book) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => _openPlayer(book),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 2,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                ),
-                child: Center(
-                  child:
-                      (book.absoluteCoverUrlThumbnail != null &&
-                          book.absoluteCoverUrlThumbnail!.isNotEmpty)
-                      ? Image.network(
-                          book.absoluteCoverUrlThumbnail!,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: double.infinity,
-                          errorBuilder: (ctx, _, __) => Icon(
-                            Icons.menu_book,
-                            size: 50,
-                            color: Theme.of(context).colorScheme.onPrimary,
-                          ),
-                        )
-                      : Icon(
-                          Icons.menu_book,
-                          size: 50,
-                          color: Theme.of(context).colorScheme.onPrimary,
-                        ),
-                ),
-              ),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+
+    return GestureDetector(
+      onTap: () => _openPlayer(book),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AspectRatio(
+            aspectRatio: 1.0,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: book.absoluteCoverUrlThumbnail.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: book.absoluteCoverUrlThumbnail!,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      errorWidget: (context, url, error) => Container(
+                        color: textColor.withOpacity(0.1),
+                        child: Icon(Icons.book, size: 40, color: textColor),
+                      ),
+                    )
+                  : Container(
+                      color: textColor.withOpacity(0.1),
+                      child: Center(
+                        child: Icon(Icons.book, size: 40, color: textColor),
+                      ),
+                    ),
             ),
-            Expanded(
-              flex: 1,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    if (constraints.maxHeight < 35) {
-                      return const SizedBox.shrink();
-                    }
-                    return Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Flexible(
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    book.title,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Flexible(
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    book.author,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurface.withOpacity(0.6),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Clickable heart button in title area
-                        GestureDetector(
-                          onTap: () => _toggleFavorite(book),
-                          child: Padding(
-                            padding: const EdgeInsets.all(4.0),
-                            child: Icon(
-                              book.isFavorite
-                                  ? Icons.favorite
-                                  : Icons.favorite_border,
-                              color: Colors.red,
-                              size: 22,
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            book.title,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+              color: textColor,
             ),
-          ],
-        ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          _buildDurationText(book, textColor),
+          const SizedBox(height: 4),
+          _buildStarRating(book, textColor),
+        ],
       ),
     );
+  }
+
+  String _formatBookDuration(int? totalSeconds) {
+    if (totalSeconds == null || totalSeconds == 0) return '';
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    if (hours > 0) {
+      return '${hours}h ${minutes}m';
+    }
+    return '${minutes} min';
+  }
+
+  Widget _buildDurationText(Book book, Color textColor) {
+    final durationText = _formatBookDuration(book.durationSeconds);
+    if (durationText.isEmpty) return const SizedBox.shrink();
+    return Text(
+      durationText,
+      style: TextStyle(fontSize: 11, color: textColor.withOpacity(0.6)),
+    );
+  }
+
+  Widget _buildStarRating(Book book, Color textColor) {
+    return Row(
+      children: [
+        ...List.generate(5, (index) {
+          if (index < book.averageRating.floor()) {
+            return const Icon(Icons.star, size: 19, color: Colors.amber);
+          } else if (index < book.averageRating) {
+            return const Icon(Icons.star_half, size: 19, color: Colors.amber);
+          } else {
+            return const Icon(Icons.star_border, size: 19, color: Colors.amber);
+          }
+        }),
+        const SizedBox(width: 5),
+        Text(
+          book.ratingCount > 0 ? _formatCount(book.ratingCount) : '',
+          style: TextStyle(fontSize: 13, color: textColor.withOpacity(0.6)),
+        ),
+      ],
+    );
+  }
+
+  String _formatCount(int count) {
+    if (count >= 1000) {
+      return '${(count / 1000).toStringAsFixed(1)}k';
+    }
+    return count.toString();
   }
 
   Widget _buildBookListTile(Book book) {
