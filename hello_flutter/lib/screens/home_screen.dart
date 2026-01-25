@@ -214,11 +214,14 @@ class _HomeScreenState extends State<HomeScreen> {
           final historyWithFavs = mergeFavs(historyRaw);
           // Filter out books that are finished (>= 95% complete)
           listenHistory = historyWithFavs.where((book) {
-            if (book.lastPosition == null || book.durationSeconds == null || book.durationSeconds == 0) {
+            if (book.lastPosition == null ||
+                book.durationSeconds == null ||
+                book.durationSeconds == 0) {
               return true; // Include if no progress data
             }
             final progress = book.lastPosition! / book.durationSeconds!;
-            return progress < 0.95; // Only show books that are less than 95% complete
+            return progress <
+                0.95; // Only show books that are less than 95% complete
           }).toList();
         }
       }
@@ -448,11 +451,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         AppLocalizations.of(context)!.topPicks,
                         textColor,
                       ),
-                      _buildHorizontalBookList(
-                        _topPicks,
-                        cardColor,
-                        textColor,
-                      ),
+                      _buildHorizontalBookList(_topPicks, cardColor, textColor),
 
                       const SliverToBoxAdapter(child: SizedBox(height: 40)),
                     ],
@@ -604,8 +603,15 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildContinueListeningCard(Book book, Color cardColor, Color textColor) {
-    final progress = (book.lastPosition != null && book.durationSeconds != null && book.durationSeconds! > 0)
+  Widget _buildContinueListeningCard(
+    Book book,
+    Color cardColor,
+    Color textColor,
+  ) {
+    final progress =
+        (book.lastPosition != null &&
+            book.durationSeconds != null &&
+            book.durationSeconds! > 0)
         ? (book.lastPosition! / book.durationSeconds!).clamp(0.0, 1.0)
         : 0.0;
 
@@ -782,7 +788,11 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 ...List.generate(5, (index) {
                   if (index < book.averageRating.floor()) {
-                    return const Icon(Icons.star, size: 16, color: Colors.amber);
+                    return const Icon(
+                      Icons.star,
+                      size: 16,
+                      color: Colors.amber,
+                    );
                   } else if (index < book.averageRating) {
                     return const Icon(
                       Icons.star_half,
@@ -800,7 +810,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(width: 4),
                 Flexible(
                   child: Text(
-                    book.ratingCount > 0 ? _formatCount(book.ratingCount) : AppLocalizations.of(context)!.rate,
+                    book.ratingCount > 0
+                        ? _formatCount(book.ratingCount)
+                        : AppLocalizations.of(context)!.rate,
                     style: TextStyle(
                       fontSize: 12,
                       color: textColor.withOpacity(0.6),
@@ -832,7 +844,11 @@ class _HomeScreenState extends State<HomeScreen> {
     if (userId == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.pleaseLogInToManageFavorites)),
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.pleaseLogInToManageFavorites,
+            ),
+          ),
         );
       }
       return;
@@ -855,7 +871,9 @@ class _HomeScreenState extends State<HomeScreen> {
         _updateBookInLists(book.id);
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.failedToUpdateFavorite)),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.failedToUpdateFavorite),
+        ),
       );
     }
   }
@@ -977,7 +995,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (userId == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.pleaseLogInToRateBooks)),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.pleaseLogInToRateBooks),
+          ),
         );
         // Navigate to login screen
         Navigator.push(
@@ -992,12 +1012,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (error == null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${AppLocalizations.of(context)!.thanksForRating(stars)} ⭐')),
+        SnackBar(
+          content: Text(
+            '${AppLocalizations.of(context)!.thanksForRating(stars)} ⭐',
+          ),
+        ),
       );
       _resetAndLoad();
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error ?? AppLocalizations.of(context)!.failedToSubmitRating)),
+        SnackBar(
+          content: Text(
+            error ?? AppLocalizations.of(context)!.failedToSubmitRating,
+          ),
+        ),
       );
     }
   }
@@ -1010,39 +1038,166 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHeroImageGrid() {
+    List<Widget> images = [];
+
+    // 1. Add known local hero images
+    for (var path in _localHeroImagePaths.take(4)) {
+      images.add(_buildHeroImageFile(File(path)));
+    }
+
+    // 2. Add 2 random books (prefer new releases or top picks)
+    List<Book> candidates = [..._newReleases, ..._topPicks, ..._books];
+    // Remove duplicates based on ID
+    final uniqueIds = <String>{};
+    candidates.retainWhere((b) => uniqueIds.add(b.id));
+
+    // Shuffle to get random ones
+    candidates.shuffle();
+
+    // Take up to 2
+    for (var book in candidates.take(2)) {
+      if (book.absoluteCoverUrlThumbnail.isNotEmpty) {
+        images.add(_buildHeroImageNetwork(book.absoluteCoverUrlThumbnail));
+      }
+    }
+
+    // 3. Fill up to 6 if needed by reusing local images
+    while (images.length < 6 && _localHeroImagePaths.isNotEmpty) {
+      images.add(
+        _buildHeroImageFile(
+          File(
+            _localHeroImagePaths[images.length % _localHeroImagePaths.length],
+          ),
+        ),
+      );
+    }
+
+    // Ensure we have exactly 6 for the layout
+    if (images.length < 6) return const SizedBox.shrink();
+
+    // The layout: 2 Rows of 3 images
+    final double tiltAngle = 0.35; // ~20 degrees, varying side
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: GridView.count(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1.0,
-        children: _localHeroImagePaths.take(4).map((path) {
-          return Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.file(
-                File(path),
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    Container(color: Colors.grey[800]),
+      padding: const EdgeInsets.symmetric(horizontal: 0),
+      child: Column(
+        children: [
+          // Row 1
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Left Column (Lowest -> Offset down)
+              _buildRotatedImageWrapper(
+                images[0],
+                angle: tiltAngle,
+                scale: 0.9,
+                offsetY: 25.0,
               ),
+              // Middle Column (Mid -> Offset mid)
+              _buildRotatedImageWrapper(
+                images[4],
+                angle: tiltAngle,
+                scale: 1.0,
+                offsetY: 12.5,
+              ),
+              // Right Column (Highest -> Offset 0)
+              _buildRotatedImageWrapper(
+                images[2],
+                angle: tiltAngle,
+                scale: 0.85,
+                offsetY: 0,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // Row 2 (apply same offsets to columns)
+          // Row 2 (apply same offsets to columns)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildRotatedImageWrapper(
+                images[3],
+                angle: tiltAngle,
+                scale: 0.85,
+                offsetY: 25.0,
+              ),
+              _buildRotatedImageWrapper(
+                images[1],
+                angle: tiltAngle,
+                scale: 1.0,
+                offsetY: 12.5,
+              ),
+              _buildRotatedImageWrapper(
+                images[5],
+                angle: tiltAngle,
+                scale: 0.9,
+                offsetY: 0,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRotatedImageWrapper(
+    Widget image, {
+    double angle = 0,
+    double scale = 1.0,
+    double offsetY = 0,
+    int zIndex = 1,
+  }) {
+    return Expanded(
+      child: Transform.translate(
+        offset: Offset(0, offsetY),
+        child: Transform.rotate(
+          angle: angle,
+          child: Transform.scale(
+            scale: scale,
+            child: Container(
+              margin: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(2, 4),
+                  ),
+                ],
+              ),
+              child: image,
             ),
-          );
-        }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeroImageFile(File file) {
+    return AspectRatio(
+      aspectRatio: 1,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.file(
+          file,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(color: Colors.grey[800]),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeroImageNetwork(String url) {
+    return AspectRatio(
+      aspectRatio: 1,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: CachedNetworkImage(
+          imageUrl: url,
+          fit: BoxFit.cover,
+          errorWidget: (_, __, ___) => Container(color: Colors.grey[800]),
+        ),
       ),
     );
   }
