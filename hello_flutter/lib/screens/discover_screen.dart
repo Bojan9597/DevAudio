@@ -123,11 +123,14 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           final historyWithFavs = mergeFavs(historyRaw);
           // Filter out books that are finished (>= 95% complete)
           listenHistory = historyWithFavs.where((book) {
-            if (book.lastPosition == null || book.durationSeconds == null || book.durationSeconds == 0) {
+            if (book.lastPosition == null ||
+                book.durationSeconds == null ||
+                book.durationSeconds == 0) {
               return true; // Include if no progress data
             }
             final progress = book.lastPosition! / book.durationSeconds!;
-            return progress < 0.95; // Only show books that are less than 95% complete
+            return progress <
+                0.95; // Only show books that are less than 95% complete
           }).toList();
         }
       }
@@ -220,7 +223,11 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                     AppLocalizations.of(context)!.continueListening,
                     textColor,
                   ),
-                  _buildContinueListeningList(_listenHistory, cardColor, textColor),
+                  _buildContinueListeningList(
+                    _listenHistory,
+                    cardColor,
+                    textColor,
+                  ),
                 ],
 
                 // New Releases Section
@@ -256,7 +263,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   Widget _buildSectionHeader(String title, Color textColor) {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
         child: Text(
           title,
           style: TextStyle(
@@ -290,7 +297,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
     return SliverToBoxAdapter(
       child: SizedBox(
-        height: 280,
+        height: 260,
         child: _isLoading && _books.isEmpty
             ? const Center(child: CircularProgressIndicator())
             : ListView.builder(
@@ -320,7 +327,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
     return SliverToBoxAdapter(
       child: SizedBox(
-        height: 300,
+        height: 280,
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -337,8 +344,15 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     );
   }
 
-  Widget _buildContinueListeningCard(Book book, Color cardColor, Color textColor) {
-    final progress = (book.lastPosition != null && book.durationSeconds != null && book.durationSeconds! > 0)
+  Widget _buildContinueListeningCard(
+    Book book,
+    Color cardColor,
+    Color textColor,
+  ) {
+    final progress =
+        (book.lastPosition != null &&
+            book.durationSeconds != null &&
+            book.durationSeconds! > 0)
         ? (book.lastPosition! / book.durationSeconds!).clamp(0.0, 1.0)
         : 0.0;
 
@@ -417,6 +431,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             _formatRemainingTime(book),
             style: TextStyle(fontSize: 11, color: textColor.withOpacity(0.6)),
           ),
+          const SizedBox(height: 4),
+          _buildStarRating(book, textColor),
         ],
       ),
     );
