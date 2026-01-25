@@ -198,15 +198,24 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 // New Releases Section
-                _buildSectionHeader('New Releases', textColor),
+                _buildSectionHeader(
+                  AppLocalizations.of(context)!.newReleases,
+                  textColor,
+                ),
                 _buildHorizontalBookList(_newReleases, cardColor, textColor),
 
                 // Top Picks Section
-                _buildSectionHeader('Top Picks', textColor),
+                _buildSectionHeader(
+                  AppLocalizations.of(context)!.topPicks,
+                  textColor,
+                ),
                 _buildHorizontalBookList(_topPicks, cardColor, textColor),
 
                 // All Books Grid/List
-                _buildSectionHeader('All Books', textColor),
+                _buildSectionHeader(
+                  AppLocalizations.of(context)!.allBooks,
+                  textColor,
+                ),
                 _isGridView
                     ? _buildSliverGrid(cardColor, textColor)
                     : _buildSliverList(cardColor, textColor),
@@ -456,7 +465,11 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
               children: [
                 ...List.generate(5, (index) {
                   if (index < book.averageRating.floor()) {
-                    return const Icon(Icons.star, size: 16, color: Colors.amber);
+                    return const Icon(
+                      Icons.star,
+                      size: 16,
+                      color: Colors.amber,
+                    );
                   } else if (index < book.averageRating) {
                     return const Icon(
                       Icons.star_half,
@@ -474,7 +487,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                 const SizedBox(width: 4),
                 Flexible(
                   child: Text(
-                    book.ratingCount > 0 ? _formatCount(book.ratingCount) : AppLocalizations.of(context)!.rate,
+                    book.ratingCount > 0
+                        ? _formatCount(book.ratingCount)
+                        : AppLocalizations.of(context)!.rate,
                     style: TextStyle(
                       fontSize: 12,
                       color: textColor.withOpacity(0.6),
@@ -506,7 +521,11 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     if (userId == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.pleaseLogInToManageFavorites)),
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.pleaseLogInToManageFavorites,
+            ),
+          ),
         );
       }
       return;
@@ -529,7 +548,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         _updateBookInLists(book.id);
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.failedToUpdateFavorite)),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.failedToUpdateFavorite),
+        ),
       );
     }
   }
@@ -651,7 +672,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     if (userId == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.pleaseLogInToRateBooks)),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.pleaseLogInToRateBooks),
+          ),
         );
         // Navigate to login screen
         Navigator.push(
@@ -666,12 +689,20 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
     if (error == null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${AppLocalizations.of(context)!.thanksForRating(stars)} ⭐')),
+        SnackBar(
+          content: Text(
+            '${AppLocalizations.of(context)!.thanksForRating(stars)} ⭐',
+          ),
+        ),
       );
       _resetAndLoad();
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error ?? AppLocalizations.of(context)!.failedToSubmitRating)),
+        SnackBar(
+          content: Text(
+            error ?? AppLocalizations.of(context)!.failedToSubmitRating,
+          ),
+        ),
       );
     }
   }

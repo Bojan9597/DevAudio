@@ -87,7 +87,12 @@ class _SupportDialogState extends State<SupportDialog> {
         children: [
           const Icon(Icons.support_agent, color: Colors.blue),
           const SizedBox(width: 10),
-          Text(AppLocalizations.of(context)!.contactSupport),
+          Flexible(
+            child: Text(
+              AppLocalizations.of(context)!.contactSupport,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
       content: Form(
