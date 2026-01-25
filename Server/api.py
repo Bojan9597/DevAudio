@@ -1626,9 +1626,10 @@ def get_listen_history(user_id):
     try:
         # Get all books the user has accessed
         books_query = """
-            SELECT DISTINCT b.id, b.title, b.author, b.audio_path, b.cover_image_path, 
+            SELECT DISTINCT b.id, b.title, b.author, b.audio_path, b.cover_image_path,
                    c.slug as category_slug, b.duration_seconds, ub.last_accessed_at,
-                   b.average_rating, b.rating_count,
+                   (SELECT AVG(stars) FROM book_ratings WHERE book_id = b.id) as average_rating,
+                   (SELECT COUNT(*) FROM book_ratings WHERE book_id = b.id) as rating_count,
                    (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count
             FROM user_books ub
             JOIN books b ON ub.book_id = b.id

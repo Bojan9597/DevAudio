@@ -202,6 +202,20 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
               controller: _scrollController,
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
+                // New Releases Section
+                _buildSectionHeader(
+                  AppLocalizations.of(context)!.newReleases,
+                  textColor,
+                ),
+                _buildHorizontalBookList(_newReleases, cardColor, textColor),
+
+                // Top Picks Section (Best Choices)
+                _buildSectionHeader(
+                  AppLocalizations.of(context)!.topPicks,
+                  textColor,
+                ),
+                _buildHorizontalBookList(_topPicks, cardColor, textColor),
+
                 // Continue Listening Section (only show if user has history)
                 if (_listenHistory.isNotEmpty) ...[
                   _buildSectionHeader(
@@ -214,23 +228,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                     textColor,
                   ),
                 ],
-
-                // New Releases Section
-                SliverToBoxAdapter(
-                  child: const SizedBox(height: 16),
-                ), // Additional spacing
-                _buildSectionHeader(
-                  AppLocalizations.of(context)!.newReleases,
-                  textColor,
-                ),
-                _buildHorizontalBookList(_newReleases, cardColor, textColor),
-
-                // Top Picks Section
-                _buildSectionHeader(
-                  AppLocalizations.of(context)!.topPicks,
-                  textColor,
-                ),
-                _buildHorizontalBookList(_topPicks, cardColor, textColor),
 
                 // All Books Grid/List
                 _buildSectionHeader(
@@ -249,7 +246,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   Widget _buildSectionHeader(String title, Color textColor) {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
         child: Text(
           title,
           style: TextStyle(
