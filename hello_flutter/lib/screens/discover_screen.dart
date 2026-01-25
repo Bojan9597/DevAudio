@@ -8,6 +8,7 @@ import 'playlist_screen.dart';
 import 'login_screen.dart';
 import '../l10n/generated/app_localizations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../states/layout_state.dart';
 
 class DiscoverScreen extends StatefulWidget {
   const DiscoverScreen({Key? key}) : super(key: key);
@@ -37,13 +38,14 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     super.initState();
     _loadBooks();
     _scrollController.addListener(_onScroll);
-    _searchController.addListener(_onSearchChanged);
+    globalLayoutState.addListener(_onSearchChanged);
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     _scrollController.dispose();
+    globalLayoutState.removeListener(_onSearchChanged);
     _debounce?.cancel();
     super.dispose();
   }
@@ -85,7 +87,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       final newBooksRaw = await _bookRepository.getDiscoverBooks(
         page: _currentPage,
         limit: _limit,
-        query: _searchController.text,
+        query: globalLayoutState.searchQuery,
       );
 
       List<Book> mergeFavs(List<Book> list) {
@@ -106,14 +108,14 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         final newReleasesRaw = await _bookRepository.getDiscoverBooks(
           limit: 5,
           sort: 'newest',
-          query: _searchController.text,
+          query: globalLayoutState.searchQuery,
         );
         newReleases = mergeFavs(newReleasesRaw);
 
         final topPicksRaw = await _bookRepository.getDiscoverBooks(
           limit: 5,
           sort: 'popular',
-          query: _searchController.text,
+          query: globalLayoutState.searchQuery,
         );
         topPicks = mergeFavs(topPicksRaw);
 
@@ -177,27 +179,27 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
     return Column(
       children: [
-        // Search Bar + View Toggle
+        // View Toggle in header if needed, or remove completely if not desired.
+        // User asked to "Move search", implies search bar removal.
+        // View toggle was right next to it. Let's keep View toggle perhaps?
+        // Actually, AppLayout has BottomNav. ContentArea handles most stuff.
+        // DiscoverScreen is just content.
+        // Let's add a small row for View Toggle if we want to keep it locally?
+        // Or maybe just remove the search bar row entirely.
+        // BUT wait, usage was:
+        // Padding(child: Row(children: [TextField, IconButton(view)]))
+        // If we remove TextField, we still might want the View Switcher?
+        // The user didn't mention the View Switcher.
+        // Let's keep the View Switcher for now but maybe make it cleaner?
+        // Actually, looking at ContentArea, there is a view switcher there too?
+        // ContentArea has its own view switcher for categories.
+        // DiscoverScreen has one for its results.
+        // Let's keep the view switcher but remove the search field.
         Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: AppLocalizations.of(context)!.searchByTitle,
-                    prefixIcon: const Icon(Icons.search),
-                    filled: true,
-                    fillColor: isDark ? Colors.grey[800] : Colors.grey[200],
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
               IconButton(
                 icon: Icon(_isGridView ? Icons.view_list : Icons.grid_view),
                 onPressed: () => setState(() => _isGridView = !_isGridView),

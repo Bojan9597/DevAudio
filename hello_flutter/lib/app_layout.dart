@@ -17,6 +17,8 @@ class AppLayout extends StatefulWidget {
 
 class _AppLayoutState extends State<AppLayout> {
   StreamSubscription<bool>? _connectivitySub;
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -44,6 +46,7 @@ class _AppLayoutState extends State<AppLayout> {
   @override
   void dispose() {
     _connectivitySub?.cancel();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -75,7 +78,7 @@ class _AppLayoutState extends State<AppLayout> {
           appBar: AppBar(
             automaticallyImplyLeading: false,
             backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-            leading: isOnDiscover
+            leading: isOnDiscover && !_isSearching
                 ? IconButton(
                     icon: Icon(
                       globalLayoutState.isCollapsed ? Icons.menu : Icons.close,
@@ -86,30 +89,72 @@ class _AppLayoutState extends State<AppLayout> {
                   )
                 : null,
             titleSpacing: isOnDiscover ? 0 : null,
-            title: Row(
-              children: [
-                if (isOnDiscover)
-                  GestureDetector(
-                    onTap: () => globalLayoutState.toggleMenu(),
-                    child: Text(
-                      AppLocalizations.of(context)!.categories,
-                      style: TextStyle(
-                        color: Theme.of(context).appBarTheme.foregroundColor,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                if (!isOnDiscover)
-                  Text(
-                    'DevAudio',
+            title: isOnDiscover && _isSearching
+                ? TextField(
+                    controller: _searchController,
+                    autofocus: true,
                     style: TextStyle(
                       color: Theme.of(context).appBarTheme.foregroundColor,
-                      fontWeight: FontWeight.bold,
                     ),
+                    decoration: InputDecoration(
+                      hintText: AppLocalizations.of(context)!.searchByTitle,
+                      hintStyle: TextStyle(
+                        color: Theme.of(
+                          context,
+                        ).appBarTheme.foregroundColor?.withOpacity(0.6),
+                      ),
+                      border: InputBorder.none,
+                    ),
+                    onChanged: (value) {
+                      globalLayoutState.setSearchQuery(value);
+                    },
+                  )
+                : Row(
+                    children: [
+                      if (isOnDiscover)
+                        GestureDetector(
+                          onTap: () => globalLayoutState.toggleMenu(),
+                          child: Text(
+                            AppLocalizations.of(context)!.categories,
+                            style: TextStyle(
+                              color: Theme.of(
+                                context,
+                              ).appBarTheme.foregroundColor,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      if (!isOnDiscover)
+                        Text(
+                          'DevAudio',
+                          style: TextStyle(
+                            color: Theme.of(
+                              context,
+                            ).appBarTheme.foregroundColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                    ],
                   ),
-              ],
-            ),
+            actions: [
+              if (isOnDiscover)
+                IconButton(
+                  icon: Icon(
+                    _isSearching ? Icons.close : Icons.search,
+                    color: Theme.of(context).appBarTheme.foregroundColor,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isSearching = !_isSearching;
+                      if (!_isSearching) {
+                        _searchController.clear();
+                        globalLayoutState.setSearchQuery('');
+                      }
+                    });
+                  },
+                ),
+            ],
           ),
           body: GestureDetector(
             behavior: HitTestBehavior.translucent,
