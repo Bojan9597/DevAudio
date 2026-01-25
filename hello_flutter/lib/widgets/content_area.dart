@@ -625,9 +625,9 @@ class _ContentAreaState extends State<ContentArea> {
         return GridView.builder(
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            childAspectRatio: 0.55,
+            childAspectRatio: 0.6,
             crossAxisSpacing: 12,
-            mainAxisSpacing: 4,
+            mainAxisSpacing: 0,
           ),
           itemCount: books.length,
           itemBuilder: (context, index) {
@@ -709,9 +709,9 @@ class _ContentAreaState extends State<ContentArea> {
           return GridView.builder(
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
-              childAspectRatio: 0.55,
+              childAspectRatio: 0.6,
               crossAxisSpacing: 12,
-              mainAxisSpacing: 4,
+              mainAxisSpacing: 0,
             ),
             itemCount: books.length,
             itemBuilder: (context, index) {

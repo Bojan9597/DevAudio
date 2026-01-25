@@ -458,9 +458,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       sliver: SliverGrid(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 0.55,
+          childAspectRatio: 0.6,
           crossAxisSpacing: 12,
-          mainAxisSpacing: 4,
+          mainAxisSpacing: 0,
         ),
         delegate: SliverChildBuilderDelegate((context, index) {
           if (index == _books.length) {
