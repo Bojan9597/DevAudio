@@ -38,6 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Book> _books = [];
   List<Book> _newReleases = [];
   List<Book> _topPicks = [];
+  List<Book> _listenHistory = [];
   List<Category> _categories = [];
   bool _isLoading = false;
   bool _isLoadingCategories = true;
@@ -190,6 +191,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       List<Book> newReleases = _newReleases;
       List<Book> topPicks = _topPicks;
+      List<Book> listenHistory = _listenHistory;
 
       if (_currentPage == 1) {
         final newReleasesRaw = await _bookRepository.getDiscoverBooks(
@@ -205,6 +207,20 @@ class _HomeScreenState extends State<HomeScreen> {
           query: _searchController.text,
         );
         topPicks = mergeFavs(topPicksRaw);
+
+        // Fetch listen history if user is logged in (filter out finished books)
+        if (userId != null) {
+          final historyRaw = await _bookRepository.getListenHistory(userId);
+          final historyWithFavs = mergeFavs(historyRaw);
+          // Filter out books that are finished (>= 95% complete)
+          listenHistory = historyWithFavs.where((book) {
+            if (book.lastPosition == null || book.durationSeconds == null || book.durationSeconds == 0) {
+              return true; // Include if no progress data
+            }
+            final progress = book.lastPosition! / book.durationSeconds!;
+            return progress < 0.95; // Only show books that are less than 95% complete
+          }).toList();
+        }
       }
 
       if (mounted) {
@@ -213,6 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
             _books = newBooks;
             _newReleases = newReleases;
             _topPicks = topPicks;
+            _listenHistory = listenHistory;
           } else {
             _books.addAll(newBooks);
           }
@@ -401,6 +418,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SliverToBoxAdapter(child: SizedBox(height: 30)),
 
+                      // Continue Listening Section (only show if user has history)
+                      if (_listenHistory.isNotEmpty) ...[
+                        _buildSectionHeader(
+                          AppLocalizations.of(context)!.continueListening,
+                          textColor,
+                        ),
+                        _buildContinueListeningList(
+                          _listenHistory,
+                          cardColor,
+                          textColor,
+                        ),
+                        const SliverToBoxAdapter(child: SizedBox(height: 20)),
+                      ],
+
                       _buildSectionHeader(
                         AppLocalizations.of(context)!.newReleases,
                         textColor,
@@ -421,7 +452,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         _topPicks,
                         cardColor,
                         textColor,
-                      ), // Simulate different content
+                      ),
 
                       const SliverToBoxAdapter(child: SizedBox(height: 40)),
                     ],
@@ -543,6 +574,133 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
       ),
     );
+  }
+
+  Widget _buildContinueListeningList(
+    List<Book> books,
+    Color cardColor,
+    Color textColor,
+  ) {
+    if (books.isEmpty) {
+      return SliverToBoxAdapter(child: SizedBox(height: 0));
+    }
+
+    return SliverToBoxAdapter(
+      child: SizedBox(
+        height: 300,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemBuilder: (context, index) {
+            final book = books[index % books.length];
+            return Container(
+              width: 160,
+              margin: const EdgeInsets.only(right: 12),
+              child: _buildContinueListeningCard(book, cardColor, textColor),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContinueListeningCard(Book book, Color cardColor, Color textColor) {
+    final progress = (book.lastPosition != null && book.durationSeconds != null && book.durationSeconds! > 0)
+        ? (book.lastPosition! / book.durationSeconds!).clamp(0.0, 1.0)
+        : 0.0;
+
+    return GestureDetector(
+      onTap: () => _openPlayer(book),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Stack(
+            children: [
+              AspectRatio(
+                aspectRatio: 1.0,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: book.absoluteCoverUrlThumbnail.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: book.absoluteCoverUrlThumbnail,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          errorWidget: (context, url, error) => Container(
+                            color: textColor.withOpacity(0.1),
+                            child: Icon(Icons.book, size: 40, color: textColor),
+                          ),
+                        )
+                      : Container(
+                          color: textColor.withOpacity(0.1),
+                          child: Center(
+                            child: Icon(Icons.book, size: 40, color: textColor),
+                          ),
+                        ),
+                ),
+              ),
+              // Play button overlay
+              Positioned.fill(
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.play_arrow,
+                      color: Colors.white,
+                      size: 30,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Progress bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: LinearProgressIndicator(
+              value: progress,
+              backgroundColor: textColor.withOpacity(0.2),
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.amber[700]!),
+              minHeight: 4,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            book.title,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+              color: textColor,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            _formatRemainingTime(book),
+            style: TextStyle(fontSize: 11, color: textColor.withOpacity(0.6)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatRemainingTime(Book book) {
+    if (book.lastPosition == null || book.durationSeconds == null) {
+      return '';
+    }
+    final remaining = book.durationSeconds! - book.lastPosition!;
+    if (remaining <= 0) return '';
+    final hours = remaining ~/ 3600;
+    final minutes = (remaining % 3600) ~/ 60;
+    if (hours > 0) {
+      return '${hours}h ${minutes}m left';
+    }
+    return '${minutes} min left';
   }
 
   Widget _buildBookCard(Book book, Color cardColor, Color textColor) {

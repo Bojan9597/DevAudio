@@ -464,6 +464,24 @@ abstract class AppLocalizations {
   /// **'Top Picks'**
   String get topPicks;
 
+  /// No description provided for @continueListening.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue Listening'**
+  String get continueListening;
+
+  /// No description provided for @nowPlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'NOW PLAYING'**
+  String get nowPlaying;
+
+  /// No description provided for @returnToLessonMap.
+  ///
+  /// In en, this message translates to:
+  /// **'Return to Lesson Map'**
+  String get returnToLessonMap;
+
   /// No description provided for @notAvailableOffline.
   ///
   /// In en, this message translates to:

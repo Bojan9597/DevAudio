@@ -70,6 +70,9 @@
 
   "newReleases": "Neuerscheinungen",
   "topPicks": "Top-Auswahl",
+  "continueListening": "Weiterhören",
+  "nowPlaying": "WIRD ABGESPIELT",
+  "returnToLessonMap": "Zurück zur Lektionskarte",
   "notAvailableOffline": "Im Offline-Modus nicht verfügbar",
 
   "errorLoadingBooks": "Fehler beim Laden der Bücher: {error}",

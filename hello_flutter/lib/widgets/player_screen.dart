@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart' hide Badge;
 import 'package:screen_brightness/screen_brightness.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import '../l10n/generated/app_localizations.dart';
 import '../models/book.dart';
+import '../screens/playlist_screen.dart';
 import 'dart:async';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
@@ -21,7 +23,7 @@ import '../main.dart'; // Import for audioHandler
 
 class PlayerScreen extends StatefulWidget {
   final Book book;
-  final String? uniqueAudioId;
+  final String uniqueAudioId;
   final VoidCallback? onPurchaseSuccess;
   final List<Map<String, dynamic>>? playlist;
   final int initialIndex;
@@ -29,17 +31,19 @@ class PlayerScreen extends StatefulWidget {
   /// Track if the app is in foreground (shared across instances)
   static bool isAppInForeground = true;
   final Function(int)? onPlaybackComplete;
-  final Map<String, dynamic>? trackQuizzes;
+  final Map<String, dynamic> trackQuizzes;
+  final String? bookTitle; // Add bookTitle parameter
 
   const PlayerScreen({
     super.key,
     required this.book,
-    this.uniqueAudioId,
+    required this.uniqueAudioId,
     this.onPurchaseSuccess,
     this.playlist,
     this.initialIndex = 0,
     this.onPlaybackComplete,
-    this.trackQuizzes,
+    this.trackQuizzes = const {},
+    this.bookTitle, // Initialize
   });
 
   @override
@@ -1068,28 +1072,61 @@ class _PlayerScreenState extends State<PlayerScreen>
                       horizontal: 16,
                       vertical: 8,
                     ),
-                    child: Row(
+                    child: Column(
                       children: [
-                        IconButton(
-                          icon: const Icon(
-                            Icons.keyboard_arrow_down,
-                            color: Colors.white,
-                            size: 30,
-                          ),
-                          onPressed: () => Navigator.of(context).pop(),
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.keyboard_arrow_down,
+                                color: Colors.white,
+                                size: 30,
+                              ),
+                              onPressed: () => Navigator.of(context).pop(),
+                            ),
+                            const Spacer(),
+                            TextButton.icon(
+                              onPressed: () {
+                                Navigator.of(context).pushReplacement(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        PlaylistScreen(book: _currentBook),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(
+                                Icons.map_outlined,
+                                color: Colors.white70,
+                                size: 16,
+                              ),
+                              label: Text(
+                                AppLocalizations.of(context)!.returnToLessonMap,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                  letterSpacing: 1,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const Spacer(),
+                          ],
                         ),
-                        const Spacer(),
-                        const Text(
-                          'NOW PLAYING',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                            letterSpacing: 2,
-                            fontWeight: FontWeight.bold,
+                        // Title below button (max 2 rows)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            _currentBook.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
-                        const Spacer(),
-                        // IconButton with more_horiz removed
                       ],
                     ),
                   ),

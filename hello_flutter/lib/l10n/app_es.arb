@@ -70,6 +70,9 @@
 
   "newReleases": "Nuevos lanzamientos",
   "topPicks": "Mejores selecciones",
+  "continueListening": "Continuar escuchando",
+  "nowPlaying": "REPRODUCIENDO",
+  "returnToLessonMap": "Volver al mapa de lecciones",
   "notAvailableOffline": "No disponible en modo sin conexión",
 
   "errorLoadingBooks": "Error al cargar libros: {error}",

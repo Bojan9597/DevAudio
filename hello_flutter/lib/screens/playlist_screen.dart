@@ -547,6 +547,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
           }
         },
         trackQuizzes: _trackQuizzes, // Pass all track quizzes
+        bookTitle: widget.book.title, // Pass Book Title
       ),
     );
 
@@ -649,7 +650,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                       _userId != null &&
                       widget.book.postedByUserId == _userId.toString(),
                   // Add Download Props
-                  bookTitle: widget.book.title,
+                  // bookTitle: widget.book.title, // Removed to prevent duplicate title
                   onDownloadTap: _downloadFullPlaylist,
                   isDownloading: _isDownloading,
                 ),

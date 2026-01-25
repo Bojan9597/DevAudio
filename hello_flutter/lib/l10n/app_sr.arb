@@ -70,6 +70,9 @@
 
   "newReleases": "Nova izdanja",
   "topPicks": "Najbolji izbori",
+  "continueListening": "Nastavite sa slušanjem",
+  "nowPlaying": "SADA SE PUŠTA",
+  "returnToLessonMap": "Povratak na mapu lekcija",
   "notAvailableOffline": "Nije dostupno van mreže",
 
   "errorLoadingBooks": "Greška pri učitavanju knjiga: {error}",

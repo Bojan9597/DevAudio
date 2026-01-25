@@ -201,6 +201,15 @@ class AppLocalizationsDe extends AppLocalizations {
   String get topPicks => 'Top-Auswahl';
 
   @override
+  String get continueListening => 'Weiterhören';
+
+  @override
+  String get nowPlaying => 'WIRD ABGESPIELT';
+
+  @override
+  String get returnToLessonMap => 'Zurück zur Lektionskarte';
+
+  @override
   String get notAvailableOffline => 'Im Offline-Modus nicht verfügbar';
 
   @override

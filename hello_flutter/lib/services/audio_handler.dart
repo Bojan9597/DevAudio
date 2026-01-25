@@ -61,6 +61,16 @@ class MyAudioHandler extends BaseAudioHandler {
       }
     });
 
+    // Update MediaItem with duration when it becomes available (for lock screen progress)
+    _player.durationStream.listen((duration) {
+      if (duration != null && mediaItem.value != null) {
+        final currentItem = mediaItem.value!;
+        if (currentItem.duration != duration) {
+          mediaItem.add(currentItem.copyWith(duration: duration));
+        }
+      }
+    });
+
     // Start background progress sync timer
     _startBackgroundProgressSync();
   }

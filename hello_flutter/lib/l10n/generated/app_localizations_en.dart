@@ -200,6 +200,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get topPicks => 'Top Picks';
 
   @override
+  String get continueListening => 'Continue Listening';
+
+  @override
+  String get nowPlaying => 'NOW PLAYING';
+
+  @override
+  String get returnToLessonMap => 'Return to Lesson Map';
+
+  @override
   String get notAvailableOffline => 'Not available in offline mode';
 
   @override

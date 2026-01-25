@@ -202,6 +202,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get topPicks => 'Meilleurs choix';
 
   @override
+  String get continueListening => 'Continuer l\'écoute';
+
+  @override
+  String get nowPlaying => 'EN COURS';
+
+  @override
+  String get returnToLessonMap => 'Retour à la carte des leçons';
+
+  @override
   String get notAvailableOffline => 'Non disponible en mode hors ligne';
 
   @override

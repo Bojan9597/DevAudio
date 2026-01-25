@@ -17,7 +17,7 @@ class _MiniPlayerState extends State<MiniPlayer> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-    final miniPlayerHeight = screenHeight * 0.15; // 15% of screen height
+    final miniPlayerHeight = screenHeight * 0.16; // 16% of screen height
 
     return StreamBuilder<MediaItem?>(
       stream: audioHandler.mediaItem,
@@ -75,7 +75,7 @@ class _MiniPlayerState extends State<MiniPlayer> {
                       backgroundColor: Colors.transparent,
                       builder: (context) => PlayerScreen(
                         book: audioHandler.currentBook!,
-                        uniqueAudioId: audioHandler.currentUniqueAudioId,
+                        uniqueAudioId: audioHandler.currentUniqueAudioId ?? '',
                         playlist: audioHandler.currentPlaylist,
                         initialIndex: audioHandler.currentIndex,
                       ),
@@ -114,14 +114,16 @@ class _MiniPlayerState extends State<MiniPlayer> {
                       // Content overlay
                       Container(
                         height: miniPlayerHeight,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
+                        padding: const EdgeInsets.only(
+                          left: 12,
+                          right: 12,
+                          top: 8,
+                          bottom: 4,
                         ),
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            // Title and Artist Row
+                            // Title and Artist Row (at top)
                             Row(
                               children: [
                                 // Album Art Thumbnail
@@ -130,25 +132,25 @@ class _MiniPlayerState extends State<MiniPlayer> {
                                     borderRadius: BorderRadius.circular(4),
                                     child: Image.network(
                                       mediaItem.artUri.toString(),
-                                      width: 50,
-                                      height: 50,
+                                      width: 40,
+                                      height: 40,
                                       fit: BoxFit.cover,
                                       errorBuilder:
                                           (context, error, stackTrace) {
                                             return Container(
-                                              width: 50,
-                                              height: 50,
+                                              width: 40,
+                                              height: 40,
                                               color: Colors.grey[800],
                                               child: const Icon(
                                                 Icons.music_note,
                                                 color: Colors.white54,
-                                                size: 24,
+                                                size: 20,
                                               ),
                                             );
                                           },
                                     ),
                                   ),
-                                const SizedBox(width: 12),
+                                const SizedBox(width: 10),
 
                                 // Title and Artist
                                 Expanded(
@@ -183,6 +185,54 @@ class _MiniPlayerState extends State<MiniPlayer> {
                               ],
                             ),
 
+                            // Progress Slider
+                            StreamBuilder<Duration>(
+                              stream: audioHandler.player.positionStream,
+                              builder: (context, positionSnapshot) {
+                                final position =
+                                    positionSnapshot.data ?? Duration.zero;
+                                final duration =
+                                    audioHandler.player.duration ??
+                                    Duration.zero;
+                                final progress = duration.inMilliseconds > 0
+                                    ? (position.inMilliseconds /
+                                              duration.inMilliseconds)
+                                          .clamp(0.0, 1.0)
+                                    : 0.0;
+
+                                return SizedBox(
+                                  height: 20,
+                                  child: SliderTheme(
+                                    data: SliderTheme.of(context).copyWith(
+                                      trackHeight: 3,
+                                      thumbShape: const RoundSliderThumbShape(
+                                        enabledThumbRadius: 5,
+                                      ),
+                                      overlayShape:
+                                          const RoundSliderOverlayShape(
+                                            overlayRadius: 10,
+                                          ),
+                                      activeTrackColor: Colors.amber[700],
+                                      inactiveTrackColor: Colors.white
+                                          .withOpacity(0.3),
+                                      thumbColor: Colors.amber[700],
+                                    ),
+                                    child: Slider(
+                                      value: progress,
+                                      onChanged: (value) {
+                                        final newPosition = Duration(
+                                          milliseconds:
+                                              (value * duration.inMilliseconds)
+                                                  .toInt(),
+                                        );
+                                        audioHandler.seek(newPosition);
+                                      },
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+
                             // Controls Row - matching big player order
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -192,12 +242,12 @@ class _MiniPlayerState extends State<MiniPlayer> {
                                   icon: const Icon(
                                     Icons.replay_10,
                                     color: Colors.white,
-                                    size: 24,
+                                    size: 20,
                                   ),
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(
-                                    minWidth: 40,
-                                    minHeight: 40,
+                                    minWidth: 32,
+                                    minHeight: 32,
                                   ),
                                   onPressed: () async {
                                     final currentPosition =
@@ -218,12 +268,12 @@ class _MiniPlayerState extends State<MiniPlayer> {
                                   icon: const Icon(
                                     Icons.skip_previous,
                                     color: Colors.white,
-                                    size: 28,
+                                    size: 24,
                                   ),
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(
-                                    minWidth: 40,
-                                    minHeight: 40,
+                                    minWidth: 32,
+                                    minHeight: 32,
                                   ),
                                   onPressed: () async {
                                     await audioHandler.playPreviousTrack();
@@ -237,12 +287,12 @@ class _MiniPlayerState extends State<MiniPlayer> {
                                         ? Icons.pause_circle_filled
                                         : Icons.play_circle_filled,
                                     color: Colors.white,
-                                    size: 48,
+                                    size: 40,
                                   ),
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(
-                                    minWidth: 48,
-                                    minHeight: 48,
+                                    minWidth: 40,
+                                    minHeight: 40,
                                   ),
                                   onPressed: () {
                                     if (playing) {
@@ -258,12 +308,12 @@ class _MiniPlayerState extends State<MiniPlayer> {
                                   icon: const Icon(
                                     Icons.skip_next,
                                     color: Colors.white,
-                                    size: 28,
+                                    size: 24,
                                   ),
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(
-                                    minWidth: 40,
-                                    minHeight: 40,
+                                    minWidth: 32,
+                                    minHeight: 32,
                                   ),
                                   onPressed: () async {
                                     await audioHandler.playNextTrack();
@@ -275,12 +325,12 @@ class _MiniPlayerState extends State<MiniPlayer> {
                                   icon: const Icon(
                                     Icons.forward_30,
                                     color: Colors.white,
-                                    size: 24,
+                                    size: 20,
                                   ),
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(
-                                    minWidth: 40,
-                                    minHeight: 40,
+                                    minWidth: 32,
+                                    minHeight: 32,
                                   ),
                                   onPressed: () async {
                                     final currentPosition =

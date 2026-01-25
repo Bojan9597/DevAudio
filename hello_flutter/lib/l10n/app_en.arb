@@ -84,6 +84,9 @@
 
   "newReleases": "New Releases",
   "topPicks": "Top Picks",
+  "continueListening": "Continue Listening",
+  "nowPlaying": "NOW PLAYING",
+  "returnToLessonMap": "Return to Lesson Map",
   "notAvailableOffline": "Not available in offline mode",
 
   "errorLoadingBooks": "Error loading books: {error}",
