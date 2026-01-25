@@ -243,12 +243,15 @@ class _SubscriptionBottomSheetState extends State<SubscriptionBottomSheet> {
                 children: [
                   Row(
                     children: [
-                      Text(
-                        details['title']!,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: theme.textTheme.bodyLarge?.color,
+                      Flexible(
+                        child: Text(
+                          details['title']!,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: theme.textTheme.bodyLarge?.color,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (isYearly) ...[
