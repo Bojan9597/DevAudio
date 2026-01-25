@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'widgets/content_area.dart';
 import 'widgets/mini_player.dart';
 import 'widgets/side_menu.dart';
+import 'widgets/search_overlay.dart';
 import 'states/layout_state.dart';
 import 'l10n/generated/app_localizations.dart';
 
@@ -17,8 +18,6 @@ class AppLayout extends StatefulWidget {
 
 class _AppLayoutState extends State<AppLayout> {
   StreamSubscription<bool>? _connectivitySub;
-  bool _isSearching = false;
-  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -46,7 +45,6 @@ class _AppLayoutState extends State<AppLayout> {
   @override
   void dispose() {
     _connectivitySub?.cancel();
-    _searchController.dispose();
     super.dispose();
   }
 
@@ -82,7 +80,7 @@ class _AppLayoutState extends State<AppLayout> {
               context,
             ).appBarTheme.backgroundColor?.withOpacity(0.1),
             foregroundColor: Theme.of(context).colorScheme.onSurface,
-            leading: isOnDiscover && !_isSearching
+            leading: isOnDiscover
                 ? IconButton(
                     icon: Icon(
                       globalLayoutState.isCollapsed ? Icons.menu : Icons.close,
@@ -93,27 +91,7 @@ class _AppLayoutState extends State<AppLayout> {
                   )
                 : null,
             titleSpacing: isOnDiscover ? 0 : null,
-            title: isOnDiscover && _isSearching
-                ? TextField(
-                    controller: _searchController,
-                    autofocus: true,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: AppLocalizations.of(context)!.searchByTitle,
-                      hintStyle: TextStyle(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.6),
-                      ),
-                      border: InputBorder.none,
-                    ),
-                    onChanged: (value) {
-                      globalLayoutState.setSearchQuery(value);
-                    },
-                  )
-                : Row(
+            title: Row(
                     children: [
                       if (isOnDiscover)
                         GestureDetector(
@@ -148,17 +126,16 @@ class _AppLayoutState extends State<AppLayout> {
               if (isOnDiscover)
                 IconButton(
                   icon: Icon(
-                    _isSearching ? Icons.close : Icons.search,
+                    Icons.search,
                     color: Theme.of(context).appBarTheme.foregroundColor,
                   ),
                   onPressed: () {
-                    setState(() {
-                      _isSearching = !_isSearching;
-                      if (!_isSearching) {
-                        _searchController.clear();
-                        globalLayoutState.setSearchQuery('');
-                      }
-                    });
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const SearchOverlay(),
+                      ),
+                    );
                   },
                 ),
             ],
