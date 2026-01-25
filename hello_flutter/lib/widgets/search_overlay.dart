@@ -202,7 +202,7 @@ class _SearchOverlayState extends State<SearchOverlay> {
               ),
             ),
             SizedBox(
-              height: 312,
+              height: 296,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),

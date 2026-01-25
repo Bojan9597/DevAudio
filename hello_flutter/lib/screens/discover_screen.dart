@@ -280,7 +280,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
     return SliverToBoxAdapter(
       child: SizedBox(
-        height: 312,
+        height: 296,
         child: _isLoading && _books.isEmpty
             ? const Center(child: CircularProgressIndicator())
             : ListView.builder(
