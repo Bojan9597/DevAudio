@@ -6,6 +6,7 @@ import '../utils/api_constants.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../services/download_service.dart';
+import '../services/api_client.dart'; // Import ApiClient
 import '../services/auth_service.dart';
 import 'quiz_creator_screen.dart';
 import 'quiz_taker_screen.dart';
@@ -319,7 +320,9 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
         'Content-Type': 'application/json',
         if (token != null) 'Authorization': 'Bearer $token',
       };
-      final response = await http.get(uri, headers: headers);
+
+      // Use ApiClient
+      final response = await ApiClient().get(uri, headers: headers);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
@@ -516,7 +519,11 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
         if (token != null) 'Authorization': 'Bearer $token',
       };
 
-      final response = await http.get(Uri.parse(quizUrl), headers: headers);
+      // Use ApiClient
+      final response = await ApiClient().get(
+        Uri.parse(quizUrl),
+        headers: headers,
+      );
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         await DownloadService().saveQuizJson(
@@ -531,7 +538,8 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
         if (_trackQuizzes.containsKey(trackId)) {
           final String trackQuizUrl =
               '${ApiConstants.baseUrl}/quiz/${widget.book.id}?playlist_item_id=$trackId';
-          final tResp = await http.get(
+          // Use ApiClient
+          final tResp = await ApiClient().get(
             Uri.parse(trackQuizUrl),
             headers: headers,
           );
@@ -651,7 +659,9 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     try {
       final uri = Uri.parse('${ApiConstants.baseUrl}/complete-track');
       final token = await AuthService().getAccessToken();
-      await http.post(
+
+      // Use ApiClient
+      await ApiClient().post(
         uri,
         headers: {
           'Content-Type': 'application/json',

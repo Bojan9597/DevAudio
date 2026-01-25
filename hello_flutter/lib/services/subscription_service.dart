@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'connectivity_service.dart';
 import 'auth_service.dart';
+import 'api_client.dart'; // Import ApiClient
 import '../utils/api_constants.dart';
 import '../models/subscription.dart';
 
@@ -92,7 +92,9 @@ class SubscriptionService {
 
       final headers = await _getHeaders();
       print('[SubscriptionService] Fetching from server for user $userId');
-      final response = await http.get(
+
+      // Use ApiClient
+      final response = await ApiClient().get(
         Uri.parse(
           '${ApiConstants.baseUrl}/subscription/status?user_id=$userId',
         ),
@@ -184,7 +186,9 @@ class SubscriptionService {
       }
 
       final headers = await _getHeaders();
-      final response = await http.post(
+
+      // Use ApiClient
+      final response = await ApiClient().post(
         Uri.parse('${ApiConstants.baseUrl}/subscription/subscribe'),
         headers: headers,
         body: json.encode({'user_id': userId, 'plan_type': planType}),
@@ -228,7 +232,9 @@ class SubscriptionService {
       }
 
       final headers = await _getHeaders();
-      final response = await http.post(
+
+      // Use ApiClient
+      final response = await ApiClient().post(
         Uri.parse('${ApiConstants.baseUrl}/subscription/cancel'),
         headers: headers,
         body: json.encode({'user_id': userId}),

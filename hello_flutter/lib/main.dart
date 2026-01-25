@@ -63,6 +63,9 @@ void main() async {
   runApp(const MyApp());
 }
 
+// Global navigator key
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -72,6 +75,7 @@ class MyApp extends StatelessWidget {
       listenable: globalLayoutState,
       builder: (context, child) {
         return MaterialApp(
+          navigatorKey: navigatorKey,
           title: 'AudioBooks',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
