@@ -246,7 +246,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   Widget _buildSectionHeader(String title, Color textColor) {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
         child: Text(
           title,
           style: TextStyle(
@@ -280,7 +280,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
     return SliverToBoxAdapter(
       child: SizedBox(
-        height: 260,
+        height: 312,
         child: _isLoading && _books.isEmpty
             ? const Center(child: CircularProgressIndicator())
             : ListView.builder(
@@ -289,7 +289,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                 itemBuilder: (context, index) {
                   final book = booksToShow[index % booksToShow.length];
                   return Container(
-                    width: 160,
+                    width: 192,
                     margin: const EdgeInsets.only(right: 12),
                     child: _buildBookCard(book, cardColor, textColor),
                   );
@@ -310,14 +310,14 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
     return SliverToBoxAdapter(
       child: SizedBox(
-        height: 280,
+        height: 336,
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           itemBuilder: (context, index) {
             final book = books[index % books.length];
             return Container(
-              width: 160,
+              width: 192,
               margin: const EdgeInsets.only(right: 12),
               child: _buildContinueListeningCard(book, cardColor, textColor),
             );

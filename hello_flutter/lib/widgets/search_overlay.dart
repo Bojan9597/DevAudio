@@ -191,7 +191,7 @@ class _SearchOverlayState extends State<SearchOverlay> {
           // Best Choices Section
           if (_topPicks.isNotEmpty) ...[
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
               child: Text(
                 AppLocalizations.of(context)!.topPicks,
                 style: TextStyle(
@@ -202,7 +202,7 @@ class _SearchOverlayState extends State<SearchOverlay> {
               ),
             ),
             SizedBox(
-              height: 260,
+              height: 312,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -218,7 +218,7 @@ class _SearchOverlayState extends State<SearchOverlay> {
           // New Releases Section (list view)
           if (_newReleases.isNotEmpty) ...[
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
               child: Text(
                 AppLocalizations.of(context)!.newReleases,
                 style: TextStyle(
@@ -246,7 +246,7 @@ class _SearchOverlayState extends State<SearchOverlay> {
     return GestureDetector(
       onTap: () => _openBook(book),
       child: Container(
-        width: 160,
+        width: 192,
         margin: const EdgeInsets.only(right: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -432,7 +432,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           cardColor,
                           textColor,
                         ),
-                        const SliverToBoxAdapter(child: SizedBox(height: 20)),
                       ],
 
                       _buildSectionHeader(
@@ -445,15 +444,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         textColor,
                       ),
 
-                      const SliverToBoxAdapter(child: SizedBox(height: 20)),
-
                       _buildSectionHeader(
                         AppLocalizations.of(context)!.topPicks,
                         textColor,
                       ),
                       _buildHorizontalBookList(_topPicks, cardColor, textColor),
 
-                      const SliverToBoxAdapter(child: SizedBox(height: 40)),
+                      const SliverToBoxAdapter(child: SizedBox(height: 20)),
                     ],
 
                     // Search Results (Only when searching)
@@ -522,7 +519,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildSectionHeader(String title, Color textColor) {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -556,7 +553,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return SliverToBoxAdapter(
       child: SizedBox(
-        height: 280,
+        height: 312,
         child: _isLoading && books.isEmpty
             ? const Center(child: CircularProgressIndicator())
             : ListView.builder(
@@ -565,7 +562,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 itemBuilder: (context, index) {
                   final book = books[index % books.length];
                   return Container(
-                    width: 160,
+                    width: 192,
                     margin: const EdgeInsets.only(right: 12),
                     child: _buildBookCard(book, cardColor, textColor),
                   );
@@ -586,14 +583,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return SliverToBoxAdapter(
       child: SizedBox(
-        height: 300,
+        height: 336,
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           itemBuilder: (context, index) {
             final book = books[index % books.length];
             return Container(
-              width: 160,
+              width: 192,
               margin: const EdgeInsets.only(right: 12),
               child: _buildContinueListeningCard(book, cardColor, textColor),
             );
