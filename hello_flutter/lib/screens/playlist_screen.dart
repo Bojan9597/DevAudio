@@ -45,6 +45,44 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   bool _isVideoInitialized = false;
   bool _isCompletionVideoInitialized = false;
   bool _showCompletionOverlay = false;
+  bool _isDownloading = false;
+
+  void _downloadFullPlaylist() async {
+    setState(() => _isDownloading = true);
+    try {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Downloading full playlist...'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+
+      await DownloadService().downloadPlaylist(
+        _tracks.cast<Map<String, dynamic>>(),
+        widget.book.id,
+        userId: _userId,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Download Complete! Available offline.'),
+          ),
+        );
+      }
+    } catch (e) {
+      print("Playlist download error: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Download failed: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isDownloading = false);
+    }
+  }
 
   @override
   void initState() {
@@ -340,7 +378,11 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     try {
       final String trackUrl = _ensureAbsoluteUrl(currentTrack['file_path']);
       final uniqueTrackId = "track_${currentTrack['id']}";
-      await DownloadService().downloadBook(uniqueTrackId, trackUrl, userId: _userId);
+      await DownloadService().downloadBook(
+        uniqueTrackId,
+        trackUrl,
+        userId: _userId,
+      );
       print("Downloaded current track: ${currentTrack['title']}");
     } catch (e) {
       print("Error downloading current track: $e");
@@ -355,7 +397,9 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       final tId = "track_${track['id']}";
 
       // Fire and forget, or log errors individually to avoid blocking UI
-      DownloadService().downloadBook(tId, tUrl, userId: _userId).catchError((err) {
+      DownloadService().downloadBook(tId, tUrl, userId: _userId).catchError((
+        err,
+      ) {
         print("Failed to background download track ${track['title']}: $err");
       });
     }
@@ -604,6 +648,10 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                   isOwner:
                       _userId != null &&
                       widget.book.postedByUserId == _userId.toString(),
+                  // Add Download Props
+                  bookTitle: widget.book.title,
+                  onDownloadTap: _downloadFullPlaylist,
+                  isDownloading: _isDownloading,
                 ),
           // Completion Overlay Video
           if (_showCompletionOverlay && _isCompletionVideoInitialized)
