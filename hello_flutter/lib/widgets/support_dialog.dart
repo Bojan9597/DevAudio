@@ -66,6 +66,7 @@ class _SupportDialogState extends State<SupportDialog> {
       }
     } catch (e) {
       if (!mounted) return;
+      Navigator.of(context).pop(); // Close dialog first
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error: ${e.toString()}'),
@@ -95,10 +96,12 @@ class _SupportDialogState extends State<SupportDialog> {
           ),
         ],
       ),
-      content: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -116,6 +119,7 @@ class _SupportDialogState extends State<SupportDialog> {
                   hintText: AppLocalizations.of(context)!.describeIssue,
                   border: const OutlineInputBorder(),
                   alignLabelWithHint: true,
+                  errorMaxLines: 2,
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -133,6 +137,7 @@ class _SupportDialogState extends State<SupportDialog> {
                 style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ],
+            ),
           ),
         ),
       ),
