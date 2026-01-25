@@ -6,7 +6,7 @@ class LayoutState extends ChangeNotifier {
   String selectedCategoryId = 'home'; // Default to home page on first login
   String searchQuery = '';
   bool isGridView = true;
-  ThemeMode _themeMode = ThemeMode.system;
+  ThemeMode _themeMode = ThemeMode.dark;
   Locale? _locale;
   String? _currentUserId;
 
@@ -41,12 +41,12 @@ class LayoutState extends ChangeNotifier {
     if (themeString != null) {
       _themeMode = ThemeMode.values.firstWhere(
         (e) => e.toString() == themeString,
-        orElse: () => ThemeMode.system,
+        orElse: () => ThemeMode.dark,
       );
     } else {
       // If no user specific setting, maybe reset to system?
       // Or try loading global? Let's just default to system for fresh user.
-      _themeMode = ThemeMode.system;
+      _themeMode = ThemeMode.dark;
     }
 
     // Load Locale

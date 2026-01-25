@@ -53,6 +53,13 @@ class _CategoryDetailsViewState extends State<CategoryDetailsView> {
     return '${minutes} min'; // e.g. "30 min"
   }
 
+  String _formatCount(int count) {
+    if (count >= 1000) {
+      return '${(count / 1000).toStringAsFixed(1)}k';
+    }
+    return count.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
     // Filter books locally
@@ -273,27 +280,61 @@ class _CategoryDetailsViewState extends State<CategoryDetailsView> {
               style: TextStyle(fontSize: 11, color: textColor.withOpacity(0.6)),
             ),
           const SizedBox(height: 4),
-          // Simple Rating/Fav Row
+          // Star Rating & Favorite Row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.star, size: 14, color: Colors.amber),
-                  const SizedBox(width: 2),
-                  Text(
-                    book.averageRating > 0
-                        ? book.averageRating.toStringAsFixed(1)
-                        : '-',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: textColor.withOpacity(0.7),
+              Flexible(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ...List.generate(5, (index) {
+                      if (index < book.averageRating.floor()) {
+                        return const Icon(
+                          Icons.star,
+                          size: 16,
+                          color: Colors.amber,
+                        );
+                      } else if (index < book.averageRating) {
+                        return const Icon(
+                          Icons.star_half,
+                          size: 16,
+                          color: Colors.amber,
+                        );
+                      } else {
+                        return const Icon(
+                          Icons.star_border,
+                          size: 16,
+                          color: Colors.amber,
+                        );
+                      }
+                    }),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        book.ratingCount > 0
+                            ? _formatCount(book.ratingCount)
+                            : AppLocalizations.of(context)!.rate,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: textColor.withOpacity(0.6),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              if (book.isFavorite)
-                const Icon(Icons.favorite, size: 16, color: Colors.red),
+              Padding(
+                padding: const EdgeInsets.only(right: 4.0),
+                child: Icon(
+                  book.isFavorite ? Icons.favorite : Icons.favorite_border,
+                  color: book.isFavorite
+                      ? Colors.red
+                      : textColor.withOpacity(0.5),
+                  size: 20,
+                ),
+              ),
             ],
           ),
         ],
