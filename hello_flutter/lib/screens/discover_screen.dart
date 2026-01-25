@@ -270,9 +270,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             : ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: booksToShow.length,
                 itemBuilder: (context, index) {
-                  final book = booksToShow[index];
+                  final book = booksToShow[index % booksToShow.length];
                   return Container(
                     width: 160,
                     margin: const EdgeInsets.only(right: 12),

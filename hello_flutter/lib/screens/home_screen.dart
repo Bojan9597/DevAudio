@@ -532,9 +532,8 @@ class _HomeScreenState extends State<HomeScreen> {
             : ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: books.length,
                 itemBuilder: (context, index) {
-                  final book = books[index];
+                  final book = books[index % books.length];
                   return Container(
                     width: 160,
                     margin: const EdgeInsets.only(right: 12),
