@@ -695,4 +695,30 @@ class AppLocalizationsSr extends AppLocalizations {
   String badgeStreak(int count) {
     return '$count dana zaredom';
   }
+
+  @override
+  String get download => 'Preuzmi';
+
+  @override
+  String get downloading => 'Preuzimanje...';
+
+  @override
+  String get supportMessageDescription =>
+      'Pošaljite poruku našem timu za podršku. Javićemo vam se u najkraćem mogućem roku.';
+
+  @override
+  String get yourMessage => 'Vaša poruka';
+
+  @override
+  String get describeIssue => 'Opišite vaš problem ili pitanje...';
+
+  @override
+  String get enterMessage => 'Molimo unesite poruku';
+
+  @override
+  String get messageTooShort => 'Poruka mora imati bar 10 karaktera';
+
+  @override
+  String get accountInfoIncluded =>
+      'Vaši podaci o nalogu će biti automatski uključeni.';
 }

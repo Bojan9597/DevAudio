@@ -786,7 +786,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               title: Text(book.title),
               subtitle: Text(
-                'Last listened: ${book.lastAccessed?.toString().split('.')[0] ?? '?'}\nProgress: ${_formatDuration(position)} / ${_formatDuration(duration)}',
+                '${AppLocalizations.of(context)!.lastListened(book.lastAccessed?.toString().split('.')[0] ?? '?')}\n${AppLocalizations.of(context)!.progress(_formatDuration(position), _formatDuration(duration))}',
               ),
               trailing: Text('$percent%'),
               onTap: () => _openBookWithSubscriptionCheck(book),
@@ -986,7 +986,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               if (isEarned) ...[
                 const SizedBox(height: 8),
                 Text(
-                  AppLocalizations.of(context)!.earnedOn(badge.earnedAt?.toString().split(" ")[0] ?? ""),
+                  AppLocalizations.of(
+                    context,
+                  )!.earnedOn(badge.earnedAt?.toString().split(" ")[0] ?? ""),
                   style: const TextStyle(color: Colors.green, fontSize: 12),
                 ),
               ],

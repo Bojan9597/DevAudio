@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:dio/dio.dart';
 import '../utils/api_constants.dart';
 import '../services/connectivity_service.dart';
+import '../l10n/generated/app_localizations.dart';
 
 class LessonMapWidget extends StatelessWidget {
   final List<dynamic> tracks;
@@ -82,37 +83,41 @@ class LessonMapWidget extends StatelessWidget {
                     flex: 3,
                     child: Align(
                       alignment: Alignment.centerRight,
-                      child: TextButton.icon(
-                        onPressed: isDownloading ? null : onDownloadTap,
-                        icon: isDownloading
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: TextButton.icon(
+                          onPressed: isDownloading ? null : onDownloadTap,
+                          icon: isDownloading
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.download,
                                   color: Colors.white,
+                                  size: 20,
                                 ),
-                              )
-                            : const Icon(
-                                Icons.download,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                        label: Text(
-                          isDownloading
-                              ? '...'
-                              : 'Download', // Shorten text so it fits 30%
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
+                          label: Text(
+                            isDownloading
+                                ? (AppLocalizations.of(context)?.downloading ??
+                                      'Downloading...')
+                                : (AppLocalizations.of(context)?.download ??
+                                      'Download'),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                            ),
                           ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        style: TextButton.styleFrom(
-                          backgroundColor: Colors.black45,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 5,
-                            vertical: 8,
+                          style: TextButton.styleFrom(
+                            backgroundColor: Colors.black45,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 8,
+                            ),
                           ),
                         ),
                       ),

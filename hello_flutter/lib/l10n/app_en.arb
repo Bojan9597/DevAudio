@@ -397,5 +397,14 @@
         "type": "int"
       }
     }
-  }
+  },
+
+  "download": "Download",
+  "downloading": "Downloading...",
+  "supportMessageDescription": "Send a message to our support team. We'll get back to you as soon as possible.",
+  "yourMessage": "Your Message",
+  "describeIssue": "Describe your issue or question...",
+  "enterMessage": "Please enter a message",
+  "messageTooShort": "Message must be at least 10 characters",
+  "accountInfoIncluded": "Your account information will be automatically included."
 }

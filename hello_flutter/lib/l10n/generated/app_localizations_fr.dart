@@ -699,4 +699,30 @@ class AppLocalizationsFr extends AppLocalizations {
   String badgeStreak(int count) {
     return '$count jours consécutifs';
   }
+
+  @override
+  String get download => 'Download';
+
+  @override
+  String get downloading => 'Downloading...';
+
+  @override
+  String get supportMessageDescription =>
+      'Send a message to our support team. We\'ll get back to you as soon as possible.';
+
+  @override
+  String get yourMessage => 'Your Message';
+
+  @override
+  String get describeIssue => 'Describe your issue or question...';
+
+  @override
+  String get enterMessage => 'Please enter a message';
+
+  @override
+  String get messageTooShort => 'Message must be at least 10 characters';
+
+  @override
+  String get accountInfoIncluded =>
+      'Your account information will be automatically included.';
 }

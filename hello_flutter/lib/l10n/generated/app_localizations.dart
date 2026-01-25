@@ -1363,6 +1363,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} day streak'**
   String badgeStreak(int count);
+
+  /// No description provided for @download.
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get download;
+
+  /// No description provided for @downloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading...'**
+  String get downloading;
+
+  /// No description provided for @supportMessageDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Send a message to our support team. We\'ll get back to you as soon as possible.'**
+  String get supportMessageDescription;
+
+  /// No description provided for @yourMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Message'**
+  String get yourMessage;
+
+  /// No description provided for @describeIssue.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe your issue or question...'**
+  String get describeIssue;
+
+  /// No description provided for @enterMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a message'**
+  String get enterMessage;
+
+  /// No description provided for @messageTooShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Message must be at least 10 characters'**
+  String get messageTooShort;
+
+  /// No description provided for @accountInfoIncluded.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account information will be automatically included.'**
+  String get accountInfoIncluded;
 }
 
 class _AppLocalizationsDelegate

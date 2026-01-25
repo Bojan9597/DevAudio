@@ -241,5 +241,14 @@
   "badgeListenHours": "Slušaj {count} sati",
   "badgeCompleteQuiz": "Završi kviz",
   "badgeFirstBook": "Završi svoju prvu knjigu",
-  "badgeStreak": "{count} dana zaredom"
+  "badgeStreak": "{count} dana zaredom",
+
+  "download": "Preuzmi",
+  "downloading": "Preuzimanje...",
+  "supportMessageDescription": "Pošaljite poruku našem timu za podršku. Javićemo vam se u najkraćem mogućem roku.",
+  "yourMessage": "Vaša poruka",
+  "describeIssue": "Opišite vaš problem ili pitanje...",
+  "enterMessage": "Molimo unesite poruku",
+  "messageTooShort": "Poruka mora imati bar 10 karaktera",
+  "accountInfoIncluded": "Vaši podaci o nalogu će biti automatski uključeni."
 }

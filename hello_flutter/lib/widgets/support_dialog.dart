@@ -42,9 +42,7 @@ class _SupportDialogState extends State<SupportDialog> {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-        body: json.encode({
-          'message': _messageController.text.trim(),
-        }),
+        body: json.encode({'message': _messageController.text.trim()}),
       );
 
       if (!mounted) return;
@@ -54,7 +52,9 @@ class _SupportDialogState extends State<SupportDialog> {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.messageSentSuccessfully),
+            content: Text(
+              AppLocalizations.of(context)!.messageSentSuccessfully,
+            ),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 3),
           ),
@@ -97,35 +97,35 @@ class _SupportDialogState extends State<SupportDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Send a message to our support team. We\'ll get back to you as soon as possible.',
-                style: TextStyle(fontSize: 14, color: Colors.grey),
+              Text(
+                AppLocalizations.of(context)!.supportMessageDescription,
+                style: const TextStyle(fontSize: 14, color: Colors.grey),
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _messageController,
                 maxLines: 8,
                 maxLength: 5000,
-                decoration: const InputDecoration(
-                  labelText: 'Your Message',
-                  hintText: 'Describe your issue or question...',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.yourMessage,
+                  hintText: AppLocalizations.of(context)!.describeIssue,
+                  border: const OutlineInputBorder(),
                   alignLabelWithHint: true,
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Please enter a message';
+                    return AppLocalizations.of(context)!.enterMessage;
                   }
                   if (value.trim().length < 10) {
-                    return 'Message must be at least 10 characters';
+                    return AppLocalizations.of(context)!.messageTooShort;
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Your account information will be automatically included.',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+              Text(
+                AppLocalizations.of(context)!.accountInfoIncluded,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ],
           ),
