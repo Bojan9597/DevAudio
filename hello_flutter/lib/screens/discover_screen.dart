@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../models/book.dart';
 import '../repositories/book_repository.dart';
 import '../services/auth_service.dart';
-import '../theme/app_theme.dart';
 import 'playlist_screen.dart';
 import 'login_screen.dart';
 import '../l10n/generated/app_localizations.dart';
@@ -31,7 +30,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   bool _hasMore = true;
   int _currentPage = 1;
   final int _limit = 10;
-  bool _isGridView = true;
 
   @override
   void initState() {
@@ -195,21 +193,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         // ContentArea has its own view switcher for categories.
         // DiscoverScreen has one for its results.
         // Let's keep the view switcher but remove the search field.
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              IconButton(
-                icon: Icon(_isGridView ? Icons.view_list : Icons.grid_view),
-                onPressed: () => setState(() => _isGridView = !_isGridView),
-                tooltip: _isGridView
-                    ? AppLocalizations.of(context)!.switchToList
-                    : AppLocalizations.of(context)!.switchToGrid,
-              ),
-            ],
-          ),
-        ),
 
         // Books Section with horizontal carousels + grid/list
         Expanded(
@@ -251,9 +234,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                   AppLocalizations.of(context)!.allBooks,
                   textColor,
                 ),
-                _isGridView
-                    ? _buildSliverGrid(cardColor, textColor)
-                    : _buildSliverList(cardColor, textColor),
+                _buildSliverGrid(cardColor, textColor),
               ],
             ),
           ),
@@ -485,74 +466,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           return _buildBookCard(_books[index], cardColor, textColor);
         }, childCount: _books.length + (_isLoading ? 1 : 0)),
       ),
-    );
-  }
-
-  Widget _buildSliverList(Color cardColor, Color textColor) {
-    if (_books.isEmpty && !_isLoading) {
-      return SliverToBoxAdapter(
-        child: SizedBox(
-          height: 200,
-          child: Center(
-            child: Text(
-              AppLocalizations.of(context)!.noBooksFound,
-              style: TextStyle(color: textColor.withOpacity(0.7)),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return SliverList(
-      delegate: SliverChildBuilderDelegate((context, index) {
-        if (index == _books.length) {
-          return const Padding(
-            padding: EdgeInsets.all(16),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-        return _buildBookItem(_books[index], cardColor, textColor);
-      }, childCount: _books.length + (_isLoading ? 1 : 0)),
-    );
-  }
-
-  Widget _buildGridView(Color cardColor, Color textColor) {
-    return GridView.builder(
-      physics: const AlwaysScrollableScrollPhysics(),
-      controller: _scrollController,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.55,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemCount: _books.length + (_isLoading ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == _books.length) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        return _buildBookCard(_books[index], cardColor, textColor);
-      },
-    );
-  }
-
-  Widget _buildListView(Color cardColor, Color textColor) {
-    return ListView.builder(
-      physics: const AlwaysScrollableScrollPhysics(),
-      controller: _scrollController,
-      itemCount: _books.length + (_isLoading ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == _books.length) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: CircularProgressIndicator(),
-            ),
-          );
-        }
-        return _buildBookItem(_books[index], cardColor, textColor);
-      },
     );
   }
 
@@ -883,78 +796,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       return '${(count / 1000).toStringAsFixed(1)}k';
     }
     return count.toString();
-  }
-
-  Widget _buildBookItem(Book book, Color cardColor, Color textColor) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: cardColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(12),
-        // Leading Image (Placeholder if no url)
-        // Leading Image (Placeholder if no url)
-        leading: Container(
-          width: 50,
-          height: 50,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
-          child:
-              (book.absoluteCoverUrlThumbnail != null &&
-                  book.absoluteCoverUrlThumbnail!.isNotEmpty)
-              ? Image.network(
-                  book.absoluteCoverUrlThumbnail!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Icon(
-                    Icons.play_circle_fill,
-                    color: Theme.of(context).colorScheme.primary,
-                    size: 40,
-                  ),
-                )
-              : Icon(
-                  Icons.play_circle_fill,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 40,
-                ),
-        ),
-        title: Text(
-          book.title,
-          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text(
-              book.author,
-              style: TextStyle(color: textColor.withOpacity(0.7)),
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(
-                  Icons.person_outline,
-                  size: 14,
-                  color: AppTheme.orangeColor,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  AppLocalizations.of(
-                    context,
-                  )!.postedBy(book.postedBy ?? "Unknown"),
-                  style: TextStyle(
-                    color: AppTheme.orangeColor,
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        onTap: () => _openPlayer(book),
-      ),
-    );
   }
 
   void _openPlayer(Book book) {
