@@ -16,6 +16,7 @@ import '../screens/upload_book_screen.dart';
 import '../screens/playlist_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/login_screen.dart';
+import 'category_details_view.dart';
 
 class ContentArea extends StatefulWidget {
   const ContentArea({super.key});
@@ -179,121 +180,19 @@ class _ContentAreaState extends State<ContentArea> {
           return _buildLibraryView();
         }
 
-        // Filter
-        final filteredBooks = BookRepository().filterBooks(
+        // Filter by category
+        var filteredBooks = BookRepository().filterBooks(
           categoryId,
           _allBooks,
           allCategories: _categories,
         );
 
-        if (filteredBooks.isEmpty) {
-          return RefreshIndicator(
-            onRefresh: _loadBooks,
-            child: ListView(
-              children: [
-                SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.5,
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.book_outlined,
-                          size: 60,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withOpacity(0.5),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          AppLocalizations.of(context)!.noBooksFoundInCategory(
-                            _getCategoryTitle(categoryId),
-                          ),
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurface,
-                            fontSize: 18,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        return RefreshIndicator(
+        return CategoryDetailsView(
+          key: Key(categoryId),
+          categoryId: categoryId,
+          categoryTitle: _getCategoryTitle(categoryId),
+          books: filteredBooks,
           onRefresh: _loadBooks,
-          child: Container(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            child: Column(
-              children: [
-                // Search bar at top
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          decoration: InputDecoration(
-                            hintText: AppLocalizations.of(
-                              context,
-                            )!.searchByTitle,
-                            prefixIcon: const Icon(Icons.search),
-                            filled: true,
-                            fillColor:
-                                Theme.of(context).brightness == Brightness.dark
-                                ? Colors.grey[800]
-                                : Colors.grey[200],
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                          onChanged: (value) {
-                            // TODO: Implement local search filtering
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: Icon(
-                          globalLayoutState.isGridView
-                              ? Icons.view_list
-                              : Icons.grid_view,
-                        ),
-                        onPressed: () => globalLayoutState.toggleViewMode(),
-                        tooltip: globalLayoutState.isGridView
-                            ? AppLocalizations.of(context)!.switchToList
-                            : AppLocalizations.of(context)!.switchToGrid,
-                      ),
-                    ],
-                  ),
-                ),
-                // Title
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      AppLocalizations.of(
-                        context,
-                      )!.booksInCategory(_getCategoryTitle(categoryId)),
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Book grid/list
-                Expanded(child: _buildBookGridOrList(filteredBooks)),
-              ],
-            ),
-          ),
         );
       },
     );
@@ -697,39 +596,6 @@ class _ContentAreaState extends State<ContentArea> {
         onTap: () => _openPlayer(book),
       ),
     );
-  }
-
-  Widget _buildBookGridOrList(List<Book> books) {
-    if (globalLayoutState.isGridView) {
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          int crossAxisCount = (constraints.maxWidth / 200).toInt();
-          if (crossAxisCount < 2) crossAxisCount = 2;
-
-          return GridView.builder(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              childAspectRatio: 0.6,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 0,
-            ),
-            itemCount: books.length,
-            itemBuilder: (context, index) {
-              final book = books[index];
-              return _buildBookCard(book);
-            },
-          );
-        },
-      );
-    } else {
-      return ListView.builder(
-        itemCount: books.length,
-        itemBuilder: (context, index) {
-          final book = books[index];
-          return _buildBookListTile(book);
-        },
-      );
-    }
   }
 
   void _openPlayer(Book book) async {
