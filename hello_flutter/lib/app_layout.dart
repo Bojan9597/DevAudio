@@ -77,12 +77,16 @@ class _AppLayoutState extends State<AppLayout> {
         return Scaffold(
           appBar: AppBar(
             automaticallyImplyLeading: false,
-            backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+
+            backgroundColor: Theme.of(
+              context,
+            ).appBarTheme.backgroundColor?.withOpacity(0.1),
+            foregroundColor: Theme.of(context).colorScheme.onSurface,
             leading: isOnDiscover && !_isSearching
                 ? IconButton(
                     icon: Icon(
                       globalLayoutState.isCollapsed ? Icons.menu : Icons.close,
-                      color: Theme.of(context).appBarTheme.foregroundColor,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                     onPressed: () => globalLayoutState.toggleMenu(),
                     tooltip: AppLocalizations.of(context)!.categories,
@@ -94,14 +98,14 @@ class _AppLayoutState extends State<AppLayout> {
                     controller: _searchController,
                     autofocus: true,
                     style: TextStyle(
-                      color: Theme.of(context).appBarTheme.foregroundColor,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                     decoration: InputDecoration(
                       hintText: AppLocalizations.of(context)!.searchByTitle,
                       hintStyle: TextStyle(
                         color: Theme.of(
                           context,
-                        ).appBarTheme.foregroundColor?.withOpacity(0.6),
+                        ).colorScheme.onSurface.withOpacity(0.6),
                       ),
                       border: InputBorder.none,
                     ),
@@ -117,9 +121,7 @@ class _AppLayoutState extends State<AppLayout> {
                           child: Text(
                             AppLocalizations.of(context)!.categories,
                             style: TextStyle(
-                              color: Theme.of(
-                                context,
-                              ).appBarTheme.foregroundColor,
+                              color: Theme.of(context).colorScheme.onSurface,
                               fontWeight: FontWeight.w500,
                               fontSize: 16,
                             ),
@@ -129,9 +131,7 @@ class _AppLayoutState extends State<AppLayout> {
                         Text(
                           'DevAudio',
                           style: TextStyle(
-                            color: Theme.of(
-                              context,
-                            ).appBarTheme.foregroundColor,
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
