@@ -154,6 +154,24 @@ class DownloadService {
     }
   }
 
+  Future<bool> isPlaylistFullyDownloaded(
+    List<Map<String, dynamic>> playlist, {
+    int? userId,
+    String? bookId,
+  }) async {
+    for (final track in playlist) {
+      final trackId = track['id'].toString();
+      final uniqueId = 'track_$trackId';
+      final isDownloaded = await isBookDownloaded(
+        uniqueId,
+        userId: userId,
+        bookId: bookId,
+      );
+      if (!isDownloaded) return false;
+    }
+    return true;
+  }
+
   /// Download multiple tracks for a playlist
   Future<void> downloadPlaylist(
     List<Map<String, dynamic>> playlist,
@@ -162,44 +180,29 @@ class DownloadService {
   }) async {
     print('[DownloadService] Starting playlist download for book $bookId');
 
-    // Process serially or parallel? Parallel is faster but might choke bandwidth.
-    // Let's do batches or just parallel with limits.
-    // For simplicity, just fire them all and let Dio/OS handle pool, but maybe slightly staggered?
-    // Actually, simple parallel `Future.wait` is ok for reasonable playlist sizes.
-    // If playlist is HUGE, this might be issue. Assuming < 50-100 tracks.
-
     final futures = <Future<void>>[];
 
     for (final track in playlist) {
       final trackId = track['id'].toString();
       final uniqueId = 'track_$trackId'; // Must match _getUniqueAudioId logic
+
+      // OPTIMIZATION: Check if already downloaded
+      final isDownloaded = await isBookDownloaded(
+        uniqueId,
+        userId: userId,
+        bookId: bookId,
+      );
+
+      if (isDownloaded) {
+        print('[DownloadService] Skipping existing track: $uniqueId');
+        continue;
+      }
+
       final url = track['file_path'];
 
       // Handle URL absolute/relative
       String absoluteUrl = url;
       if (!url.startsWith('http')) {
-        // We need base URL. We can't access it easily here without import or helper.
-        // Assuming the caller passes absolute URL or we assume ApiConstants exists (it does in other files).
-        // But wait, `_performDownload` just uses `_dio.download(url)`.
-        // `audioHandler` added base URL. We need to duplicate that logic or pass it.
-        // Let's assume the passed URL is absolute OR we fix it here.
-        // We'll trust the caller (PlayerScreen) to be consistent or handle it here if we import ApiConstants.
-        // `PlayerScreen` logic uses `_getAbsoluteUrl`.
-        // Let's handle it here if it's relative.
-      }
-
-      // Actually `downloadBook` expects `String url`.
-      // Let's assume the caller will sanitize user input,
-      // BUT we are implementing `downloadPlaylist` here. We need valid URLs.
-      // We can iterate and check.
-
-      if (!absoluteUrl.startsWith('http')) {
-        // This file doesn't import ApiConstants.
-        // Let's assume we need to import it or rely on existing imports (DownloadService imports auth_service? no.)
-        // It imports `auth_service.dart`. `AuthService` might expose baseUrl using `ApiConstants`.
-        // Let's look at `auth_service.dart`.
-        // For now, let's play safe and check if `AuthService` has `baseUrl`.
-        // `registerServerDownload` uses `AuthService().baseUrl`.
         final baseUrl = AuthService().baseUrl;
         absoluteUrl = '$baseUrl$url';
       }
@@ -207,6 +210,11 @@ class DownloadService {
       futures.add(
         downloadBook(uniqueId, absoluteUrl, userId: userId, bookId: bookId),
       );
+    }
+
+    if (futures.isEmpty) {
+      print('[DownloadService] All tracks already downloaded.');
+      return;
     }
 
     await Future.wait(futures);

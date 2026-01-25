@@ -48,6 +48,85 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   bool _isDownloading = false;
 
   void _downloadFullPlaylist() async {
+    // 1. Check if already downloaded
+    bool isFullyDownloaded = false;
+    try {
+      // Cast safely
+      final List<Map<String, dynamic>> playlist = _tracks
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+
+      // Note: isPlaylistFullyDownloaded check assumes we know bookId context if strict.
+      // added bookId param to helper or just iterate manually?
+      // The helper I added `isPlaylistFullyDownloaded` takes `playlist` and `userId`.
+      // It doesn't take bookId in signature I proposed above, but it calls `isBookDownloaded`.
+      // `isBookDownloaded` is better with bookId.
+      // I should update `isPlaylistFullyDownloaded` signature in next step if I forgot,
+      // OR I can just use it as is if I didn't add bookId param to it.
+      // Wait, I didn't add bookId to `isPlaylistFullyDownloaded` in the previous tool call?
+      // I used: `isPlaylistFullyDownloaded(List<Map<String, dynamic>> playlist, {int? userId})`
+      // It iterates and calls `isBookDownloaded(uniqueId, userId: userId)`.
+      // It DOES NOT pass bookId. This means it falls back to legacy/flat structure or might miss folder.
+      // I should probably fix `isPlaylistFullyDownloaded` first to accept bookId for safety.
+      // BUT for now, let's assume it works or I'll fix it in a sec.
+      // Actually, I can just rely on `DownloadService` logic.
+
+      // Let's assume I will fix the signature in a followup if needed.
+      // Actually I just wrote the code, let's check what I wrote.
+      // I wrote: `isPlaylistFullyDownloaded(List<Map<String, dynamic>> playlist, {int? userId})`.
+      // It calls `isBookDownloaded(uniqueId, userId: userId)`.
+      // This is slightly risky if files are in book_ID folder.
+      // `isBookDownloaded` does:
+      // `getLocalBookPath(fileKey, userId: userId, bookId: bookId)` -> NEEDS bookId for folder.
+      // If bookId is null, it returns `.../user_X/file.mp3`.
+      // If file is in `.../user_X/book_Y/file.mp3`, `isBookDownloaded` without bookId might return FALSE.
+      // So `isPlaylistFullyDownloaded` MIGHT return false even if downloaded in new folder structure.
+
+      // Correction: I should update `PlaylistScreen` to call a BETTER version or just check manually here.
+      // Or I can update `DownloadService` again to add `bookId`.
+      // Let's just use it for now and I will fix the Service signature in next turn if I made a mistake.
+      // Wait, I am controlling the edit. I can see I missed bookId in previous step's signature.
+      // However, `isBookDownloaded` falls back?
+      // `getLocalBookPath` with NO bookId -> `userPath/uniqueId.mp3`.
+      // If file is in `userPath/bookId/uniqueId.mp3`, `File(legacyPath).exists()` will be FALSE.
+      // So `isBookDownloaded` returns FALSE.
+      // So `isFullyDownloaded` returns FALSE.
+      // So it tries to download.
+      // Inside `downloadPlaylist`, I added `isBookDownloaded(..., bookId: bookId)`. THIS ONE IS CORRECT.
+      // So `downloadPlaylist` will skip existing ones correctly.
+      // The only "bug" is that the "Already downloaded" snackbar might not show if files are in new folder structure,
+      // it will instead say "Downloading..." and then finish instantly because `downloadPlaylist` skips them.
+      // That is acceptable behavior for now (it fixes the re-download waste), but not the UI message the user wants.
+
+      // To get the UI message right, I really should fix `isPlaylistFullyDownloaded` to accept bookId.
+      // I will do that in `DownloadService` first.
+
+      // For this step (PlaylistScreen), let's assume I WILL fix `DownloadService` to take bookId.
+      // So I will write the code here assuming `bookId` parameter exists or I'll rely on `downloadPlaylist` skipping fast.
+      // User specifically asked "say that book is already downloaded".
+      // So I MUST Ensure `isFullyDownloaded` returns TRUE.
+
+      isFullyDownloaded = await DownloadService().isPlaylistFullyDownloaded(
+        playlist,
+        userId: _userId,
+        bookId: widget.book.id,
+      );
+    } catch (e) {
+      print("Error checking download status: $e");
+    }
+
+    if (isFullyDownloaded) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Book is already downloaded.'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
+
     setState(() => _isDownloading = true);
     try {
       if (mounted) {
