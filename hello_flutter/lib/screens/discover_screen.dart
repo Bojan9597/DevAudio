@@ -734,6 +734,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     updateList(_books);
     updateList(_newReleases);
     updateList(_topPicks);
+    updateList(_listenHistory);
   }
 
   void _showRatingDialog(Book book) {

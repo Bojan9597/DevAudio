@@ -1628,6 +1628,7 @@ def get_listen_history(user_id):
         books_query = """
             SELECT DISTINCT b.id, b.title, b.author, b.audio_path, b.cover_image_path, 
                    c.slug as category_slug, b.duration_seconds, ub.last_accessed_at,
+                   b.average_rating, b.rating_count,
                    (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count
             FROM user_books ub
             JOIN books b ON ub.book_id = b.id
@@ -1741,7 +1742,10 @@ def get_listen_history(user_id):
                     "lastPosition": int(total_listened_seconds),
                     "duration": total_duration,
                     "percentage": round(percentage, 2),
-                    "lastAccessed": str(book['last_accessed_at'])
+                    "percentage": round(percentage, 2),
+                    "lastAccessed": str(book['last_accessed_at']),
+                    "averageRating": float(book['average_rating'] or 0),
+                    "ratingCount": int(book['rating_count'] or 0)
                 })
                 
         return jsonify(history)
