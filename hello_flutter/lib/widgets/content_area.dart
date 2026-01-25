@@ -627,7 +627,7 @@ class _ContentAreaState extends State<ContentArea> {
             crossAxisCount: crossAxisCount,
             childAspectRatio: 0.55,
             crossAxisSpacing: 12,
-            mainAxisSpacing: 20,
+            mainAxisSpacing: 4,
           ),
           itemCount: books.length,
           itemBuilder: (context, index) {
@@ -711,7 +711,7 @@ class _ContentAreaState extends State<ContentArea> {
               crossAxisCount: crossAxisCount,
               childAspectRatio: 0.55,
               crossAxisSpacing: 12,
-              mainAxisSpacing: 20,
+              mainAxisSpacing: 4,
             ),
             itemCount: books.length,
             itemBuilder: (context, index) {
@@ -828,7 +828,11 @@ class _ContentAreaState extends State<ContentArea> {
               children: [
                 ...List.generate(5, (index) {
                   if (index < book.averageRating.floor()) {
-                    return const Icon(Icons.star, size: 16, color: Colors.amber);
+                    return const Icon(
+                      Icons.star,
+                      size: 16,
+                      color: Colors.amber,
+                    );
                   } else if (index < book.averageRating) {
                     return const Icon(
                       Icons.star_half,
@@ -846,7 +850,9 @@ class _ContentAreaState extends State<ContentArea> {
                 const SizedBox(width: 4),
                 Flexible(
                   child: Text(
-                    book.ratingCount > 0 ? _formatCount(book.ratingCount) : AppLocalizations.of(context)!.rate,
+                    book.ratingCount > 0
+                        ? _formatCount(book.ratingCount)
+                        : AppLocalizations.of(context)!.rate,
                     style: TextStyle(
                       fontSize: 12,
                       color: textColor.withOpacity(0.6),
@@ -977,7 +983,9 @@ class _ContentAreaState extends State<ContentArea> {
     if (userId == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.pleaseLogInToRateBooks)),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.pleaseLogInToRateBooks),
+          ),
         );
         // Navigate to login screen
         Navigator.push(
@@ -992,12 +1000,20 @@ class _ContentAreaState extends State<ContentArea> {
 
     if (error == null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${AppLocalizations.of(context)!.thanksForRating(stars)} ⭐')),
+        SnackBar(
+          content: Text(
+            '${AppLocalizations.of(context)!.thanksForRating(stars)} ⭐',
+          ),
+        ),
       );
       _loadBooks();
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error ?? AppLocalizations.of(context)!.failedToSubmitRating)),
+        SnackBar(
+          content: Text(
+            error ?? AppLocalizations.of(context)!.failedToSubmitRating,
+          ),
+        ),
       );
     }
   }

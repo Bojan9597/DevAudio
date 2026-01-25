@@ -216,6 +216,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                 ],
 
                 // New Releases Section
+                SliverToBoxAdapter(
+                  child: const SizedBox(height: 16),
+                ), // Additional spacing
                 _buildSectionHeader(
                   AppLocalizations.of(context)!.newReleases,
                   textColor,
@@ -457,7 +460,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           crossAxisCount: 2,
           childAspectRatio: 0.55,
           crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
+          mainAxisSpacing: 4,
         ),
         delegate: SliverChildBuilderDelegate((context, index) {
           if (index == _books.length) {
