@@ -127,7 +127,7 @@ class _AppLayoutState extends State<AppLayout> {
                             ),
                           ),
                         ),
-                      if (!isOnDiscover)
+                      if (!isOnDiscover) ...[
                         Text(
                           'DevAudio',
                           style: TextStyle(
@@ -135,6 +135,13 @@ class _AppLayoutState extends State<AppLayout> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                        const SizedBox(width: 8),
+                        Image.asset(
+                          'assets/icon/logo1.png',
+                          height: 32,
+                          width: 32,
+                        ),
+                      ],
                     ],
                   ),
             actions: [
