@@ -24,6 +24,7 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
   String? _selectedCategoryId;
   List<String> _selectedAudioPaths = [];
   String? _selectedCoverPath;
+  String? _selectedPdfPath;
 
   bool _isUploading = false;
   List<Category> _categories = [];
@@ -99,6 +100,18 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
     }
   }
 
+  Future<void> _pickPdf() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+    );
+    if (result != null) {
+      setState(() {
+        _selectedPdfPath = result.files.single.path;
+      });
+    }
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCategoryId == null) {
@@ -169,6 +182,7 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
         userId: userId.toString(),
         audioPaths: finalPaths,
         coverPath: _selectedCoverPath,
+        pdfPath: _selectedPdfPath,
         description: _descriptionController.text,
         price: double.tryParse(_priceController.text) ?? 0.0,
         duration: totalDuration,
@@ -288,6 +302,24 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 onTap: _pickCover,
+              ),
+              const SizedBox(height: 16),
+
+              // PDF Picker
+              ListTile(
+                title: Text(
+                  _selectedPdfPath == null
+                      ? 'Select PDF (Optional)'
+                      : 'PDF Selected: ...${_selectedPdfPath!.split(r'\').last}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                leading: const Icon(Icons.picture_as_pdf),
+                tileColor: Colors.grey.withOpacity(0.1),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                onTap: _pickPdf,
               ),
               const SizedBox(height: 32),
 

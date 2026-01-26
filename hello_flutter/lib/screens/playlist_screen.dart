@@ -18,6 +18,7 @@ import '../services/connectivity_service.dart';
 import '../services/subscription_service.dart';
 import '../widgets/mini_player.dart';
 import '../widgets/subscription_bottom_sheet.dart';
+import 'pdf_viewer_screen.dart';
 
 class PlaylistScreen extends StatefulWidget {
   final Book book;
@@ -47,6 +48,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   bool _isCompletionVideoInitialized = false;
   bool _showCompletionOverlay = false;
   bool _isDownloading = false;
+  String? _pdfUrl;
 
   void _downloadFullPlaylist() async {
     // 1. Check if already downloaded
@@ -144,6 +146,19 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
         widget.book.id,
         userId: _userId,
       );
+
+      // Also download PDF if available
+      if (_pdfUrl != null && _pdfUrl!.isNotEmpty) {
+        try {
+          await DownloadService().downloadPdf(
+            widget.book.id,
+            _pdfUrl!,
+            userId: _userId,
+          );
+        } catch (e) {
+          print('PDF download failed: $e');
+        }
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -372,6 +387,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
 
       // Must set _isQuizPassed BEFORE calculating _isBookCompleted
       _isQuizPassed = data['quiz_passed'] ?? false;
+      _pdfUrl = data['pdf_path'];
 
       if (_hasQuiz) {
         _isBookCompleted = _areTracksCompleted && _isQuizPassed;
@@ -653,6 +669,61 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     }
   }
 
+  Future<void> _openPdfViewer() async {
+    if (_pdfUrl == null || _pdfUrl!.isEmpty) return;
+
+    // Check if PDF is downloaded
+    final isDownloaded = await DownloadService().isPdfDownloaded(
+      widget.book.id,
+      userId: _userId,
+    );
+
+    if (!isDownloaded) {
+      // Download PDF first
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Downloading PDF...'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+
+      try {
+        await DownloadService().downloadPdf(
+          widget.book.id,
+          _pdfUrl!,
+          userId: _userId,
+        );
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to download PDF: $e')),
+          );
+        }
+        return;
+      }
+    }
+
+    // Get the local PDF path and open viewer
+    final pdfPath = await DownloadService().getPdfPath(
+      widget.book.id,
+      userId: _userId,
+    );
+
+    if (mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PdfViewerScreen(
+            pdfPath: pdfPath,
+            title: widget.book.title,
+          ),
+        ),
+      );
+    }
+  }
+
   Future<void> _onTrackFinished(Map<String, dynamic> track) async {
     // Call backend to mark complete
     if (_userId == null) return;
@@ -680,6 +751,13 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       appBar: AppBar(
         title: Text(widget.book.title),
         actions: [
+          // PDF Button - only show if PDF exists
+          if (_pdfUrl != null && _pdfUrl!.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.picture_as_pdf),
+              tooltip: "View PDF",
+              onPressed: _openPdfViewer,
+            ),
           Builder(
             builder: (context) {
               bool isOwner =

@@ -811,15 +811,21 @@ def get_playlist(book_id):
                            "is_passed": False
                         }
                 
+            # Fetch pdf_path for the book
+            pdf_query = "SELECT pdf_path FROM books WHERE id = %s"
+            pdf_res = db.execute_query(pdf_query, (book_id,))
+            pdf_path = pdf_res[0]['pdf_path'] if pdf_res and pdf_res[0]['pdf_path'] else None
+
             return jsonify({
-                "tracks": result, 
-                "has_quiz": quiz_exists, 
+                "tracks": result,
+                "has_quiz": quiz_exists,
                 "quiz_passed": quiz_passed,
-                "track_quizzes": track_quizzes 
+                "track_quizzes": track_quizzes,
+                "pdf_path": pdf_path
             })
         
         # Fallback for "Single Book" treated as Playlist
-        book_query = "SELECT title, audio_path, duration_seconds FROM books WHERE id = %s"
+        book_query = "SELECT title, audio_path, duration_seconds, pdf_path FROM books WHERE id = %s"
         book_res = db.execute_query(book_query, (book_id,))
         if book_res:
             book = book_res[0]
@@ -856,9 +862,10 @@ def get_playlist(book_id):
             if q_res:
                 quiz_exists = True
 
-            return jsonify({"tracks": [synthetic_item], "has_quiz": quiz_exists})
+            pdf_path = book['pdf_path'] if book.get('pdf_path') else None
+            return jsonify({"tracks": [synthetic_item], "has_quiz": quiz_exists, "pdf_path": pdf_path})
             
-        return jsonify({"tracks": [], "has_quiz": False})
+        return jsonify({"tracks": [], "has_quiz": False, "pdf_path": None})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
@@ -1064,12 +1071,12 @@ def get_books():
         params = []
         # Updated query to check for playlist items existence, get duration, and ratings
         base_select = """
-            SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug, 
-                   u.name as posted_by_name, b.description, b.price, b.posted_by_user_id, b.duration_seconds,
+            SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug,
+                   u.name as posted_by_name, b.description, b.price, b.posted_by_user_id, b.duration_seconds, b.pdf_path,
                    (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count,
                    (SELECT AVG(stars) FROM book_ratings WHERE book_id = b.id) as average_rating,
                    (SELECT COUNT(*) FROM book_ratings WHERE book_id = b.id) as rating_count
-            FROM books b 
+            FROM books b
             LEFT JOIN categories c ON b.primary_category_id = c.id
             LEFT JOIN users u ON b.posted_by_user_id = u.id
         """
@@ -1177,7 +1184,8 @@ def get_books():
                     "isPlaylist": row['playlist_count'] > 0,
                     "duration": row['duration_seconds'] or 0,
                     "averageRating": round(float(row['average_rating']), 1) if row['average_rating'] else 0.0,
-                    "ratingCount": row['rating_count'] or 0
+                    "ratingCount": row['rating_count'] or 0,
+                    "pdfUrl": row['pdf_path']
                 }
                 
                 # Add percentage if calculated
@@ -2002,21 +2010,43 @@ def upload_book():
             cover_file = request.files['cover']
             if cover_file.filename != '':
                 cover_filename = secure_filename(f"{timestamp_prefix}_{cover_file.filename}")
-                cover_save_path = os.path.join(static_dir, "BookCovers", cover_filename) 
+                cover_save_path = os.path.join(static_dir, "BookCovers", cover_filename)
                 os.makedirs(os.path.dirname(cover_save_path), exist_ok=True)
                 cover_file.save(cover_save_path)
                 db_cover_path = f"{BASE_URL}static/BookCovers/{cover_filename}"
+
+        # Handle PDF (Optional)
+        db_pdf_path = None
+        if 'pdf' in request.files:
+            pdf_file = request.files['pdf']
+            if pdf_file.filename != '':
+                if is_playlist:
+                    # Save PDF in the same folder as audio files
+                    safe_title = secure_filename(title)
+                    folder_name = f"{timestamp_prefix}_{safe_title}"
+                    pdf_filename = "book.pdf"
+                    pdf_save_path = os.path.join(static_dir, "AudioBooks", folder_name, pdf_filename)
+                    os.makedirs(os.path.dirname(pdf_save_path), exist_ok=True)
+                    pdf_file.save(pdf_save_path)
+                    db_pdf_path = f"{BASE_URL}static/AudioBooks/{folder_name}/{pdf_filename}"
+                else:
+                    # Save PDF with timestamp prefix for single audio files
+                    pdf_filename = secure_filename(f"{timestamp_prefix}_book.pdf")
+                    pdf_save_path = os.path.join(static_dir, "AudioBooks", pdf_filename)
+                    os.makedirs(os.path.dirname(pdf_save_path), exist_ok=True)
+                    pdf_file.save(pdf_save_path)
+                    db_pdf_path = f"{BASE_URL}static/AudioBooks/{pdf_filename}"
 
         # Insert Book
         # Calculate total duration for playlists
         total_duration = sum(item.get('duration', 0) for item in saved_files_info)
         
         insert_query = """
-            INSERT INTO books 
-            (title, author, primary_category_id, audio_path, cover_image_path, posted_by_user_id, description, price, duration_seconds)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO books
+            (title, author, primary_category_id, audio_path, cover_image_path, posted_by_user_id, description, price, duration_seconds, pdf_path)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
-        params = (title, author, numeric_cat_id, main_audio_path, db_cover_path, user_id, description, price, total_duration)
+        params = (title, author, numeric_cat_id, main_audio_path, db_cover_path, user_id, description, price, total_duration, db_pdf_path)
         
         cursor = db.connection.cursor()
         cursor.execute(insert_query, params)
@@ -2062,10 +2092,10 @@ def get_my_uploads():
         return jsonify([]), 200  # Return empty list for non-admin users
 
     query = """
-        SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug, 
-               b.description, b.price, b.posted_by_user_id,
+        SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug,
+               b.description, b.price, b.posted_by_user_id, b.pdf_path,
                (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count
-        FROM books b 
+        FROM books b
         LEFT JOIN categories c ON b.primary_category_id = c.id
         WHERE b.posted_by_user_id = %s
         ORDER BY b.id DESC
@@ -2123,7 +2153,8 @@ def get_my_uploads():
                 "description": row['description'],
                 "price": float(row['price']) if row['price'] else 0.0,
                 "postedByUserId": str(row['posted_by_user_id']),
-                "isPlaylist": row['playlist_count'] > 0
+                "isPlaylist": row['playlist_count'] > 0,
+                "pdfUrl": row['pdf_path']
             })
             
     return jsonify(books)

@@ -485,4 +485,112 @@ class DownloadService {
     final directory = await getApplicationDocumentsDirectory();
     return '${directory.path}/$fileName';
   }
+
+  // --- PDF Download Methods ---
+
+  /// Get local path for a book's PDF
+  Future<String> getPdfPath(String bookId, {int? userId}) async {
+    final userPath = await _getUserPath(userId);
+    if (userId != null) {
+      final bookDir = Directory('$userPath/book_$bookId');
+      if (!await bookDir.exists()) {
+        await bookDir.create(recursive: true);
+      }
+      return '${bookDir.path}/book.pdf';
+    }
+    return '$userPath/book_$bookId.pdf';
+  }
+
+  /// Check if PDF is downloaded for a book
+  Future<bool> isPdfDownloaded(String bookId, {int? userId}) async {
+    final pdfPath = await getPdfPath(bookId, userId: userId);
+    final file = File(pdfPath);
+    if (await file.exists()) {
+      final size = await file.length();
+      return size > 0;
+    }
+    return false;
+  }
+
+  /// Download PDF for a book
+  Future<void> downloadPdf(
+    String bookId,
+    String pdfUrl, {
+    int? userId,
+  }) async {
+    final downloadKey = 'pdf_$bookId${userId != null ? '_$userId' : ''}';
+
+    // If download already in progress, wait for it
+    if (_activeDownloads.containsKey(downloadKey)) {
+      print('[DownloadService] PDF download already in progress for $downloadKey');
+      await _activeDownloads[downloadKey];
+      return;
+    }
+
+    // Check if already downloaded
+    if (await isPdfDownloaded(bookId, userId: userId)) {
+      print('[DownloadService] PDF already downloaded for book $bookId');
+      return;
+    }
+
+    final downloadFuture = _performPdfDownload(bookId, pdfUrl, userId: userId);
+    _activeDownloads[downloadKey] = downloadFuture;
+
+    try {
+      await downloadFuture;
+    } finally {
+      _activeDownloads.remove(downloadKey);
+    }
+  }
+
+  Future<void> _performPdfDownload(
+    String bookId,
+    String pdfUrl, {
+    int? userId,
+  }) async {
+    try {
+      final pdfPath = await getPdfPath(bookId, userId: userId);
+      final tempPath = '$pdfPath.tmp';
+
+      print('[DownloadService] Downloading PDF from: $pdfUrl');
+
+      await _dio.download(
+        pdfUrl,
+        tempPath,
+        onReceiveProgress: (received, total) {
+          if (total > 0) {
+            final progress = (received / total * 100).toStringAsFixed(1);
+            print('[DownloadService] PDF download progress: $progress%');
+          }
+        },
+      );
+
+      // Verify download
+      final tempFile = File(tempPath);
+      if (!await tempFile.exists()) {
+        throw Exception('PDF download failed - temp file not created');
+      }
+
+      final fileSize = await tempFile.length();
+      if (fileSize == 0) {
+        await tempFile.delete();
+        throw Exception('Downloaded PDF is empty');
+      }
+
+      // Move temp file to final path
+      await tempFile.rename(pdfPath);
+      print('[DownloadService] PDF saved to: $pdfPath');
+    } catch (e) {
+      print('[DownloadService] PDF download failed: $e');
+      // Clean up partial downloads
+      try {
+        final pdfPath = await getPdfPath(bookId, userId: userId);
+        final file = File(pdfPath);
+        if (await file.exists()) await file.delete();
+        final tempFile = File('$pdfPath.tmp');
+        if (await tempFile.exists()) await tempFile.delete();
+      } catch (_) {}
+      throw Exception('Failed to download PDF: $e');
+    }
+  }
 }

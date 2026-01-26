@@ -434,6 +434,7 @@ class BookRepository {
     required String userId,
     required List<String> audioPaths,
     String? coverPath,
+    String? pdfPath,
     String description = '',
     double price = 0.0,
     required int duration,
@@ -476,6 +477,10 @@ class BookRepository {
 
     if (coverPath != null && coverPath.isNotEmpty) {
       request.files.add(await http.MultipartFile.fromPath('cover', coverPath));
+    }
+
+    if (pdfPath != null && pdfPath.isNotEmpty) {
+      request.files.add(await http.MultipartFile.fromPath('pdf', pdfPath));
     }
 
     final response = await request.send();
