@@ -206,9 +206,8 @@ class _SearchOverlayState extends State<SearchOverlay> {
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _topPicks.length,
                 itemBuilder: (context, index) {
-                  final book = _topPicks[index];
+                  final book = _topPicks[index % _topPicks.length];
                   return _buildHorizontalBookCard(book, textColor, subtitleColor);
                 },
               ),
