@@ -1,0 +1,90 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import '../services/auth_service.dart';
+import '../main.dart'; // For navigatorKey
+import '../screens/login_screen.dart';
+
+class ApiClient {
+  // Singleton pattern
+  static final ApiClient _instance = ApiClient._internal();
+  factory ApiClient() => _instance;
+  ApiClient._internal();
+
+  final AuthService _authService = AuthService();
+
+  // Helper to handle response
+  Future<http.Response> _handleResponse(http.Response response) async {
+    if (response.statusCode == 401) {
+      // Token Expired / Unauthorized
+      print('[ApiClient] 401 Unauthorized detected. Logging out...');
+
+      await _authService.logout();
+
+      final context = navigatorKey.currentContext;
+      if (context != null) {
+        // Show dialog
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Text('Session Expired'),
+            content: const Text(
+              'Your session has expired. Please log in again.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  // Close dialog
+                  Navigator.of(context).pop();
+                  // Navigate to Login
+                  // Clear stack to prevent back button
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (context) => const LoginScreen(),
+                    ),
+                    (route) => false,
+                  );
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+    return response;
+  }
+
+  Future<http.Response> get(Uri url, {Map<String, String>? headers}) async {
+    final response = await http.get(url, headers: headers);
+    return _handleResponse(response);
+  }
+
+  Future<http.Response> post(
+    Uri url, {
+    Map<String, String>? headers,
+    Object? body,
+  }) async {
+    final response = await http.post(url, headers: headers, body: body);
+    return _handleResponse(response);
+  }
+
+  Future<http.Response> put(
+    Uri url, {
+    Map<String, String>? headers,
+    Object? body,
+  }) async {
+    final response = await http.put(url, headers: headers, body: body);
+    return _handleResponse(response);
+  }
+
+  Future<http.Response> delete(
+    Uri url, {
+    Map<String, String>? headers,
+    Object? body,
+  }) async {
+    final response = await http.delete(url, headers: headers, body: body);
+    return _handleResponse(response);
+  }
+}

@@ -7,7 +7,15 @@
       "Bash(findstr:*)",
       "Bash(flutter gen-l10n:*)",
       "Bash(flutter analyze:*)",
-      "Bash(flutter pub get:*)"
+      "Bash(flutter pub get:*)",
+      "Bash(where:*)",
+      "Bash(py:*)",
+      "Bash(C:UsersbojanAppDataLocalProgramsPythonPython311python.exe --version)",
+      "Bash(cmd /c \"\"\"C:\\\\Users\\\\bojan\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python311\\\\python.exe\"\" --version\")",
+      "Bash(\"c:\\\\Users\\\\bojan\\\\Desktop\\\\TrainingFlutter\\\\Server\\\\venv\\\\Scripts\\\\python.exe\" -m pip install --upgrade pip)",
+      "Bash(\"c:\\\\Users\\\\bojan\\\\Desktop\\\\TrainingFlutter\\\\Server\\\\venv\\\\Scripts\\\\pip.exe\" install -r \"c:\\\\Users\\\\bojan\\\\Desktop\\\\TrainingFlutter\\\\Server\\\\requirements.txt\")",
+      "Bash(\"c:\\\\Users\\\\bojan\\\\Desktop\\\\TrainingFlutter\\\\Server\\\\venv\\\\Scripts\\\\pip.exe\" freeze:*)",
+      "Bash(\"c:\\\\Users\\\\bojan\\\\Desktop\\\\TrainingFlutter\\\\Server\\\\venv\\\\Scripts\\\\pip.exe\" install:*)"
     ]
   }
 }

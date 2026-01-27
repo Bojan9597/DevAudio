@@ -1,0 +1,11 @@
+CREATE TABLE `quizzes` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `book_id` int unsigned NOT NULL,
+  `playlist_item_id` int DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_book_track_quiz` (`book_id`,`playlist_item_id`),
+  KEY `fk_quizzes_playlist_item` (`playlist_item_id`),
+  CONSTRAINT `fk_quizzes_playlist_item` FOREIGN KEY (`playlist_item_id`) REFERENCES `playlist_items` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `quizzes_ibfk_1` FOREIGN KEY (`book_id`) REFERENCES `books` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci

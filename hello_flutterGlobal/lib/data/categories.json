@@ -1,0 +1,218 @@
+[
+    {
+        "id": "operating_systems",
+        "title": "Operating Systems",
+        "hasBooks": false,
+        "children": [
+            {
+                "id": "linux",
+                "title": "Linux",
+                "children": [
+                    {
+                        "id": "linux_networking",
+                        "title": "Networking",
+                        "children": []
+                    },
+                    {
+                        "id": "linux_filesystems",
+                        "title": "File Systems",
+                        "children": []
+                    },
+                    {
+                        "id": "linux_security",
+                        "title": "Security",
+                        "children": []
+                    },
+                    {
+                        "id": "linux_shell_scripting",
+                        "title": "Shell Scripting",
+                        "children": []
+                    },
+                    {
+                        "id": "linux_system_admin",
+                        "title": "System Administration",
+                        "children": []
+                    }
+                ]
+            },
+            {
+                "id": "windows",
+                "title": "Windows",
+                "children": [
+                    {
+                        "id": "windows_internals",
+                        "title": "Internals",
+                        "children": []
+                    },
+                    {
+                        "id": "windows_powershell",
+                        "title": "PowerShell",
+                        "children": []
+                    },
+                    {
+                        "id": "windows_networking",
+                        "title": "Networking",
+                        "children": []
+                    },
+                    {
+                        "id": "windows_security",
+                        "title": "Security",
+                        "children": []
+                    },
+                    {
+                        "id": "windows_administration",
+                        "title": "System Administration",
+                        "children": []
+                    }
+                ]
+            },
+            {
+                "id": "macos",
+                "title": "macOS",
+                "children": [
+                    {
+                        "id": "macos_networking",
+                        "title": "Networking",
+                        "children": []
+                    },
+                    {
+                        "id": "macos_filesystems",
+                        "title": "File Systems",
+                        "children": []
+                    },
+                    {
+                        "id": "macos_security",
+                        "title": "Security",
+                        "children": []
+                    },
+                    {
+                        "id": "macos_shell",
+                        "title": "Shell & Scripting",
+                        "children": []
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "programming_languages",
+        "title": "Programming Languages",
+        "hasBooks": false,
+        "children": [
+            {
+                "id": "python",
+                "title": "Python",
+                "children": [
+                    {
+                        "id": "python_basics",
+                        "title": "Basics",
+                        "children": []
+                    },
+                    {
+                        "id": "python_advanced",
+                        "title": "Advanced Topics",
+                        "children": []
+                    },
+                    {
+                        "id": "python_web",
+                        "title": "Web Development",
+                        "children": []
+                    },
+                    {
+                        "id": "python_data_science",
+                        "title": "Data Science",
+                        "children": []
+                    },
+                    {
+                        "id": "python_scripting",
+                        "title": "Scripting & Automation",
+                        "children": []
+                    }
+                ]
+            },
+            {
+                "id": "c_cpp",
+                "title": "C / C++",
+                "children": [
+                    {
+                        "id": "c_basics",
+                        "title": "C Basics",
+                        "children": []
+                    },
+                    {
+                        "id": "cpp_basics",
+                        "title": "C++ Basics",
+                        "children": []
+                    },
+                    {
+                        "id": "cpp_advanced",
+                        "title": "C++ Advanced",
+                        "children": []
+                    },
+                    {
+                        "id": "cpp_stl",
+                        "title": "STL",
+                        "children": []
+                    },
+                    {
+                        "id": "cpp_system_programming",
+                        "title": "System Programming",
+                        "children": []
+                    }
+                ]
+            },
+            {
+                "id": "java",
+                "title": "Java",
+                "children": [
+                    {
+                        "id": "java_basics",
+                        "title": "Basics",
+                        "children": []
+                    },
+                    {
+                        "id": "java_oop",
+                        "title": "Object-Oriented Programming",
+                        "children": []
+                    },
+                    {
+                        "id": "java_web",
+                        "title": "Web Development",
+                        "children": []
+                    },
+                    {
+                        "id": "java_concurrency",
+                        "title": "Concurrency & Threads",
+                        "children": []
+                    }
+                ]
+            },
+            {
+                "id": "javascript",
+                "title": "JavaScript",
+                "children": [
+                    {
+                        "id": "js_basics",
+                        "title": "Basics",
+                        "children": []
+                    },
+                    {
+                        "id": "js_browser",
+                        "title": "Browser & DOM",
+                        "children": []
+                    },
+                    {
+                        "id": "js_node",
+                        "title": "Node.js",
+                        "children": []
+                    },
+                    {
+                        "id": "js_frameworks",
+                        "title": "Frameworks (React, Vue, Angular)",
+                        "children": []
+                    }
+                ]
+            }
+        ]
+    }
+]
