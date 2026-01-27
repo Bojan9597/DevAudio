@@ -11,7 +11,6 @@ import 'theme/app_theme.dart';
 import 'services/connectivity_service.dart';
 import 'package:audio_service/audio_service.dart';
 import 'services/audio_handler.dart';
-import 'package:syncfusion_flutter_core/core.dart';
 
 // Global audio handler instance
 late MyAudioHandler audioHandler;
@@ -23,10 +22,6 @@ void main() async {
     print("=== 2. Initializing Flutter binding ===");
     WidgetsFlutterBinding.ensureInitialized();
     print("=== 3. Flutter binding initialized ===");
-
-    // Register Syncfusion community license key
-    // Get your free key at: https://www.syncfusion.com/account/claim-license-key
-    SyncfusionLicense.registerLicense('Ngo9BigBOggjHTQxAR8/V1JGaF5cXGpCfEx1WmFZfVhgdVdMY1tbQHJPIiBoS35RcEViW3hfcndSQmRYVUZwVEFf');
 
     print("=== 4. Starting AudioService initialization ===");
     audioHandler = await AudioService.init(
