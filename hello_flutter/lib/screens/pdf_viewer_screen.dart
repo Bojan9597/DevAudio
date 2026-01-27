@@ -29,6 +29,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
   int _currentPage = 0;
   bool _isReady = false;
   String _errorMessage = '';
+  bool _nightMode = false;
 
   // Search state
   List<String> _pageTexts = [];
@@ -120,6 +121,15 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
       appBar: AppBar(
         title: _isSearchBarVisible ? _buildSearchField() : Text(widget.title),
         actions: [
+          IconButton(
+            icon: Icon(_nightMode ? Icons.wb_sunny : Icons.bedtime),
+            onPressed: () {
+              setState(() {
+                _nightMode = !_nightMode;
+              });
+            },
+            tooltip: _nightMode ? 'Day mode' : 'Night mode',
+          ),
           IconButton(
             icon: Icon(_isSearchBarVisible ? Icons.close : Icons.search),
             onPressed: _toggleSearchBar,
@@ -387,17 +397,17 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
       );
     }
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return PDFView(
+      key: ValueKey('pdf_night_$_nightMode'),
       filePath: widget.pdfPath,
+      defaultPage: _currentPage,
       enableSwipe: true,
       swipeHorizontal: false,
       autoSpacing: true,
       pageFling: true,
       pageSnap: true,
       fitPolicy: FitPolicy.BOTH,
-      nightMode: isDark,
+      nightMode: _nightMode,
       onRender: (pages) {
         setState(() {
           _totalPages = pages ?? 0;
