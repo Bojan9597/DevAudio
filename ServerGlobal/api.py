@@ -10,7 +10,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from database import Database
 from badge_service import BadgeService
 from mutagen import File as MutagenFile
-from image_utils import ensure_thumbnail_exists
+from image_utils import ensure_thumbnail_exists, create_thumbnail
+from r2_storage import upload_fileobj_to_r2, upload_local_file_to_r2, is_r2_enabled, is_r2_ref, get_r2_key, resolve_url, generate_presigned_url
+import tempfile
+import shutil
 
 import re
 import datetime
@@ -82,6 +85,68 @@ def is_admin_user(user_id, db):
     if result and result[0]['email'].lower() == ADMIN_EMAIL.lower():
         return True
     return False
+
+def resolve_cover_urls(cover_path):
+    """Resolve cover image path and thumbnail path, handling R2 refs, legacy URLs, and local paths.
+    Returns (cover_url, thumbnail_url) tuple."""
+    if not cover_path:
+        return None, None
+
+    cover_thumbnail_path = None
+
+    if is_r2_ref(cover_path):
+        # R2 reference (r2://BookCovers/filename) - generate pre-signed URLs
+        r2_key = get_r2_key(cover_path)
+        cover_url = generate_presigned_url(r2_key)
+        # Thumbnail was uploaded at upload time with key: BookCovers/thumbnails/filename
+        thumb_key = r2_key.replace('BookCovers/', 'BookCovers/thumbnails/', 1)
+        cover_thumbnail_path = generate_presigned_url(thumb_key)
+        # Fallback: if thumbnail pre-sign fails, use the cover itself
+        if not cover_thumbnail_path:
+            cover_thumbnail_path = cover_url
+        return cover_url, cover_thumbnail_path
+    elif cover_path.startswith('http'):
+        # Legacy absolute URL (e.g. BASE_URL + static/BookCovers/...)
+        server_dir = os.path.dirname(os.path.abspath(__file__))
+        filename = os.path.basename(cover_path.split('?')[0])
+        thumbnail_local = os.path.join(server_dir, 'static', 'BookCovers', 'thumbnails', filename)
+        if os.path.exists(thumbnail_local):
+            cover_thumbnail_path = f"{BASE_URL}static/BookCovers/thumbnails/{filename}"
+        else:
+            source_path = os.path.join(server_dir, 'static', 'BookCovers', filename)
+            if os.path.exists(source_path):
+                ensure_thumbnail_exists(f"BookCovers/{filename}", os.path.join(server_dir, 'static'))
+                cover_thumbnail_path = f"{BASE_URL}static/BookCovers/thumbnails/{filename}"
+            else:
+                cover_thumbnail_path = cover_path
+    else:
+        # Relative path (legacy local)
+        if not cover_path.startswith('static/') and not cover_path.startswith('/static/'):
+            cover_path = f"static/BookCovers/{cover_path}"
+        if cover_path.startswith('/'):
+            cover_path = cover_path[1:]
+        server_dir = os.path.dirname(os.path.abspath(__file__))
+        thumbnail_relative = ensure_thumbnail_exists(cover_path, os.path.join(server_dir, 'static'))
+        cover_thumbnail_path = f"{BASE_URL}{thumbnail_relative}"
+        cover_path = f"{BASE_URL}{cover_path}"
+
+    return cover_path, cover_thumbnail_path
+
+def resolve_stored_url(stored_path, path_prefix="AudioBooks"):
+    """Resolve a stored path (r2:// ref, http URL, or relative) to a usable URL.
+    Works for audio, PDF, profile pictures, and any other stored file path."""
+    if not stored_path:
+        return None
+    if is_r2_ref(stored_path):
+        return resolve_url(stored_path)
+    if stored_path.startswith('http'):
+        return stored_path
+    # Relative path - prepend static prefix and BASE_URL
+    if not stored_path.startswith('static/') and not stored_path.startswith('/static/'):
+        stored_path = f"static/{path_prefix}/{stored_path}"
+    if stored_path.startswith('/'):
+        stored_path = stored_path[1:]
+    return f"{BASE_URL}{stored_path}"
 
 def is_subscriber(user_id, db):
     """Check if user has active subscription."""
@@ -310,7 +375,7 @@ def login():
                     "id": user['id'],
                     "name": user['name'],
                     "email": user['email'],
-                    "profile_picture_url": user['profile_picture_url'],
+                    "profile_picture_url": resolve_stored_url(user['profile_picture_url'], "profilePictures"),
                     "aes_key": aes_key
                 }
             }), 200
@@ -409,7 +474,7 @@ def google_login():
                     "id": user['id'],
                     "name": user['name'],
                     "email": user['email'],
-                    "profile_picture_url": user['profile_picture_url'],
+                    "profile_picture_url": resolve_stored_url(user['profile_picture_url'], "profilePictures"),
                     "aes_key": aes_key
                 }
             }), 200
@@ -649,20 +714,25 @@ def upload_profile_picture():
             safe_email_name = secure_filename(user_email) # e.g. test_example_com
             new_filename = f"{safe_email_name}.{file_ext}"
 
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], new_filename)
-            file.save(file_path)
-            
-            # 3. Save relative path to DB
-            # The path should be consistent with the route that serves it: /profilePictures/<filename>
-            # Frontend will append this to base URL.
-            relative_path = f"profilePictures/{new_filename}"
-            
-            full_url = f"{request.host_url}{relative_path}"
-            
-            update_query = "UPDATE users SET profile_picture_url = %s WHERE id = %s"
-            db.execute_query(update_query, (relative_path, user_id))
-            
-            return jsonify({"message": "Profile picture updated", "url": full_url, "path": relative_path}), 200
+            # Try R2 upload first, fallback to local
+            r2_key = f"profilePictures/{new_filename}"
+            r2_url = upload_fileobj_to_r2(file, r2_key)
+
+            if r2_url:
+                # Stored as full R2 URL
+                update_query = "UPDATE users SET profile_picture_url = %s WHERE id = %s"
+                db.execute_query(update_query, (r2_url, user_id))
+                return jsonify({"message": "Profile picture updated", "url": r2_url, "path": r2_url}), 200
+            else:
+                # Fallback: save locally
+                file.seek(0)
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], new_filename)
+                file.save(file_path)
+                relative_path = f"profilePictures/{new_filename}"
+                full_url = f"{request.host_url}{relative_path}"
+                update_query = "UPDATE users SET profile_picture_url = %s WHERE id = %s"
+                db.execute_query(update_query, (relative_path, user_id))
+                return jsonify({"message": "Profile picture updated", "url": full_url, "path": relative_path}), 200
 
         except Exception as e:
             return jsonify({"error": str(e)}), 500
@@ -754,10 +824,12 @@ def get_playlist(book_id):
              result = db.execute_query(query, (book_id,))
              
         if result:
-            # Normalize boolean (MySQL returns 1/0)
+            # Normalize boolean (MySQL returns 1/0) and resolve file URLs
             for item in result:
                 item['is_completed'] = bool(item.get('is_completed', 0))
-                
+                if item.get('file_path'):
+                    item['file_path'] = resolve_stored_url(item['file_path'], "AudioBooks")
+
             # Check for quiz containing questions
             quiz_exists = False
             q_query = """
@@ -818,7 +890,7 @@ def get_playlist(book_id):
             # Fetch pdf_path for the book
             pdf_query = "SELECT pdf_path FROM books WHERE id = %s"
             pdf_res = db.execute_query(pdf_query, (book_id,))
-            pdf_path = pdf_res[0]['pdf_path'] if pdf_res and pdf_res[0]['pdf_path'] else None
+            pdf_path = resolve_stored_url(pdf_res[0]['pdf_path'], "AudioBooks") if pdf_res and pdf_res[0]['pdf_path'] else None
 
             return jsonify({
                 "tracks": result,
@@ -833,13 +905,8 @@ def get_playlist(book_id):
         book_res = db.execute_query(book_query, (book_id,))
         if book_res:
             book = book_res[0]
-            audio_path = book['audio_path']
-            # Ensure Full URL
-            if audio_path and not audio_path.startswith('http'):
-                 if not audio_path.startswith('static/'):
-                     audio_path = f"static/AudioBooks/{audio_path}"
-                 audio_path = f"{BASE_URL}{audio_path}"
-            
+            audio_path = resolve_stored_url(book['audio_path'], "AudioBooks")
+
             # Check if book is "read" if it's a single file?
             # We can check user_books.is_read
             is_completed = False
@@ -866,7 +933,7 @@ def get_playlist(book_id):
             if q_res:
                 quiz_exists = True
 
-            pdf_path = book['pdf_path'] if book.get('pdf_path') else None
+            pdf_path = resolve_stored_url(book['pdf_path'], "AudioBooks") if book.get('pdf_path') else None
             return jsonify({"tracks": [synthetic_item], "has_quiz": quiz_exists, "pdf_path": pdf_path})
             
         return jsonify({"tracks": [], "has_quiz": False, "pdf_path": None})
@@ -1123,49 +1190,12 @@ def get_books():
                 sub_result = db.execute_query(sub_query, (book_id,))
                 subcategory_ids = [sub['slug'] for sub in sub_result] if sub_result else []
                 
-                # Construct full Audio URL if relative
-                audio_path = row['audio_path']
-                if audio_path and not audio_path.startswith('http'):
-                     if not audio_path.startswith('static/'):
-                         audio_path = f"static/AudioBooks/{audio_path}"
-                     audio_path = f"{BASE_URL}{audio_path}"
+                # Resolve audio URL (handles R2 refs, http, and relative paths)
+                audio_path = resolve_stored_url(row['audio_path'], "AudioBooks")
 
-                # Construct full Cover URL if relative
-                cover_path = row['cover_image_path']
-                cover_thumbnail_path = None
-                if cover_path:
-                    if cover_path.startswith('http'):
-                        # Cover is already an absolute URL - extract filename and create thumbnail URL
-                        import os
-                        server_dir = os.path.dirname(os.path.abspath(__file__))
-                        filename = os.path.basename(cover_path.split('?')[0])  # Remove query params
-                        # Check if thumbnail exists
-                        thumbnail_local = os.path.join(server_dir, 'static', 'BookCovers', 'thumbnails', filename)
-                        if os.path.exists(thumbnail_local):
-                            cover_thumbnail_path = f"{BASE_URL}static/BookCovers/thumbnails/{filename}"
-                        else:
-                            # Try to create thumbnail from original
-                            source_path = os.path.join(server_dir, 'static', 'BookCovers', filename)
-                            if os.path.exists(source_path):
-                                ensure_thumbnail_exists(f"BookCovers/{filename}", os.path.join(server_dir, 'static'))
-                                cover_thumbnail_path = f"{BASE_URL}static/BookCovers/thumbnails/{filename}"
-                            else:
-                                # Can't create thumbnail, use original
-                                cover_thumbnail_path = cover_path
-                    else:
-                        if not cover_path.startswith('static/') and not cover_path.startswith('/static/'):
-                            cover_path = f"static/BookCovers/{cover_path}"
-                        # Remove leading slash if present to avoid double slashes
-                        if cover_path.startswith('/'):
-                            cover_path = cover_path[1:]
+                # Resolve cover URL and thumbnail (handles R2 and local)
+                cover_path, cover_thumbnail_path = resolve_cover_urls(row['cover_image_path'])
 
-                        # Generate thumbnail path
-                        server_dir = os.path.dirname(os.path.abspath(__file__))
-                        thumbnail_relative = ensure_thumbnail_exists(cover_path, os.path.join(server_dir, 'static'))
-                        cover_thumbnail_path = f"{BASE_URL}{thumbnail_relative}"
-
-                        cover_path = f"{BASE_URL}{cover_path}"
-                
                 # Calculate listen percentage if user_id is provided
                 percentage = None
                 if user_id:
@@ -1190,7 +1220,7 @@ def get_books():
                     "duration": row['duration_seconds'] or 0,
                     "averageRating": round(float(row['average_rating']), 1) if row['average_rating'] else 0.0,
                     "ratingCount": row['rating_count'] or 0,
-                    "pdfUrl": row['pdf_path'],
+                    "pdfUrl": resolve_stored_url(row['pdf_path'], "AudioBooks"),
                     "premium": row['premium'] or 0
                 }
                 
@@ -1707,42 +1737,12 @@ def get_listen_history(user_id):
                     if single_result:
                         total_listened_seconds = single_result[0]['last_position'] or 0
                 
-                # Construct full Cover URL if relative
-                cover_path = book['cover_image_path']
-                cover_thumbnail_path = None
-                if cover_path:
-                    if cover_path.startswith('http'):
-                        # Cover is already an absolute URL - extract filename and create thumbnail URL
-                        import os
-                        server_dir = os.path.dirname(os.path.abspath(__file__))
-                        filename = os.path.basename(cover_path.split('?')[0])
-                        thumbnail_local = os.path.join(server_dir, 'static', 'BookCovers', 'thumbnails', filename)
-                        if os.path.exists(thumbnail_local):
-                            cover_thumbnail_path = f"{BASE_URL}static/BookCovers/thumbnails/{filename}"
-                        else:
-                            source_path = os.path.join(server_dir, 'static', 'BookCovers', filename)
-                            if os.path.exists(source_path):
-                                ensure_thumbnail_exists(f"BookCovers/{filename}", os.path.join(server_dir, 'static'))
-                                cover_thumbnail_path = f"{BASE_URL}static/BookCovers/thumbnails/{filename}"
-                            else:
-                                cover_thumbnail_path = cover_path
-                    else:
-                        if not cover_path.startswith('static/') and not cover_path.startswith('/static/'):
-                            cover_path = f"static/BookCovers/{cover_path}"
-                        if cover_path.startswith('/'):
-                            cover_path = cover_path[1:]
-                        server_dir = os.path.dirname(os.path.abspath(__file__))
-                        thumbnail_relative = ensure_thumbnail_exists(cover_path, os.path.join(server_dir, 'static'))
-                        cover_thumbnail_path = f"{BASE_URL}{thumbnail_relative}"
-                        cover_path = f"{BASE_URL}{cover_path}"
+                # Resolve cover URL and thumbnail (handles R2 and local)
+                cover_path, cover_thumbnail_path = resolve_cover_urls(book['cover_image_path'])
 
-                # Construct full Audio URL if relative
-                audio_path = book['audio_path']
-                if audio_path and not audio_path.startswith('http'):
-                     if not audio_path.startswith('static/'):
-                         audio_path = f"static/AudioBooks/{audio_path}"
-                     audio_path = f"{BASE_URL}{audio_path}"
-                
+                # Resolve audio URL (handles R2 refs, http, and relative paths)
+                audio_path = resolve_stored_url(book['audio_path'], "AudioBooks")
+
                 # Calculate percentage
                 total_duration = book['duration_seconds'] or 0
                 percentage = (total_listened_seconds / total_duration * 100) if total_duration > 0 else 0
@@ -1950,99 +1950,152 @@ def upload_book():
         
         saved_files_info = [] # (filename, full_db_path)
 
-        if is_playlist:
-            # Create Folder: timestamp_safeTitle
-            safe_title = secure_filename(title)
-            folder_name = f"{timestamp_prefix}_{safe_title}"
-            book_folder_path = os.path.join(static_dir, "AudioBooks", folder_name)
-            os.makedirs(book_folder_path, exist_ok=True)
-            
-            for index, file in enumerate(audio_files):
-                if file.filename == '': continue
-                
-                safe_fname = secure_filename(f"{index+1:02d}_{file.filename}") # Add order prefix
-                save_path = os.path.join(book_folder_path, safe_fname)
-                file.save(save_path)
-                
-                # Extract duration using mutagen
+        # Create a temp directory for processing (duration extraction etc.)
+        temp_dir = tempfile.mkdtemp()
+
+        try:  # Inner try for temp dir cleanup
+            if is_playlist:
+                safe_title = secure_filename(title)
+                folder_name = f"{timestamp_prefix}_{safe_title}"
+
+                for index, file in enumerate(audio_files):
+                    if file.filename == '': continue
+
+                    safe_fname = secure_filename(f"{index+1:02d}_{file.filename}")
+
+                    # Save to temp for duration extraction
+                    temp_path = os.path.join(temp_dir, safe_fname)
+                    file.save(temp_path)
+
+                    # Extract duration using mutagen
+                    duration_seconds = 0
+                    try:
+                        audio_info = MutagenFile(temp_path)
+                        if audio_info and hasattr(audio_info.info, 'length'):
+                            duration_seconds = int(audio_info.info.length)
+                            print(f"Extracted duration for {safe_fname}: {duration_seconds}s")
+                    except Exception as e:
+                        print(f"Could not extract duration for {safe_fname}: {e}")
+
+                    # Try R2 upload, fallback to local
+                    r2_key = f"AudioBooks/{folder_name}/{safe_fname}"
+                    r2_url = upload_local_file_to_r2(temp_path, r2_key)
+
+                    if r2_url:
+                        full_url = r2_url
+                    else:
+                        # Fallback: move to local static dir
+                        local_folder = os.path.join(static_dir, "AudioBooks", folder_name)
+                        os.makedirs(local_folder, exist_ok=True)
+                        shutil.copy2(temp_path, os.path.join(local_folder, safe_fname))
+                        full_url = f"{BASE_URL}static/AudioBooks/{folder_name}/{safe_fname}"
+
+                    saved_files_info.append({
+                        "path": full_url,
+                        "title": file.filename,
+                        "order": index,
+                        "duration": duration_seconds
+                    })
+
+                main_audio_path = saved_files_info[0]["path"] if saved_files_info else ""
+
+            else:
+                # Single File
+                audio_file = audio_files[0]
+                audio_filename = secure_filename(f"{timestamp_prefix}_{audio_file.filename}")
+
+                # Save to temp for duration extraction
+                temp_path = os.path.join(temp_dir, audio_filename)
+                audio_file.save(temp_path)
+
+                # Extract duration
                 duration_seconds = 0
                 try:
-                    audio_info = MutagenFile(save_path)
+                    audio_info = MutagenFile(temp_path)
                     if audio_info and hasattr(audio_info.info, 'length'):
                         duration_seconds = int(audio_info.info.length)
-                        print(f"Extracted duration for {safe_fname}: {duration_seconds}s")
+                        print(f"Extracted duration for single file: {duration_seconds}s")
                 except Exception as e:
-                    print(f"Could not extract duration for {safe_fname}: {e}")
-                
-                # DB Path: static/AudioBooks/folder/file
-                # Full URL constructed in getter usually, but we store relative/semi-relative
-                # Current logic stores FULL URL often.
-                # Let's store semi-relative for playlist items?
-                # Existing code: db_audio_path = f"{BASE_URL}static/AudioBooks/{audio_filename}"
-                
-                full_url = f"{BASE_URL}static/AudioBooks/{folder_name}/{safe_fname}"
-                saved_files_info.append({
-                    "path": full_url,
-                    "title": file.filename, # Or metadata
-                    "order": index,
-                    "duration": duration_seconds
-                })
-                
-            main_audio_path = saved_files_info[0]["path"] if saved_files_info else ""
+                    print(f"Could not extract duration for single file: {e}")
 
-        else:
-            # Single File
-            audio_file = audio_files[0]
-            audio_filename = secure_filename(f"{timestamp_prefix}_{audio_file.filename}")
-            audio_save_path = os.path.join(static_dir, "AudioBooks", audio_filename)
-            os.makedirs(os.path.dirname(audio_save_path), exist_ok=True)
-            audio_file.save(audio_save_path)
-            
-            # Extract duration for single file
-            duration_seconds = 0
-            try:
-                audio_info = MutagenFile(audio_save_path)
-                if audio_info and hasattr(audio_info.info, 'length'):
-                    duration_seconds = int(audio_info.info.length)
-                    print(f"Extracted duration for single file: {duration_seconds}s")
-            except Exception as e:
-                print(f"Could not extract duration for single file: {e}")
-            
-            main_audio_path = f"{BASE_URL}static/AudioBooks/{audio_filename}"
-            saved_files_info.append({"path": main_audio_path, "title": audio_file.filename, "order": 0, "duration": duration_seconds})
+                # Try R2 upload, fallback to local
+                r2_key = f"AudioBooks/{audio_filename}"
+                r2_url = upload_local_file_to_r2(temp_path, r2_key)
 
-        # Handle Cover (Standard)
-        db_cover_path = None
-        if 'cover' in request.files:
-            cover_file = request.files['cover']
-            if cover_file.filename != '':
-                cover_filename = secure_filename(f"{timestamp_prefix}_{cover_file.filename}")
-                cover_save_path = os.path.join(static_dir, "BookCovers", cover_filename)
-                os.makedirs(os.path.dirname(cover_save_path), exist_ok=True)
-                cover_file.save(cover_save_path)
-                db_cover_path = f"{BASE_URL}static/BookCovers/{cover_filename}"
-
-        # Handle PDF (Optional)
-        db_pdf_path = None
-        if 'pdf' in request.files:
-            pdf_file = request.files['pdf']
-            if pdf_file.filename != '':
-                if is_playlist:
-                    # Save PDF in the same folder as audio files
-                    safe_title = secure_filename(title)
-                    folder_name = f"{timestamp_prefix}_{safe_title}"
-                    pdf_filename = "book.pdf"
-                    pdf_save_path = os.path.join(static_dir, "AudioBooks", folder_name, pdf_filename)
-                    os.makedirs(os.path.dirname(pdf_save_path), exist_ok=True)
-                    pdf_file.save(pdf_save_path)
-                    db_pdf_path = f"{BASE_URL}static/AudioBooks/{folder_name}/{pdf_filename}"
+                if r2_url:
+                    main_audio_path = r2_url
                 else:
-                    # Save PDF with timestamp prefix for single audio files
-                    pdf_filename = secure_filename(f"{timestamp_prefix}_book.pdf")
-                    pdf_save_path = os.path.join(static_dir, "AudioBooks", pdf_filename)
-                    os.makedirs(os.path.dirname(pdf_save_path), exist_ok=True)
-                    pdf_file.save(pdf_save_path)
-                    db_pdf_path = f"{BASE_URL}static/AudioBooks/{pdf_filename}"
+                    local_path = os.path.join(static_dir, "AudioBooks", audio_filename)
+                    os.makedirs(os.path.dirname(local_path), exist_ok=True)
+                    shutil.copy2(temp_path, local_path)
+                    main_audio_path = f"{BASE_URL}static/AudioBooks/{audio_filename}"
+
+                saved_files_info.append({"path": main_audio_path, "title": audio_file.filename, "order": 0, "duration": duration_seconds})
+
+            # Handle Cover
+            db_cover_path = None
+            if 'cover' in request.files:
+                cover_file = request.files['cover']
+                if cover_file.filename != '':
+                    cover_filename = secure_filename(f"{timestamp_prefix}_{cover_file.filename}")
+
+                    # Save to temp for thumbnail generation
+                    temp_cover_path = os.path.join(temp_dir, cover_filename)
+                    cover_file.save(temp_cover_path)
+
+                    # Try R2 upload for cover
+                    r2_key = f"BookCovers/{cover_filename}"
+                    r2_url = upload_local_file_to_r2(temp_cover_path, r2_key)
+
+                    if r2_url:
+                        db_cover_path = r2_url
+
+                        # Generate thumbnail and upload to R2
+                        temp_thumb_path = os.path.join(temp_dir, f"thumb_{cover_filename}")
+                        try:
+                            create_thumbnail(temp_cover_path, temp_thumb_path, size=(200, 200))
+                            thumb_r2_key = f"BookCovers/thumbnails/{cover_filename}"
+                            upload_local_file_to_r2(temp_thumb_path, thumb_r2_key)
+                        except Exception as e:
+                            print(f"Thumbnail generation/upload failed: {e}")
+                    else:
+                        # Fallback: save locally
+                        local_cover_path = os.path.join(static_dir, "BookCovers", cover_filename)
+                        os.makedirs(os.path.dirname(local_cover_path), exist_ok=True)
+                        shutil.copy2(temp_cover_path, local_cover_path)
+                        db_cover_path = f"{BASE_URL}static/BookCovers/{cover_filename}"
+
+            # Handle PDF (Optional)
+            db_pdf_path = None
+            if 'pdf' in request.files:
+                pdf_file = request.files['pdf']
+                if pdf_file.filename != '':
+                    if is_playlist:
+                        safe_title = secure_filename(title)
+                        folder_name = f"{timestamp_prefix}_{safe_title}"
+                        pdf_r2_key = f"AudioBooks/{folder_name}/book.pdf"
+                        pdf_local_subpath = f"AudioBooks/{folder_name}/book.pdf"
+                    else:
+                        pdf_fname = secure_filename(f"{timestamp_prefix}_book.pdf")
+                        pdf_r2_key = f"AudioBooks/{pdf_fname}"
+                        pdf_local_subpath = f"AudioBooks/{pdf_fname}"
+
+                    # Try R2 upload
+                    r2_url = upload_fileobj_to_r2(pdf_file, pdf_r2_key, content_type='application/pdf')
+
+                    if r2_url:
+                        db_pdf_path = r2_url
+                    else:
+                        # Fallback: save locally
+                        pdf_file.seek(0)
+                        pdf_save_path = os.path.join(static_dir, pdf_local_subpath)
+                        os.makedirs(os.path.dirname(pdf_save_path), exist_ok=True)
+                        pdf_file.save(pdf_save_path)
+                        db_pdf_path = f"{BASE_URL}static/{pdf_local_subpath}"
+
+        finally:
+            # Clean up temp directory
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
         # Insert Book
         # Calculate total duration for playlists
@@ -2113,41 +2166,11 @@ def get_my_uploads():
     books = []
     if books_result:
         for row in books_result:
-             # Construct full Audio URL if relative
-             audio_path = row['audio_path']
-             if audio_path and not audio_path.startswith('http'):
-                 if not audio_path.startswith('static/'):
-                     audio_path = f"static/AudioBooks/{audio_path}"
-                 audio_path = f"{BASE_URL}{audio_path}"
+             # Resolve audio URL (handles R2 refs, http, and relative paths)
+             audio_path = resolve_stored_url(row['audio_path'], "AudioBooks")
 
-             # Construct full Cover URL if relative
-             cover_path = row['cover_image_path']
-             cover_thumbnail_path = None
-             if cover_path:
-                 if cover_path.startswith('http'):
-                     # Cover is already an absolute URL - extract filename and create thumbnail URL
-                     import os
-                     server_dir = os.path.dirname(os.path.abspath(__file__))
-                     filename = os.path.basename(cover_path.split('?')[0])
-                     thumbnail_local = os.path.join(server_dir, 'static', 'BookCovers', 'thumbnails', filename)
-                     if os.path.exists(thumbnail_local):
-                         cover_thumbnail_path = f"{BASE_URL}static/BookCovers/thumbnails/{filename}"
-                     else:
-                         source_path = os.path.join(server_dir, 'static', 'BookCovers', filename)
-                         if os.path.exists(source_path):
-                             ensure_thumbnail_exists(f"BookCovers/{filename}", os.path.join(server_dir, 'static'))
-                             cover_thumbnail_path = f"{BASE_URL}static/BookCovers/thumbnails/{filename}"
-                         else:
-                             cover_thumbnail_path = cover_path
-                 else:
-                     if not cover_path.startswith('static/') and not cover_path.startswith('/static/'):
-                         cover_path = f"static/BookCovers/{cover_path}"
-                     if cover_path.startswith('/'):
-                         cover_path = cover_path[1:]
-                     server_dir = os.path.dirname(os.path.abspath(__file__))
-                     thumbnail_relative = ensure_thumbnail_exists(cover_path, os.path.join(server_dir, 'static'))
-                     cover_thumbnail_path = f"{BASE_URL}{thumbnail_relative}"
-                     cover_path = f"{BASE_URL}{cover_path}"
+             # Resolve cover URL and thumbnail (handles R2 and local)
+             cover_path, cover_thumbnail_path = resolve_cover_urls(row['cover_image_path'])
 
              books.append({
                 "id": str(row['id']),
@@ -2161,10 +2184,10 @@ def get_my_uploads():
                 "price": float(row['price']) if row['price'] else 0.0,
                 "postedByUserId": str(row['posted_by_user_id']),
                 "isPlaylist": row['playlist_count'] > 0,
-                "pdfUrl": row['pdf_path'],
+                "pdfUrl": resolve_stored_url(row['pdf_path'], "AudioBooks"),
                 "premium": row['premium'] or 0
             })
-            
+
     return jsonify(books)
 
 @app.route('/quiz/result', methods=['POST'])

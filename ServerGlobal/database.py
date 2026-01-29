@@ -1,6 +1,14 @@
+import os
+import platform
+
 class Database:
     def __init__(self):
-        self.host = "localhost"
+        # On the server (Linux), connect to localhost
+        # On local dev (Windows), connect to the remote DB
+        if platform.system() == "Windows":
+            self.host = "hope.global.ba"
+        else:
+            self.host = "localhost"
         self.database = "velorusb_DevAudio"
         self.user = "velorusb_audio"
         self.password = "Pijanista123!"
