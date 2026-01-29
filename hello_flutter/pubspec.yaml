@@ -99,6 +99,7 @@ flutter:
     - assets/icon/
     - assets/Background.png
     - assets/island.png
+    - assets/homeImages/
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

@@ -1,23 +1,18 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/book.dart';
 import '../models/category.dart';
 import '../repositories/book_repository.dart';
 import '../repositories/category_repository.dart';
 import '../states/layout_state.dart';
-import '../utils/api_constants.dart';
 import '../services/auth_service.dart';
 
 import 'playlist_screen.dart';
 import 'login_screen.dart';
 import '../widgets/subscription_bottom_sheet.dart';
 import '../services/subscription_service.dart';
-import 'package:hello_flutter/services/connectivity_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../l10n/generated/app_localizations.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:dio/dio.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -66,39 +61,19 @@ class _HomeScreenState extends State<HomeScreen> {
     _checkLoginStatus();
     _loadCategories();
     _loadBooks();
-    _downloadHeroImages();
+    _loadHeroImages();
     _scrollController.addListener(_onScroll);
     _searchController.addListener(_onSearchChanged);
   }
 
-  Future<void> _downloadHeroImages() async {
-    final List<String> localPaths = [];
-    final directory = await getApplicationDocumentsDirectory();
-
-    for (final imageName in _heroImages) {
-      final filePath = '${directory.path}/homeImages_thumb_$imageName';
-      final file = File(filePath);
-
-      try {
-        if (await file.exists()) {
-          localPaths.add(filePath);
-        } else {
-          if (!ConnectivityService().isOffline) {
-            // Load from thumbnails folder for faster performance
-            final imageUrl =
-                '${ApiConstants.baseUrl}/static/homeImages/thumbnails/$imageName';
-            await Dio().download(imageUrl, filePath);
-            localPaths.add(filePath);
-          }
-        }
-      } catch (e) {
-        print('Error downloading hero image $imageName: $e');
-      }
-    }
-
+  void _loadHeroImages() {
+    // Hero images are now bundled as local assets - no download needed
+    // Set the asset paths directly
     if (mounted) {
       setState(() {
-        _localHeroImagePaths = localPaths;
+        _localHeroImagePaths = _heroImages
+            .map((name) => 'assets/homeImages/$name')
+            .toList();
       });
     }
   }
@@ -794,11 +769,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.workspace_premium,
-              size: 14,
-              color: Colors.amber[700],
-            ),
+            Icon(Icons.workspace_premium, size: 14, color: Colors.amber[700]),
             const SizedBox(width: 3),
             Text(
               'Premium',
@@ -1080,7 +1051,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // 1. Add known local hero images
     for (var path in _localHeroImagePaths.take(4)) {
-      images.add(_buildHeroImageFile(File(path)));
+      images.add(_buildHeroImageAsset(path));
     }
 
     // 2. Add 2 random books (prefer new releases or top picks)
@@ -1102,10 +1073,8 @@ class _HomeScreenState extends State<HomeScreen> {
     // 3. Fill up to 6 if needed by reusing local images
     while (images.length < 6 && _localHeroImagePaths.isNotEmpty) {
       images.add(
-        _buildHeroImageFile(
-          File(
-            _localHeroImagePaths[images.length % _localHeroImagePaths.length],
-          ),
+        _buildHeroImageAsset(
+          _localHeroImagePaths[images.length % _localHeroImagePaths.length],
         ),
       );
     }
@@ -1212,13 +1181,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHeroImageFile(File file) {
+  Widget _buildHeroImageAsset(String assetPath) {
     return AspectRatio(
       aspectRatio: 1,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: Image.file(
-          file,
+        child: Image.asset(
+          assetPath,
           fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => Container(color: Colors.grey[800]),
         ),
@@ -1537,11 +1506,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  image: DecorationImage(
-                    image: CachedNetworkImageProvider(
-                      ApiConstants.baseUrl +
-                          '/static/homeImages/thumbnails/fire.jpg',
-                    ),
+                  image: const DecorationImage(
+                    image: AssetImage('assets/homeImages/fire.jpg'),
                     fit: BoxFit.cover,
                   ),
                 ),
