@@ -28,15 +28,24 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   List<Book> _listenHistory = [];
   bool _isLoading = false;
   bool _hasMore = true;
+  bool _isSubscribed = false;
   int _currentPage = 1;
   final int _limit = 10;
 
   @override
   void initState() {
     super.initState();
+    _checkSubscriptionStatus();
     _loadBooks();
     _scrollController.addListener(_onScroll);
     globalLayoutState.addListener(_onSearchChanged);
+  }
+
+  Future<void> _checkSubscriptionStatus() async {
+    final isSubscribed = await AuthService().isSubscribed();
+    if (mounted) {
+      setState(() => _isSubscribed = isSubscribed);
+    }
   }
 
   @override
@@ -415,6 +424,18 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             _formatRemainingTime(book),
             style: TextStyle(fontSize: 11, color: textColor.withOpacity(0.6)),
           ),
+          if (book.isPremium && !_isSubscribed)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                'Premium',
+                style: const TextStyle(
+                  color: Colors.amber,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10,
+                ),
+              ),
+            ),
           const SizedBox(height: 4),
           _buildStarRating(book, textColor),
         ],
@@ -511,6 +532,18 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           ),
           const SizedBox(height: 2),
           _buildDurationText(book, textColor),
+          if (book.isPremium && !_isSubscribed)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                'Premium',
+                style: const TextStyle(
+                  color: Colors.amber,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10,
+                ),
+              ),
+            ),
           const SizedBox(height: 4),
           _buildStarRating(book, textColor),
         ],

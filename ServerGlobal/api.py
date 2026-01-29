@@ -1077,6 +1077,7 @@ def get_books():
         base_select = """
             SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug,
                    u.name as posted_by_name, b.description, b.price, b.posted_by_user_id, b.duration_seconds, b.pdf_path,
+                   b.premium,
                    (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count,
                    (SELECT AVG(stars) FROM book_ratings WHERE book_id = b.id) as average_rating,
                    (SELECT COUNT(*) FROM book_ratings WHERE book_id = b.id) as rating_count
@@ -1189,7 +1190,8 @@ def get_books():
                     "duration": row['duration_seconds'] or 0,
                     "averageRating": round(float(row['average_rating']), 1) if row['average_rating'] else 0.0,
                     "ratingCount": row['rating_count'] or 0,
-                    "pdfUrl": row['pdf_path']
+                    "pdfUrl": row['pdf_path'],
+                    "premium": row['premium'] or 0
                 }
                 
                 # Add percentage if calculated
@@ -1640,6 +1642,7 @@ def get_listen_history(user_id):
         books_query = """
             SELECT DISTINCT b.id, b.title, b.author, b.audio_path, b.cover_image_path,
                    c.slug as category_slug, b.duration_seconds, ub.last_accessed_at,
+                   b.premium,
                    (SELECT AVG(stars) FROM book_ratings WHERE book_id = b.id) as average_rating,
                    (SELECT COUNT(*) FROM book_ratings WHERE book_id = b.id) as rating_count,
                    (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count
@@ -1755,10 +1758,10 @@ def get_listen_history(user_id):
                     "lastPosition": int(total_listened_seconds),
                     "duration": total_duration,
                     "percentage": round(percentage, 2),
-                    "percentage": round(percentage, 2),
                     "lastAccessed": str(book['last_accessed_at']),
                     "averageRating": float(book['average_rating'] or 0),
-                    "ratingCount": int(book['rating_count'] or 0)
+                    "ratingCount": int(book['rating_count'] or 0),
+                    "premium": book['premium'] or 0
                 })
                 
         return jsonify(history)
@@ -2097,7 +2100,7 @@ def get_my_uploads():
 
     query = """
         SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug,
-               b.description, b.price, b.posted_by_user_id, b.pdf_path,
+               b.description, b.price, b.posted_by_user_id, b.pdf_path, b.premium,
                (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count
         FROM books b
         LEFT JOIN categories c ON b.primary_category_id = c.id
@@ -2158,7 +2161,8 @@ def get_my_uploads():
                 "price": float(row['price']) if row['price'] else 0.0,
                 "postedByUserId": str(row['posted_by_user_id']),
                 "isPlaylist": row['playlist_count'] > 0,
-                "pdfUrl": row['pdf_path']
+                "pdfUrl": row['pdf_path'],
+                "premium": row['premium'] or 0
             })
             
     return jsonify(books)

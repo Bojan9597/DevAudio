@@ -749,6 +749,8 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 2),
           _buildDurationText(book, textColor),
           const SizedBox(height: 4),
+          _buildPremiumBadge(book, textColor),
+          if (book.isPremium && !_isSubscribed) const SizedBox(height: 4),
           _buildStarRating(book, textColor),
         ],
       ),
@@ -771,6 +773,44 @@ class _HomeScreenState extends State<HomeScreen> {
     return Text(
       durationText,
       style: TextStyle(fontSize: 11, color: textColor.withOpacity(0.6)),
+    );
+  }
+
+  Widget _buildPremiumBadge(Book book, Color textColor) {
+    if (!book.isPremium) return const SizedBox.shrink();
+
+    // If user is already subscribed, don't show clickable badge
+    if (_isSubscribed) return const SizedBox.shrink();
+
+    return GestureDetector(
+      onTap: () => _navigateToSubscription(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: Colors.amber.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: Colors.amber.withOpacity(0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.workspace_premium,
+              size: 14,
+              color: Colors.amber[700],
+            ),
+            const SizedBox(width: 3),
+            Text(
+              'Premium',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: Colors.amber[700],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1252,6 +1292,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openPlayer(Book book) {
+    // If book is premium and user is not subscribed, show subscription sheet
+    if (book.isPremium && !_isSubscribed) {
+      _navigateToSubscription();
+      return;
+    }
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => PlaylistScreen(book: book)),

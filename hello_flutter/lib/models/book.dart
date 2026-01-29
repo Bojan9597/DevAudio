@@ -22,6 +22,7 @@ class Book {
   final double averageRating;
   final int ratingCount;
   final String? pdfUrl;
+  final bool isPremium;
 
   /// Returns the absolute cover URL with base URL prepended if needed
   String get absoluteCoverUrl => ensureAbsoluteUrl(coverUrl);
@@ -52,6 +53,7 @@ class Book {
     this.averageRating = 0.0,
     this.ratingCount = 0,
     this.pdfUrl,
+    this.isPremium = false,
   });
 
   factory Book.fromJson(Map<String, dynamic> json) {
@@ -83,6 +85,7 @@ class Book {
       averageRating: (json['averageRating'] as num?)?.toDouble() ?? 0.0,
       ratingCount: json['ratingCount'] as int? ?? 0,
       pdfUrl: json['pdfUrl'] as String?,
+      isPremium: (json['premium'] as int?) == 1 || (json['isPremium'] as bool? ?? false),
     );
   }
 
@@ -98,6 +101,7 @@ class Book {
     String? coverUrl,
     bool? isEncrypted,
     String? pdfUrl,
+    bool? isPremium,
   }) {
     return Book(
       id: id,
@@ -120,6 +124,7 @@ class Book {
       averageRating: averageRating,
       ratingCount: ratingCount,
       pdfUrl: pdfUrl ?? this.pdfUrl,
+      isPremium: isPremium ?? this.isPremium,
     );
   }
 }

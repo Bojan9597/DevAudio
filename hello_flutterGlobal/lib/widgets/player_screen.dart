@@ -15,6 +15,7 @@ import 'subscription_bottom_sheet.dart';
 // import '../models/badge.dart'; // Unused
 import '../services/download_service.dart';
 import '../utils/api_constants.dart';
+import '../services/subscription_service.dart';
 import '../screens/quiz_taker_screen.dart'; // Import QuizTakerScreen
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -378,10 +379,27 @@ class _PlayerScreenState extends State<PlayerScreen>
       // Ensure we compare int to int or string to string. widget.book.id is String.
       final isFav = favoriteIds.contains(int.tryParse(widget.book.id) ?? -1);
 
+      // Check access logic:
+      // 1. Admin always has access
+      // 2. Free books (!isPremium) always have access
+      // 3. Purchased books always have access
+      // 4. Subscribed users have access (checked in PlaylistScreen, passed implicitly via 'isSubscribed' check there? No, we check here too)
+
+      // Wait, PlayerScreen checks ownership via api calls.
+      // But PlaylistScreen ALREADY checked access.
+      // If we are in PlayerScreen, we SHOULD assume access is granted unless we want to double check.
+      // However, PlayerScreen handles "Subscription Overlay" itself (lines 1492+).
+
+      // We need to verify if user is SUBSCRIBED here too, OR trust the caller.
+      // Currently, it only checks `getPurchasedBookIds`. It DOES NOT check SubscriptionService.
+      // We should check SubscriptionService OR check isPremium.
+
+      final isSubscribed = await SubscriptionService().isSubscribed();
+      final isFree = !widget.book.isPremium;
+
       setState(() {
         _isAdmin = isAdmin;
-        // Admin always has access, otherwise check ownership/subscription
-        _isPurchased = isAdmin || isOwned;
+        _isPurchased = isAdmin || isOwned || isSubscribed || isFree;
         _isFavorite = isFav; // Update favorite status from backend
         _isLoadingOwnership = false;
       });

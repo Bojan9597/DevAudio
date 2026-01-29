@@ -187,6 +187,35 @@ class AuthService {
     await prefs.setString(_userKey, json.encode(user));
   }
 
+  Future<bool> isSubscribed() async {
+    try {
+      if (ConnectivityService().isOffline) return false;
+
+      final userId = await getCurrentUserId();
+      if (userId == null) return false;
+
+      final token = await getAccessToken();
+      if (token == null) return false;
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/subscription/status?user_id=$userId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['is_active'] == true;
+      }
+      return false;
+    } catch (e) {
+      print('Error checking subscription: $e');
+      return false;
+    }
+  }
+
   Future<void> _saveTokens(String accessToken, String refreshToken) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_accessTokenKey, accessToken);

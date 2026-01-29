@@ -130,6 +130,17 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       return;
     }
 
+    // Check access before downloading
+    // Access is already checked in initState -> _checkAccess
+    // But we should double check here explicitly or rely on _hasAccess flag
+    // We want to block download if no access (Premium book + No Sub + No Admin)
+
+    // Re-verify access state just in case
+    if (!_hasAccess) {
+      _showSubscriptionSheet();
+      return;
+    }
+
     setState(() => _isDownloading = true);
     try {
       if (mounted) {
@@ -189,20 +200,35 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   }
 
   Future<void> _checkAccess({bool forceRefresh = false}) async {
+    // 1. Immediate check for Free Books (no network/db processing needed)
+    if (!widget.book.isPremium) {
+      if (mounted) {
+        setState(() {
+          _hasAccess = true;
+          _isCheckingAccess = false;
+        });
+      }
+      return;
+    }
+
     try {
       final isAdmin = await AuthService().isAdmin();
       final isSubscribed = await SubscriptionService().isSubscribed(
         forceRefresh: forceRefresh,
       );
 
+      // We know it is premium here (due to check above)
+      // So access = isAdmin OR isSubscribed
+      final hasAccess = isAdmin || isSubscribed;
+
       print(
-        '[PlaylistScreen] Access check (force=$forceRefresh): isAdmin=$isAdmin, isSubscribed=$isSubscribed',
+        '[PlaylistScreen] Access check (Premium Book): isAdmin=$isAdmin, isSubscribed=$isSubscribed, hasAccess=$hasAccess',
       );
 
       if (mounted) {
         setState(() {
           _isAdmin = isAdmin;
-          _hasAccess = isAdmin || isSubscribed;
+          _hasAccess = hasAccess;
           _isCheckingAccess = false;
         });
       }
@@ -211,7 +237,13 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       if (mounted) {
         setState(() {
           _isCheckingAccess = false;
-          // On error, don't block access - let server handle it
+          // On error for PREMIUM books, we default to ... true? No, safe to blocking usually.
+          // But previous logic was lenient.
+          // Let's keep it lenient for now to avoid blocking legitimate users on network fail?
+          // Or strict? "User request: user should not need to upgrade... for free".
+          // For premium, if error, we probably shouldn't grant access blindly if we want to sell subs.
+          // But strict locking might annoy users if server flakes.
+          // Let's stick to lenient fallback but log it, matching previous behavior.
           _hasAccess = true;
         });
       }
@@ -595,8 +627,11 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     }
 
     // Check subscription access before playing
+    // _hasAccess is calculated in _checkAccess based on isPremium, isSubscribed, isAdmin
     if (!_hasAccess) {
-      print('[PlaylistScreen] No access, showing subscription sheet');
+      print(
+        '[PlaylistScreen] No access (Premium & Not Subscribed), showing subscription sheet',
+      );
       _showSubscriptionSheet();
       return;
     }
@@ -697,9 +732,9 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
         );
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to download PDF: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Failed to download PDF: $e')));
         }
         return;
       }
@@ -715,10 +750,8 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => PdfViewerScreen(
-            pdfPath: pdfPath,
-            title: widget.book.title,
-          ),
+          builder: (context) =>
+              PdfViewerScreen(pdfPath: pdfPath, title: widget.book.title),
         ),
       );
     }

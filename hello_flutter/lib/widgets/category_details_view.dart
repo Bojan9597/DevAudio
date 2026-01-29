@@ -4,6 +4,7 @@ import '../models/book.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../screens/playlist_screen.dart';
 import '../states/layout_state.dart';
+import '../services/auth_service.dart';
 
 class CategoryDetailsView extends StatefulWidget {
   final String categoryId;
@@ -26,6 +27,20 @@ class CategoryDetailsView extends StatefulWidget {
 class _CategoryDetailsViewState extends State<CategoryDetailsView> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  bool _isSubscribed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkSubscriptionStatus();
+  }
+
+  Future<void> _checkSubscriptionStatus() async {
+    final isSubscribed = await AuthService().isSubscribed();
+    if (mounted) {
+      setState(() => _isSubscribed = isSubscribed);
+    }
+  }
 
   @override
   void dispose() {
@@ -278,6 +293,18 @@ class _CategoryDetailsViewState extends State<CategoryDetailsView> {
             Text(
               _formatDuration(book.durationSeconds),
               style: TextStyle(fontSize: 11, color: textColor.withOpacity(0.6)),
+            ),
+          if (book.isPremium && !_isSubscribed)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                'Premium',
+                style: const TextStyle(
+                  color: Colors.amber,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10,
+                ),
+              ),
             ),
           const SizedBox(height: 4),
           // Star Rating & Favorite Row

@@ -27,6 +27,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   List<Book> _topPicks = [];
   List<Book> _listenHistory = [];
   bool _isLoading = false;
+  bool _isSubscribed = false;
   bool _hasMore = true;
   int _currentPage = 1;
   final int _limit = 10;
@@ -34,6 +35,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   @override
   void initState() {
     super.initState();
+    _checkSubscriptionStatus();
     _loadBooks();
     _scrollController.addListener(_onScroll);
     globalLayoutState.addListener(_onSearchChanged);
@@ -60,6 +62,13 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     _debounce = Timer(const Duration(milliseconds: 500), () {
       _resetAndLoad();
     });
+  }
+
+  Future<void> _checkSubscriptionStatus() async {
+    final isSubscribed = await AuthService().isSubscribed();
+    if (mounted) {
+      setState(() => _isSubscribed = isSubscribed);
+    }
   }
 
   Future<void> _resetAndLoad() async {
@@ -415,6 +424,18 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             _formatRemainingTime(book),
             style: TextStyle(fontSize: 11, color: textColor.withOpacity(0.6)),
           ),
+          if (book.isPremium && !_isSubscribed)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                'Premium',
+                style: const TextStyle(
+                  color: Colors.amber,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10,
+                ),
+              ),
+            ),
           const SizedBox(height: 4),
           _buildStarRating(book, textColor),
         ],
@@ -511,6 +532,18 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           ),
           const SizedBox(height: 2),
           _buildDurationText(book, textColor),
+          if (book.isPremium && !_isSubscribed)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                'Premium',
+                style: const TextStyle(
+                  color: Colors.amber,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10,
+                ),
+              ),
+            ),
           const SizedBox(height: 4),
           _buildStarRating(book, textColor),
         ],

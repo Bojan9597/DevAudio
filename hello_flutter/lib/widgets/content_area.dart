@@ -33,6 +33,7 @@ class _ContentAreaState extends State<ContentArea> {
   List<Category> _categories = []; // State for recursive filtering
   bool _isLoading = true;
   bool _isAdmin = false;
+  bool _isSubscribed = false;
 
   // Library view mode toggles (separate from global grid/list setting)
   bool _isLibraryGridView = true;
@@ -45,6 +46,7 @@ class _ContentAreaState extends State<ContentArea> {
   void initState() {
     super.initState();
     _checkAdminStatus();
+    _checkSubscriptionStatus();
     _loadBooks();
     _loadCategories(); // Load categories for filtering
 
@@ -58,6 +60,13 @@ class _ContentAreaState extends State<ContentArea> {
     final isAdmin = await AuthService().isAdmin();
     if (mounted) {
       setState(() => _isAdmin = isAdmin);
+    }
+  }
+
+  Future<void> _checkSubscriptionStatus() async {
+    final isSubscribed = await AuthService().isSubscribed();
+    if (mounted) {
+      setState(() => _isSubscribed = isSubscribed);
     }
   }
 
@@ -656,6 +665,18 @@ class _ContentAreaState extends State<ContentArea> {
           ),
           const SizedBox(height: 2),
           _buildDurationText(book, textColor),
+          if (book.isPremium && !_isSubscribed)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                'Premium',
+                style: const TextStyle(
+                  color: Colors.amber,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10,
+                ),
+              ),
+            ),
           const SizedBox(height: 4),
           _buildStarRating(book, textColor),
         ],

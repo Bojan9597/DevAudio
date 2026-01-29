@@ -128,6 +128,12 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       return;
     }
 
+    // Check access before downloading
+    if (!_hasAccess) {
+      _showSubscriptionSheet();
+      return;
+    }
+
     setState(() => _isDownloading = true);
     try {
       if (mounted) {
@@ -187,20 +193,38 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   }
 
   Future<void> _checkAccess({bool forceRefresh = false}) async {
+    print(
+      '[PlaylistScreen] DEBUG: Checking access for "${widget.book.title}". isPremium: ${widget.book.isPremium}',
+    );
+
+    // 1. Immediate check for Free Books
+    if (!widget.book.isPremium) {
+      if (mounted) {
+        setState(() {
+          _hasAccess = true;
+          _isCheckingAccess = false;
+        });
+      }
+      return;
+    }
+
     try {
       final isAdmin = await AuthService().isAdmin();
       final isSubscribed = await SubscriptionService().isSubscribed(
         forceRefresh: forceRefresh,
       );
 
+      // We know it is premium here
+      final hasAccess = isAdmin || isSubscribed;
+
       print(
-        '[PlaylistScreen] Access check (force=$forceRefresh): isAdmin=$isAdmin, isSubscribed=$isSubscribed',
+        '[PlaylistScreen] Access check (Premium Book): isAdmin=$isAdmin, isSubscribed=$isSubscribed, hasAccess=$hasAccess',
       );
 
       if (mounted) {
         setState(() {
           _isAdmin = isAdmin;
-          _hasAccess = isAdmin || isSubscribed;
+          _hasAccess = hasAccess;
           _isCheckingAccess = false;
         });
       }
@@ -209,7 +233,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       if (mounted) {
         setState(() {
           _isCheckingAccess = false;
-          // On error, don't block access - let server handle it
+          // Fallback
           _hasAccess = true;
         });
       }
@@ -558,8 +582,11 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     }
 
     // Check subscription access before playing
+    // _hasAccess is calculated in _checkAccess based on isPremium, isSubscribed, isAdmin
     if (!_hasAccess) {
-      print('[PlaylistScreen] No access, showing subscription sheet');
+      print(
+        '[PlaylistScreen] No access (Premium & Not Subscribed), showing subscription sheet',
+      );
       _showSubscriptionSheet();
       return;
     }
