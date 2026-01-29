@@ -588,46 +588,23 @@ class _PlayerScreenState extends State<PlayerScreen>
         "[DEBUG][PlayerScreen] isDownloaded=$isDownloaded, url=$url, userId=$_userId, storageId=$storageId",
       );
 
-      String playPath;
-
       if (isDownloaded) {
-        // Play from local file
-        playPath = await downloadService.getLocalBookPath(
+        // Play from local file (user explicitly downloaded this book)
+        final playPath = await downloadService.getLocalBookPath(
           storageId,
           userId: _userId,
           bookId: widget.book.id,
         );
         print("[DEBUG][PlayerScreen] Playing from local file: $playPath");
+        await audioHandler.loadLocalFile(playPath, mediaItem);
       } else {
-        // Not downloaded - Auto-download now (Permanent storage)
-        print("[DEBUG][PlayerScreen] Not downloaded. Auto-downloading...");
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Downloading track...'),
-              duration: Duration(milliseconds: 1500),
-            ),
-          );
-        }
-
-        await downloadService.downloadBook(
-          storageId,
-          url,
-          userId: _userId,
-          bookId: widget.book.id,
-        );
-
-        playPath = await downloadService.getLocalBookPath(
-          storageId,
-          userId: _userId,
-          bookId: widget.book.id,
-        );
-        print("[DEBUG][PlayerScreen] Downloaded and playing from: $playPath");
+        // Stream from URL (no auto-download)
+        final cleanUrl = url.startsWith('http')
+            ? url
+            : '${ApiConstants.baseUrl}$url';
+        print("[DEBUG][PlayerScreen] Streaming from URL: $cleanUrl");
+        await audioHandler.loadAudio(cleanUrl, mediaItem);
       }
-
-      // Play the local file
-      await audioHandler.loadLocalFile(playPath, mediaItem);
 
       // Auto-play
       await audioHandler.play();

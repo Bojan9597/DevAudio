@@ -1,10 +1,5 @@
 import 'dart:math';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:dio/dio.dart';
-import '../utils/api_constants.dart';
-import '../services/connectivity_service.dart';
 import '../l10n/generated/app_localizations.dart';
 
 class LessonMapWidget extends StatelessWidget {
@@ -473,149 +468,14 @@ class _LessonNode extends StatelessWidget {
   }
 }
 
-// Cached island image widget
-class _IslandImage extends StatefulWidget {
+// Island image widget - now loads from local assets
+class _IslandImage extends StatelessWidget {
   const _IslandImage();
 
   @override
-  State<_IslandImage> createState() => _IslandImageState();
-}
-
-class _IslandImageState extends State<_IslandImage> {
-  String? _localPath;
-  bool _isLoading = true;
-
-  // Static cache to avoid re-downloading for every node
-  static String? _cachedPath;
-  static bool _cacheChecked = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadIslandImage();
-  }
-
-  Future<void> _loadIslandImage() async {
-    // Use cached path if already verified
-    if (_cacheChecked && _cachedPath != null) {
-      if (mounted) {
-        setState(() {
-          _localPath = _cachedPath;
-          _isLoading = false;
-        });
-      }
-      return;
-    }
-
-    try {
-      final directory = await getApplicationDocumentsDirectory();
-      final filePath = '${directory.path}/island.png';
-      final file = File(filePath);
-
-      if (await file.exists()) {
-        // Verify file is not corrupted (has content)
-        final fileSize = await file.length();
-        if (fileSize > 100) {
-          // Valid PNG should be > 100 bytes
-          _cachedPath = filePath;
-          _cacheChecked = true;
-          if (mounted) {
-            setState(() {
-              _localPath = filePath;
-              _isLoading = false;
-            });
-          }
-          return;
-        } else {
-          // Corrupted file, delete and re-download
-          print(
-            '[IslandImage] Cached file corrupted (size: $fileSize), re-downloading...',
-          );
-          await file.delete();
-        }
-      }
-
-      if (!ConnectivityService().isOffline) {
-        // Download the island image (PNG for transparency support)
-        final imageUrl = '${ApiConstants.baseUrl}/static/Animations/island.png';
-        print('[IslandImage] Downloading from: $imageUrl');
-
-        await Dio().download(
-          imageUrl,
-          filePath,
-          onReceiveProgress: (received, total) {
-            if (total > 0) {
-              print(
-                '[IslandImage] Download progress: ${(received / total * 100).toStringAsFixed(0)}%',
-              );
-            }
-          },
-        );
-
-        // Verify download succeeded
-        final downloadedFile = File(filePath);
-        if (await downloadedFile.exists()) {
-          final size = await downloadedFile.length();
-          print('[IslandImage] Downloaded successfully, size: $size bytes');
-          if (size > 100) {
-            _cachedPath = filePath;
-            _cacheChecked = true;
-            if (mounted) {
-              setState(() {
-                _localPath = filePath;
-                _isLoading = false;
-              });
-            }
-            return;
-          } else {
-            print(
-              '[IslandImage] Downloaded file too small, might be error response',
-            );
-            await downloadedFile.delete();
-          }
-        }
-      } else {
-        print('[IslandImage] Offline and no cached image');
-      }
-
-      // Mark as checked even if failed
-      _cacheChecked = true;
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      print('[IslandImage] Error loading island image: $e');
-      _cacheChecked = true;
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Container(width: 120, height: 120, color: Colors.transparent);
-    }
-
-    if (_localPath != null) {
-      return Image.file(
-        File(_localPath!),
-        width: 120,
-        height: 120,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) =>
-            Container(width: 120, height: 120, color: Colors.transparent),
-      );
-    }
-
-    // Fallback to network image
-    return Image.network(
-      '${ApiConstants.baseUrl}/static/Animations/island.png',
+    return Image.asset(
+      'assets/island.png',
       width: 120,
       height: 120,
       fit: BoxFit.cover,

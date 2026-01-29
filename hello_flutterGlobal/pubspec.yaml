@@ -98,6 +98,8 @@ flutter:
     - lib/data/
     - assets/icon/
     - assets/happy_owl.mp4
+    - assets/Background.png
+    - assets/island.png
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

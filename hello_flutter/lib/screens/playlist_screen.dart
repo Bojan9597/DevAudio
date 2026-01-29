@@ -171,6 +171,23 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
         }
       }
 
+      // Save metadata and download assets for offline use
+      try {
+        await DownloadService().savePlaylistJson(widget.book.id, {
+          'tracks': _tracks,
+          'has_quiz': _hasQuiz,
+          'track_quizzes': _trackQuizzes,
+          'quiz_passed': _isQuizPassed,
+        }, userId: _userId);
+
+        await DownloadService().registerServerDownload(widget.book.id);
+
+        _downloadQuizData();
+        _downloadBackgroundAssets();
+      } catch (e) {
+        print("Error saving offline metadata: $e");
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -494,67 +511,19 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   }
 
   Future<void> _handlePurchaseSuccess(Map<String, dynamic> currentTrack) async {
-    // 1. Show message
+    // Show message - no auto-download, user can use download button explicitly
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Purchase Successful! Downloading playlist...'),
+          content: Text('Purchase Successful! You can now stream this book.'),
           duration: Duration(seconds: 4),
         ),
       );
     }
 
-    // 2. Download Current Track FIRST (high priority, user-specific storage)
-    try {
-      final String trackUrl = _ensureAbsoluteUrl(currentTrack['file_path']);
-      final uniqueTrackId = "track_${currentTrack['id']}";
-      await DownloadService().downloadBook(
-        uniqueTrackId,
-        trackUrl,
-        userId: _userId,
-      );
-      print("Downloaded current track: ${currentTrack['title']}");
-    } catch (e) {
-      print("Error downloading current track: $e");
-    }
-
-    // 2.5 Download Remaining Tracks (Background, user-specific storage)
-    for (var track in _tracks) {
-      // Skip the current one as we just started/awaited it (or tried to)
-      if (track['id'] == currentTrack['id']) continue;
-
-      final String tUrl = _ensureAbsoluteUrl(track['file_path']);
-      final tId = "track_${track['id']}";
-
-      // Fire and forget, or log errors individually to avoid blocking UI
-      DownloadService().downloadBook(tId, tUrl, userId: _userId).catchError((
-        err,
-      ) {
-        print("Failed to background download track ${track['title']}: $err");
-      });
-    }
-
-    // 3. Save Metadata and Download Assets
-    try {
-      // We need updated playlist data to save properly (flags etc)
-      // Current state might be stale if we just purchased?
-      // Safe to assume current state is okay-ish or fetch fresh?
-      // Step 334 logic saved state variables.
-      await DownloadService().savePlaylistJson(widget.book.id, {
-        'tracks': _tracks,
-        'has_quiz': _hasQuiz,
-        'track_quizzes': _trackQuizzes,
-        'quiz_passed': _isQuizPassed,
-      }, userId: _userId);
-
-      // Register download on server (so we know this user has this book downloaded)
-      await DownloadService().registerServerDownload(widget.book.id);
-
-      _downloadQuizData();
-      _downloadBackgroundAssets();
-    } catch (e) {
-      print("Error triggering background downloads: $e");
-    }
+    // Refresh access state so UI updates
+    await _checkAccess(forceRefresh: true);
+    if (mounted) setState(() {});
   }
 
   Future<void> _downloadQuizData() async {
@@ -607,12 +576,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     }
   }
 
-  Future<void> _downloadBackgroundAssets() async {
-    if (ConnectivityService().isOffline) return;
-    final String fileName = 'Background.png';
-    final imageUrl = '${ApiConstants.baseUrl}/static/Animations/$fileName';
-    await DownloadService().downloadFile(imageUrl, fileName);
-  }
+  // Background.png is now bundled as an asset, no download needed
 
   void _playTrack(Map<String, dynamic> track, int index) async {
     // Wait for access check to complete if still checking
@@ -813,11 +777,11 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       backgroundColor: const Color(0xFF121212),
       body: Stack(
         children: [
-          // Background Image
+          // Background Image (loaded from local assets)
           if (_isVideoInitialized)
             SizedBox.expand(
-              child: Image.network(
-                '${ApiConstants.baseUrl}/static/Animations/Background.png',
+              child: Image.asset(
+                'assets/Background.png',
                 fit: BoxFit.cover,
                 alignment: Alignment.center,
                 errorBuilder: (context, error, stackTrace) =>

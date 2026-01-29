@@ -506,7 +506,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       await DownloadService().registerServerDownload(widget.book.id);
 
       _downloadQuizData();
-      _downloadBackgroundAssets();
+      // Background.png is now a local asset, no download needed
     } catch (e) {
       print("Error triggering background downloads: $e");
     }
@@ -562,12 +562,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     }
   }
 
-  Future<void> _downloadBackgroundAssets() async {
-    if (ConnectivityService().isOffline) return;
-    final String fileName = 'Background.png';
-    final imageUrl = '${ApiConstants.baseUrl}/static/Animations/$fileName';
-    await DownloadService().downloadFile(imageUrl, fileName);
-  }
+  // Background.png is now bundled as an asset, no download needed
 
   void _playTrack(Map<String, dynamic> track, int index) async {
     // Wait for access check to complete if still checking
@@ -768,11 +763,11 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       backgroundColor: const Color(0xFF121212),
       body: Stack(
         children: [
-          // Background Image
+          // Background Image (loaded from local assets)
           if (_isVideoInitialized)
             SizedBox.expand(
-              child: Image.network(
-                '${ApiConstants.baseUrl}/static/Animations/Background.png',
+              child: Image.asset(
+                'assets/Background.png',
                 fit: BoxFit.cover,
                 alignment: Alignment.center,
                 errorBuilder: (context, error, stackTrace) =>

@@ -4,6 +4,7 @@ import 'package:audio_service/audio_service.dart';
 import '../models/book.dart';
 import '../utils/api_constants.dart';
 import '../repositories/book_repository.dart';
+import 'download_service.dart';
 
 class MyAudioHandler extends BaseAudioHandler {
   final AudioPlayer _player = AudioPlayer();
@@ -237,13 +238,31 @@ class MyAudioHandler extends BaseAudioHandler {
           : null,
     );
 
-    // Load and play
-    final cleanUrl = trackUrl.startsWith('http')
-        ? trackUrl
-        : '${ApiConstants.baseUrl}$trackUrl';
+    // Check if track is already downloaded locally
+    final downloadService = DownloadService();
+    final trackStorageId = 'track_${track['id']}';
+    final userId = _userId;
+    final bookId = currentBook!.id;
+    final isDownloaded = await downloadService.isBookDownloaded(
+      trackStorageId,
+      userId: userId,
+      bookId: bookId,
+    );
 
-    // Stream directly (no encryption)
-    await loadAudio(cleanUrl, mediaItem);
+    if (isDownloaded) {
+      final localPath = await downloadService.getLocalBookPath(
+        trackStorageId,
+        userId: userId,
+        bookId: bookId,
+      );
+      await loadLocalFile(localPath, mediaItem);
+    } else {
+      // Stream from URL
+      final cleanUrl = trackUrl.startsWith('http')
+          ? trackUrl
+          : '${ApiConstants.baseUrl}$trackUrl';
+      await loadAudio(cleanUrl, mediaItem);
+    }
 
     await play();
   }
