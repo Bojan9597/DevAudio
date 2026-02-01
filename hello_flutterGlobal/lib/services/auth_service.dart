@@ -137,6 +137,32 @@ class AuthService {
     await _storage.delete(key: _encryptionKeyStorageKey);
   }
 
+  Future<void> refreshUserProfile() async {
+    if (ConnectivityService().isOffline) return;
+
+    final token = await getAccessToken();
+    if (token == null) return;
+
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/user/profile'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['user'] != null) {
+          await _saveUser(data['user']);
+        }
+      }
+    } catch (e) {
+      print('Error refreshing user profile: $e');
+    }
+  }
+
   Future<String> uploadProfilePicture(File imageFile, int userId) async {
     if (ConnectivityService().isOffline) throw Exception('Offline mode');
 

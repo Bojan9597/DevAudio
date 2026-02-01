@@ -115,7 +115,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadUser() async {
     try {
-      final user = await AuthService().getUser();
+      // 1. Load from cache first for immediate display
+      var user = await AuthService().getUser();
+      if (mounted) {
+        setState(() {
+          _user = user;
+        });
+      }
+
+      // 2. Refresh from server to get fresh URLs (important for R2 presigned URLs)
+      await AuthService().refreshUserProfile();
+      user = await AuthService().getUser();
+
       if (mounted) {
         setState(() {
           _user = user;
@@ -424,17 +435,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   String _getProfilePictureUrl(String path) {
-    String url;
     if (path.startsWith('http')) {
-      url = path;
-    } else {
-      // Remove leading slash if present to avoid double slash with baseUrl
-      final cleanPath = path.startsWith('/') ? path.substring(1) : path;
-      url = '${AuthService().baseUrl}/$cleanPath';
+      // Presigned URLs (R2/Cloudflare) already have unique signatures per
+      // generation, so they naturally bust the cache. Appending extra query
+      // params would invalidate the signature and cause a 403.
+      return path;
     }
-
-    // Append cache busting query param
-    return '$url?v=$_imageCacheKey';
+    // Relative path (local fallback) — needs cache busting
+    final cleanPath = path.startsWith('/') ? path.substring(1) : path;
+    final url = '${AuthService().baseUrl}/$cleanPath';
+    final separator = url.contains('?') ? '&' : '?';
+    return '$url${separator}v=$_imageCacheKey';
   }
 
   @override

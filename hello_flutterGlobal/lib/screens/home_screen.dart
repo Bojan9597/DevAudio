@@ -1033,21 +1033,8 @@ class _HomeScreenState extends State<HomeScreen> {
       images.add(_buildHeroImageAsset(path));
     }
 
-    // 2. Add 2 random books (prefer new releases or top picks)
-    List<Book> candidates = [..._newReleases, ..._topPicks, ..._books];
-    // Remove duplicates based on ID
-    final uniqueIds = <String>{};
-    candidates.retainWhere((b) => uniqueIds.add(b.id));
-
-    // Shuffle to get random ones
-    candidates.shuffle();
-
-    // Take up to 2
-    for (var book in candidates.take(2)) {
-      if (book.absoluteCoverUrlThumbnail.isNotEmpty) {
-        images.add(_buildHeroImageNetwork(book.absoluteCoverUrlThumbnail));
-      }
-    }
+    // 2. Add 2 random books (prefer new releases or top picks) - REMOVED as per user request
+    // We only want local assets now.
 
     // 3. Fill up to 6 if needed by reusing local images
     while (images.length < 6 && _localHeroImagePaths.isNotEmpty) {
@@ -1169,20 +1156,6 @@ class _HomeScreenState extends State<HomeScreen> {
           assetPath,
           fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => Container(color: Colors.grey[800]),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeroImageNetwork(String url) {
-    return AspectRatio(
-      aspectRatio: 1,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: CachedNetworkImage(
-          imageUrl: url,
-          fit: BoxFit.cover,
-          errorWidget: (_, __, ___) => Container(color: Colors.grey[800]),
         ),
       ),
     );

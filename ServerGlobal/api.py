@@ -141,9 +141,20 @@ def resolve_stored_url(stored_path, path_prefix="AudioBooks"):
         return resolve_url(stored_path)
     if stored_path.startswith('http'):
         return stored_path
-    # Relative path - prepend static prefix and BASE_URL
+    # Relative path - check if we need to prepend static/ and prefix
     if not stored_path.startswith('static/') and not stored_path.startswith('/static/'):
-        stored_path = f"static/{path_prefix}/{stored_path}"
+        # potential cleaning of leading slash
+        clean_stored = stored_path
+        if clean_stored.startswith('/'):
+            clean_stored = clean_stored[1:]
+            
+        # Check if it already starts with the prefix (to avoid double prefixing)
+        # e.g. stored="profilePictures/foo.jpg", prefix="profilePictures"
+        if clean_stored.startswith(path_prefix + '/'):
+             stored_path = f"static/{clean_stored}"
+        else:
+             stored_path = f"static/{path_prefix}/{clean_stored}"
+
     if stored_path.startswith('/'):
         stored_path = stored_path[1:]
     return f"{BASE_URL}{stored_path}"
@@ -730,7 +741,11 @@ def upload_profile_picture():
                 # Stored as full R2 URL
                 update_query = "UPDATE users SET profile_picture_url = %s WHERE id = %s"
                 db.execute_query(update_query, (r2_url, user_id))
-                return jsonify({"message": "Profile picture updated", "url": r2_url, "path": r2_url}), 200
+                
+                # Resolve for client use
+                resolved_url = resolve_url(r2_url)
+                
+                return jsonify({"message": "Profile picture updated", "url": resolved_url, "path": resolved_url}), 200
             else:
                 # Fallback: save locally
                 file.seek(0)
@@ -748,6 +763,45 @@ def upload_profile_picture():
             db.disconnect()
             
     return jsonify({"error": "File type not allowed"}), 400
+
+@app.route('/user/profile', methods=['GET'])
+@jwt_required
+def get_user_profile():
+    """Get current user profile with fresh URLs."""
+    try:
+        auth_header = request.headers.get('Authorization')
+        access_token = auth_header.split()[1]
+        payload = pyjwt.decode(access_token, options={"verify_signature": False})
+        user_id = payload.get('user_id')
+        
+        db = Database()
+        if not db.connect():
+            return jsonify({"error": "Database connection failed"}), 500
+            
+        try:
+            query = "SELECT id, name, email, profile_picture_url, is_verified FROM users WHERE id = %s"
+            users = db.execute_query(query, (user_id,))
+            
+            if not users:
+                return jsonify({"error": "User not found"}), 404
+                
+            user = users[0]
+            # Get AES key (though typically not needed for just profile view, but good for consistency)
+            aes_key = get_or_create_user_aes_key(user['id'], db)
+            
+            return jsonify({
+                "user": {
+                    "id": user['id'],
+                    "name": user['name'],
+                    "email": user['email'],
+                    "profile_picture_url": resolve_stored_url(user['profile_picture_url'], "profilePictures"),
+                    "aes_key": aes_key
+                }
+            }), 200
+        finally:
+            db.disconnect()
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 def build_category_tree(categories, parent_id=None):
     """
