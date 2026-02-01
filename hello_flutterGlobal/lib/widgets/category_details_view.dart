@@ -189,7 +189,7 @@ class _CategoryDetailsViewState extends State<CategoryDetailsView> {
             Text(
               _searchQuery.isNotEmpty
                   ? AppLocalizations.of(context)!.noBooksFound
-                  : AppLocalizations.of(context)!.noBooksFoundInCategory(''),
+                  : AppLocalizations.of(context)!.noBooksFoundInCategory(widget.categoryTitle),
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 18,
