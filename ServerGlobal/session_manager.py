@@ -23,10 +23,10 @@ class SessionManager:
             query = """
             INSERT INTO user_sessions (user_id, session_id, refresh_token, expires_at, device_info)
             VALUES (%s, %s, %s, %s, %s)
-            ON DUPLICATE KEY UPDATE 
-                session_id = VALUES(session_id),
-                refresh_token = VALUES(refresh_token),
-                expires_at = VALUES(expires_at),
+            ON CONFLICT (user_id) DO UPDATE SET 
+                session_id = EXCLUDED.session_id,
+                refresh_token = EXCLUDED.refresh_token,
+                expires_at = EXCLUDED.expires_at,
                 created_at = CURRENT_TIMESTAMP
             """
             # Expires in 30 days

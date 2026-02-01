@@ -1,5 +1,7 @@
 import os
 import platform
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 class Database:
     def __init__(self):
@@ -9,41 +11,40 @@ class Database:
             self.host = "hope.global.ba"
         else:
             self.host = "localhost"
-        self.database = "velorusb_DevAudio"
-        self.user = "velorusb_audio"
+        self.database = "velorusb_echoHistory"
+        self.user = "velorusb_echoHistoryAdmin"
         self.password = "Pijanista123!"
+        self.port = 5432
         self.connection = None
 
     def connect(self):
         """Establishes a connection to the database."""
         try:
-            import mysql.connector
-            from mysql.connector import Error
-            self.connection = mysql.connector.connect(
+            self.connection = psycopg2.connect(
                 host=self.host,
                 database=self.database,
                 user=self.user,
-                password=self.password
+                password=self.password,
+                port=self.port
             )
-            if self.connection.is_connected():
-                return True
+            return True
         except Exception as e:
-            print(f"Error while connecting to MySQL: {e}")
+            print(f"Error while connecting to PostgreSQL: {e}")
             return False
 
     def disconnect(self):
         """Closes the connection if it is open."""
-        if self.connection and self.connection.is_connected():
+        if self.connection and not self.connection.closed:
             self.connection.close()
-            print("MySQL connection is closed")
+            print("PostgreSQL connection is closed")
 
     def execute_query(self, query, params=None):
         """Executes a query and returns the results for SELECT queries."""
-        if not self.connection or not self.connection.is_connected():
+        if not self.connection or self.connection.closed:
              if not self.connect():
                  return None
         
-        cursor = self.connection.cursor(dictionary=True)
+        cursor = self.connection.cursor(cursor_factory=RealDictCursor)
         try:
             if params:
                 cursor.execute(query, params)
@@ -52,12 +53,14 @@ class Database:
             
             if query.strip().upper().startswith(("SELECT", "SHOW")):
                 result = cursor.fetchall()
-                return result
+                # Convert RealDictRow to regular dicts
+                return [dict(row) for row in result]
             else:
                 self.connection.commit()
                 return cursor.rowcount
         except Exception as e:
             print(f"Error executing query: {e}")
+            self.connection.rollback()
             return None
         finally:
             cursor.close()

@@ -232,8 +232,16 @@ def register():
         verification_code = str(random.randint(100000, 999999))
         
         # Insert/Update pending user
-        # We use REPLACE INTO to handle retries (e.g. user didn't get code first time)
-        insert_query = "REPLACE INTO pending_users (name, email, password_hash, verification_code) VALUES (%s, %s, %s, %s)"
+        # Use INSERT ON CONFLICT for PostgreSQL (upsert)
+        insert_query = """
+            INSERT INTO pending_users (name, email, password_hash, verification_code) 
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (email) DO UPDATE SET 
+                name = EXCLUDED.name, 
+                password_hash = EXCLUDED.password_hash, 
+                verification_code = EXCLUDED.verification_code,
+                created_at = CURRENT_TIMESTAMP
+        """
         cursor = db.connection.cursor()
         cursor.execute(insert_query, (name, email, hashed_pw, verification_code))
         db.connection.commit()
@@ -284,11 +292,11 @@ def verify_email():
             aes_key = generate_aes_key()
 
             # Move to users table with AES key
-            insert_query = "INSERT INTO users (name, email, password_hash, is_verified, aes_key) VALUES (%s, %s, %s, TRUE, %s)"
+            insert_query = "INSERT INTO users (name, email, password_hash, is_verified, aes_key) VALUES (%s, %s, %s, 1, %s) RETURNING id"
             cursor = db.connection.cursor()
             cursor.execute(insert_query, (pending_user['name'], pending_user['email'], pending_user['password_hash'], aes_key))
+            user_id = cursor.fetchone()[0]
             db.connection.commit()
-            user_id = cursor.lastrowid
 
             # Delete from pending
             delete_query = "DELETE FROM pending_users WHERE email = %s"
@@ -484,11 +492,11 @@ def google_login():
             dummy_hash = generate_password_hash("google_auth_placeholder")
             aes_key = generate_aes_key()
 
-            insert_query = "INSERT INTO users (name, email, password_hash, aes_key) VALUES (%s, %s, %s, %s)"
+            insert_query = "INSERT INTO users (name, email, password_hash, is_verified, aes_key) VALUES (%s, %s, %s, 1, %s) RETURNING id"
             cursor = db.connection.cursor()
             cursor.execute(insert_query, (name or "Google User", email, dummy_hash, aes_key))
+            user_id = cursor.fetchone()[0]
             db.connection.commit()
-            user_id = cursor.lastrowid
             cursor.close()
 
             # Generate JWT tokens
@@ -982,13 +990,13 @@ def save_quiz():
             cursor.execute("DELETE FROM quiz_questions WHERE quiz_id = %s", (quiz_id,))
         else:
             if playlist_item_id:
-                ins_q = "INSERT INTO quizzes (book_id, playlist_item_id) VALUES (%s, %s)"
+                ins_q = "INSERT INTO quizzes (book_id, playlist_item_id) VALUES (%s, %s) RETURNING id"
                 cursor.execute(ins_q, (book_id, playlist_item_id))
             else:
-                ins_q = "INSERT INTO quizzes (book_id) VALUES (%s)"
+                ins_q = "INSERT INTO quizzes (book_id) VALUES (%s) RETURNING id"
                 cursor.execute(ins_q, (book_id,))
                 
-            quiz_id = cursor.lastrowid
+            quiz_id = cursor.fetchone()[0]
             
         # 2. Insert Questions
         q_insert = """
@@ -1377,7 +1385,7 @@ def complete_track():
                     quiz_id = book_quiz[0]['id']
                     passed_query = """
                         SELECT is_passed FROM user_quiz_results
-                        WHERE user_id = %s AND quiz_id = %s AND is_passed = TRUE
+                        WHERE user_id = %s AND quiz_id = %s AND is_passed = 1
                         LIMIT 1
                     """
                     passed_res = db.execute_query(passed_query, (user_id, quiz_id))
@@ -1395,7 +1403,7 @@ def complete_track():
                     for tq in track_quizzes:
                         passed_query = """
                             SELECT is_passed FROM user_quiz_results
-                            WHERE user_id = %s AND quiz_id = %s AND is_passed = TRUE
+                            WHERE user_id = %s AND quiz_id = %s AND is_passed = 1
                             LIMIT 1
                         """
                         passed_res = db.execute_query(passed_query, (user_id, tq['id']))
@@ -1409,7 +1417,7 @@ def complete_track():
                     print(f"User {user_id} fully completed book {book_id} (all tracks + all quizzes)")
 
                     # Mark book as read
-                    update_read = "UPDATE user_books SET is_read = TRUE, last_accessed_at = CURRENT_TIMESTAMP WHERE user_id = %s AND book_id = %s"
+                    update_read = "UPDATE user_books SET is_read = 1, last_accessed_at = CURRENT_TIMESTAMP WHERE user_id = %s AND book_id = %s"
                     db.execute_query(update_read, (user_id, book_id))
 
                     # Check Badges (since book is now read)
@@ -1486,7 +1494,7 @@ def update_progress():
             params = [position]
             
             if is_read:
-                update_sql += ", is_read = TRUE"
+                update_sql += ", is_read = 1"
             
             if playlist_item_id:
                 update_sql += ", current_playlist_item_id = %s"
@@ -1497,12 +1505,13 @@ def update_progress():
             
             db.execute_query(update_sql, tuple(params))
             
-            # Update user_track_progress if playlist item
             if playlist_item_id:
                 track_upd_query = """
                     INSERT INTO user_track_progress (user_id, book_id, playlist_item_id, position_seconds)
                     VALUES (%s, %s, %s, %s)
-                    ON DUPLICATE KEY UPDATE position_seconds = VALUES(position_seconds), updated_at = CURRENT_TIMESTAMP
+                    ON CONFLICT (user_id, book_id, playlist_item_id) DO UPDATE SET 
+                        position_seconds = EXCLUDED.position_seconds, 
+                        updated_at = CURRENT_TIMESTAMP
                 """
                 db.execute_query(track_upd_query, (user_id, book_id, playlist_item_id, position))
 
@@ -1522,13 +1531,13 @@ def update_progress():
                     print(f"Track {playlist_item_id} already completed, skipping playback_history update")
             
             if should_update:
-                # Use INSERT ON DUPLICATE KEY UPDATE to maintain only one record per combination
+                # Use INSERT ON CONFLICT to maintain only one record per combination
                 history_query = """
                     INSERT INTO playback_history (user_id, book_id, playlist_item_id, start_time, end_time, played_seconds)
                     VALUES (%s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, %s)
-                    ON DUPLICATE KEY UPDATE 
+                    ON CONFLICT (user_id, book_id, playlist_item_id) DO UPDATE SET 
                         end_time = CURRENT_TIMESTAMP,
-                        played_seconds = VALUES(played_seconds)
+                        played_seconds = EXCLUDED.played_seconds
                 """
                 db.execute_query(history_query, (user_id, book_id, playlist_item_id, position))
             
@@ -1557,11 +1566,11 @@ def register_download():
     db = Database()
     try:
         # Insert or update timestamp
-        # Using ON DUPLICATE KEY UPDATE to refresh timestamp on re-download
+        # Using ON CONFLICT to refresh timestamp on re-download
         query = """
         INSERT INTO user_downloads (user_id, book_id, downloaded_at)
         VALUES (%s, %s, CURRENT_TIMESTAMP)
-        ON DUPLICATE KEY UPDATE downloaded_at = CURRENT_TIMESTAMP
+        ON CONFLICT (user_id, book_id) DO UPDATE SET downloaded_at = CURRENT_TIMESTAMP
         """
         db.execute_query(query, (user_id, book_id))
         return jsonify({'success': True, 'message': 'Download registered'}), 200
@@ -2105,12 +2114,13 @@ def upload_book():
             INSERT INTO books
             (title, author, primary_category_id, audio_path, cover_image_path, posted_by_user_id, description, price, duration_seconds, pdf_path)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
         """
         params = (title, author, numeric_cat_id, main_audio_path, db_cover_path, user_id, description, price, total_duration, db_pdf_path)
         
         cursor = db.connection.cursor()
         cursor.execute(insert_query, params)
-        book_id = cursor.lastrowid
+        book_id = cursor.fetchone()[0]
         
         # Insert Playlist Items if Playlist
         if is_playlist:
@@ -2269,7 +2279,7 @@ def save_quiz_result():
                     bq_id = book_quiz[0]['id']
                     passed_query = """
                         SELECT is_passed FROM user_quiz_results
-                        WHERE user_id = %s AND quiz_id = %s AND is_passed = TRUE
+                        WHERE user_id = %s AND quiz_id = %s AND is_passed = 1
                         LIMIT 1
                     """
                     passed_res = db.execute_query(passed_query, (user_id, bq_id))
@@ -2287,7 +2297,7 @@ def save_quiz_result():
                     for tq in track_quizzes:
                         passed_query = """
                             SELECT is_passed FROM user_quiz_results
-                            WHERE user_id = %s AND quiz_id = %s AND is_passed = TRUE
+                            WHERE user_id = %s AND quiz_id = %s AND is_passed = 1
                             LIMIT 1
                         """
                         passed_res = db.execute_query(passed_query, (user_id, tq['id']))
@@ -2299,7 +2309,7 @@ def save_quiz_result():
                     print(f"User {user_id} fully completed book {book_id} after passing quiz")
 
                     # Mark book as read
-                    update_read = "UPDATE user_books SET is_read = TRUE, last_accessed_at = CURRENT_TIMESTAMP WHERE user_id = %s AND book_id = %s"
+                    update_read = "UPDATE user_books SET is_read = 1, last_accessed_at = CURRENT_TIMESTAMP WHERE user_id = %s AND book_id = %s"
                     db.execute_query(update_read, (user_id, book_id))
 
                     # Check badges
@@ -2465,7 +2475,7 @@ def subscribe():
             # Update existing subscription
             update_query = """
                 UPDATE subscriptions
-                SET plan_type = %s, status = 'active', start_date = %s, end_date = %s, auto_renew = TRUE
+                SET plan_type = %s, status = 'active', start_date = %s, end_date = %s, auto_renew = 1
                 WHERE user_id = %s
             """
             cursor.execute(update_query, (plan_type, now, end_date, user_id))
@@ -2474,7 +2484,7 @@ def subscribe():
             # Create new subscription
             insert_query = """
                 INSERT INTO subscriptions (user_id, plan_type, status, start_date, end_date, auto_renew)
-                VALUES (%s, %s, 'active', %s, %s, TRUE)
+                VALUES (%s, %s, 'active', %s, %s, 1)
             """
             cursor.execute(insert_query, (user_id, plan_type, now, end_date))
             action = 'subscribed'
@@ -2522,7 +2532,7 @@ def cancel_subscription():
         # Update subscription to not auto-renew (keep status active until actual expiry)
         update_query = """
             UPDATE subscriptions
-            SET auto_renew = FALSE
+            SET auto_renew = 0
             WHERE user_id = %s
         """
         db.execute_query(update_query, (user_id,))
@@ -2602,13 +2612,13 @@ def admin_set_subscription():
         # Upsert subscription
         upsert_query = """
             INSERT INTO subscriptions (user_id, plan_type, status, start_date, end_date, auto_renew)
-            VALUES (%s, %s, 'active', %s, %s, TRUE)
-            ON DUPLICATE KEY UPDATE
-                plan_type = VALUES(plan_type),
+            VALUES (%s, %s, 'active', %s, %s, 1)
+            ON CONFLICT (user_id) DO UPDATE SET
+                plan_type = EXCLUDED.plan_type,
                 status = 'active',
-                start_date = VALUES(start_date),
-                end_date = VALUES(end_date),
-                auto_renew = TRUE
+                start_date = EXCLUDED.start_date,
+                end_date = EXCLUDED.end_date,
+                auto_renew = 1
         """
         cursor.execute(upsert_query, (user_id, plan_type, now, end_date))
         db.connection.commit()
@@ -2738,7 +2748,9 @@ def rate_book(book_id):
         upsert_query = """
             INSERT INTO book_ratings (book_id, user_id, stars)
             VALUES (%s, %s, %s)
-            ON DUPLICATE KEY UPDATE stars = VALUES(stars), updated_at = CURRENT_TIMESTAMP
+            ON CONFLICT (book_id, user_id) DO UPDATE SET 
+                stars = EXCLUDED.stars, 
+                updated_at = CURRENT_TIMESTAMP
         """
         cursor.execute(upsert_query, (book_id, user_id, stars))
         db.connection.commit()
