@@ -1667,13 +1667,14 @@ def get_library():
                         "audioUrl": audio_path,
                         "coverUrl": cover_path,
                         "coverThumbnailUrl": cover_thumb,
-                        "categorySlug": book['category_slug'],
+                        "categoryId": book['category_slug'] or "others",
                         "durationSeconds": book['duration_seconds'],
                         "lastPosition": book['last_position'],
-                        "premium": book.get('premium', False),
-                        "averageRating": float(book['average_rating']) if book['average_rating'] else None,
+                        "premium": book.get('premium', 0),
+                        "averageRating": float(book['average_rating']) if book['average_rating'] else 0.0,
                         "ratingCount": book['rating_count'] or 0,
                         "isFavorite": book['id'] in favIds,
+                        "isPlaylist": book['playlist_count'] > 0,
                     })
         
         # Get uploaded books (for admin users)
@@ -1702,12 +1703,13 @@ def get_library():
                         "audioUrl": audio_path,
                         "coverUrl": cover_path,
                         "coverThumbnailUrl": cover_thumb,
-                        "categorySlug": book['category_slug'],
+                        "categoryId": book['category_slug'] or "others",
                         "durationSeconds": book['duration_seconds'],
-                        "premium": book.get('premium', False),
-                        "averageRating": float(book['average_rating']) if book['average_rating'] else None,
+                        "premium": book.get('premium', 0),
+                        "averageRating": float(book['average_rating']) if book['average_rating'] else 0.0,
                         "ratingCount": book['rating_count'] or 0,
                         "isFavorite": book['id'] in favIds,
+                        "isPlaylist": book['playlist_count'] > 0,
                     })
         
         # Build all books response
@@ -1723,12 +1725,13 @@ def get_library():
                     "audioUrl": audio_path,
                     "coverUrl": cover_path,
                     "coverThumbnailUrl": cover_thumb,
-                    "categorySlug": book['category_slug'],
+                    "categoryId": book['category_slug'] or "others",
                     "durationSeconds": book['duration_seconds'],
-                    "premium": book.get('premium', False),
-                    "averageRating": float(book['average_rating']) if book['average_rating'] else None,
+                    "premium": book.get('premium', 0),
+                    "averageRating": float(book['average_rating']) if book['average_rating'] else 0.0,
                     "ratingCount": book['rating_count'] or 0,
                     "isFavorite": book['id'] in favIds,
+                    "isPlaylist": book['playlist_count'] > 0,
                 })
         
         response = {
