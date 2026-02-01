@@ -35,17 +35,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   @override
   void initState() {
     super.initState();
-    _checkSubscriptionStatus();
+    // Subscription status now comes from the combined /discover endpoint
     _loadBooks();
     _scrollController.addListener(_onScroll);
     globalLayoutState.addListener(_onSearchChanged);
-  }
-
-  Future<void> _checkSubscriptionStatus() async {
-    final isSubscribed = await AuthService().isSubscribed();
-    if (mounted) {
-      setState(() => _isSubscribed = isSubscribed);
-    }
   }
 
   @override
@@ -85,18 +78,24 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final userId = await AuthService().getCurrentUserId();
-      List<int> favIds = [];
-      if (userId != null) {
-        favIds = await _bookRepository.getFavoriteBookIds(userId);
-      }
-
-      final newBooksRaw = await _bookRepository.getDiscoverBooks(
+      // Single API call gets everything we need!
+      final discoverData = await _bookRepository.getDiscoverData(
         page: _currentPage,
         limit: _limit,
-        query: globalLayoutState.searchQuery,
       );
 
+      // Extract data from combined response
+      final List<Book> allBooks = discoverData['allBooks'] as List<Book>;
+      final List<int> favIds = discoverData['favorites'] as List<int>;
+      final bool isSubscribed = discoverData['isSubscribed'] as bool;
+
+      // Cache subscription status so other screens don't need to re-fetch
+      AuthService().setSubscriptionStatus(isSubscribed);
+
+      // Cache favorites so other screens don't need to re-fetch
+      _bookRepository.setFavorites(favIds);
+
+      // Merge favorite status into books
       List<Book> mergeFavs(List<Book> list) {
         return list.map((b) {
           final isFav = favIds.contains(int.tryParse(b.id) ?? -1);
@@ -104,53 +103,31 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         }).toList();
       }
 
-      final newBooks = mergeFavs(newBooksRaw);
-
-      List<Book> newReleases = _newReleases;
-      List<Book> topPicks = _topPicks;
-      List<Book> listenHistory = _listenHistory;
-
-      if (_currentPage == 1) {
-        // Fetch specific lists only on initial load/refresh
-        final newReleasesRaw = await _bookRepository.getDiscoverBooks(
-          limit: 5,
-          sort: 'newest',
-          query: globalLayoutState.searchQuery,
-        );
-        newReleases = mergeFavs(newReleasesRaw);
-
-        final topPicksRaw = await _bookRepository.getDiscoverBooks(
-          limit: 5,
-          sort: 'popular',
-          query: globalLayoutState.searchQuery,
-        );
-        topPicks = mergeFavs(topPicksRaw);
-
-        // Fetch listen history if user is logged in (filter out finished books)
-        if (userId != null) {
-          final historyRaw = await _bookRepository.getListenHistory(userId);
-          final historyWithFavs = mergeFavs(historyRaw);
-          // Filter out books that are finished (>= 95% complete)
-          listenHistory = historyWithFavs.where((book) {
-            if (book.lastPosition == null ||
-                book.durationSeconds == null ||
-                book.durationSeconds == 0) {
-              return true; // Include if no progress data
-            }
-            final progress = book.lastPosition! / book.durationSeconds!;
-            return progress <
-                0.95; // Only show books that are less than 95% complete
-          }).toList();
-        }
-      }
+      final newBooks = mergeFavs(allBooks);
 
       if (mounted) {
         setState(() {
+          _isSubscribed = isSubscribed;
+
           if (_currentPage == 1) {
             _books = newBooks;
-            _newReleases = newReleases;
-            _topPicks = topPicks;
-            _listenHistory = listenHistory;
+            _newReleases = mergeFavs(discoverData['newReleases'] as List<Book>);
+            _topPicks = mergeFavs(discoverData['topPicks'] as List<Book>);
+
+            // Filter listen history to exclude finished books
+            final historyWithFavs = mergeFavs(
+              discoverData['listenHistory'] as List<Book>,
+            );
+            _listenHistory = historyWithFavs.where((book) {
+              if (book.lastPosition == null ||
+                  book.durationSeconds == null ||
+                  book.durationSeconds == 0) {
+                return true; // Include if no progress data
+              }
+              final progress = book.lastPosition! / book.durationSeconds!;
+              return progress <
+                  0.95; // Only show books that are less than 95% complete
+            }).toList();
           } else {
             _books.addAll(newBooks);
           }

@@ -109,26 +109,20 @@ class _ContentAreaState extends State<ContentArea> {
 
   Future<void> _loadBooks() async {
     try {
-      final books = await BookRepository().getBooks();
+      // Single API call gets everything we need!
+      final libraryData = await BookRepository().getLibraryData();
+
+      final List<Book> allBooks = libraryData['allBooks'] as List<Book>;
+      final List<String> purchasedIds =
+          libraryData['purchasedIds'] as List<String>;
+      final List<Book> history = libraryData['listenHistory'] as List<Book>;
+      final List<Book> uploaded = libraryData['uploadedBooks'] as List<Book>;
+
       final userId = await AuthService().getCurrentUserId();
       _userId = userId;
 
-      List<int> favoriteIds = [];
-      List<String> purchasedIds = [];
-      List<Book> history = [];
-      List<Book> uploaded = [];
-
-      if (userId != null) {
-        favoriteIds = await BookRepository().getFavoriteBookIds(userId);
-        purchasedIds = await BookRepository().getPurchasedBookIds(userId);
-        history = await BookRepository().getListenHistory(userId);
-        uploaded = await BookRepository().getMyUploadedBooks(userId.toString());
-      }
-
-      // Map favorites and merge history progress
-      final updatedBooks = books.map((book) {
-        final isFav = favoriteIds.contains(int.tryParse(book.id) ?? -1);
-
+      // Merge history progress into all books
+      final updatedBooks = allBooks.map((book) {
         // Find if we have history for this book to get progress
         final historyBook = history.firstWhere(
           (h) => h.id == book.id,
@@ -136,7 +130,6 @@ class _ContentAreaState extends State<ContentArea> {
         );
 
         return book.copyWith(
-          isFavorite: isFav,
           lastPosition: historyBook.lastPosition,
           durationSeconds: historyBook.durationSeconds,
           lastAccessed: historyBook.lastAccessed,

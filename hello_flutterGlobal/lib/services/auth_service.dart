@@ -189,7 +189,33 @@ class AuthService {
     await prefs.setString(_userKey, json.encode(user));
   }
 
+  // Subscription cache (in-memory with TTL)
+  static bool? _cachedSubscriptionStatus;
+  static DateTime? _subscriptionCacheTime;
+  static const Duration _subscriptionCacheTTL = Duration(minutes: 5);
+
+  /// Set subscription status from external source (e.g., /discover endpoint)
+  /// This avoids needing a separate API call
+  void setSubscriptionStatus(bool isSubscribed) {
+    _cachedSubscriptionStatus = isSubscribed;
+    _subscriptionCacheTime = DateTime.now();
+  }
+
+  /// Check if subscription cache is still valid
+  bool _isSubscriptionCacheValid() {
+    if (_cachedSubscriptionStatus == null || _subscriptionCacheTime == null) {
+      return false;
+    }
+    return DateTime.now().difference(_subscriptionCacheTime!) <
+        _subscriptionCacheTTL;
+  }
+
   Future<bool> isSubscribed() async {
+    // Return cached value if still valid
+    if (_isSubscriptionCacheValid()) {
+      return _cachedSubscriptionStatus!;
+    }
+
     try {
       if (ConnectivityService().isOffline) return false;
 
@@ -209,13 +235,25 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        return data['is_active'] == true;
+        final isActive = data['is_active'] == true;
+
+        // Cache the result
+        _cachedSubscriptionStatus = isActive;
+        _subscriptionCacheTime = DateTime.now();
+
+        return isActive;
       }
       return false;
     } catch (e) {
       print('Error checking subscription: $e');
       return false;
     }
+  }
+
+  /// Clear subscription cache (call on logout)
+  void clearSubscriptionCache() {
+    _cachedSubscriptionStatus = null;
+    _subscriptionCacheTime = null;
   }
 
   Future<void> _saveTokens(String accessToken, String refreshToken) async {

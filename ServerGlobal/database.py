@@ -1,42 +1,59 @@
 import os
 import platform
 import psycopg2
+from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
+
+# Global connection pool - created once, reused for all requests
+_connection_pool = None
+
+def get_connection_pool():
+    """Get or create the global connection pool."""
+    global _connection_pool
+    if _connection_pool is None:
+        # Determine host based on platform
+        if platform.system() == "Windows":
+            host = "hope.global.ba"
+        else:
+            host = "localhost"
+        
+        _connection_pool = pool.ThreadedConnectionPool(
+            minconn=2,      # Minimum connections to keep open
+            maxconn=10,     # Maximum connections allowed
+            host=host,
+            database="velorusb_echoHistory",
+            user="velorusb_echoHistoryAdmin",
+            password="Pijanista123!",
+            port=5432
+        )
+        print("Database connection pool created")
+    return _connection_pool
 
 class Database:
     def __init__(self):
-        # On the server (Linux), connect to localhost
-        # On local dev (Windows), connect to the remote DB
-        if platform.system() == "Windows":
-            self.host = "hope.global.ba"
-        else:
-            self.host = "localhost"
-        self.database = "velorusb_echoHistory"
-        self.user = "velorusb_echoHistoryAdmin"
-        self.password = "Pijanista123!"
-        self.port = 5432
         self.connection = None
+        self._from_pool = False
 
     def connect(self):
-        """Establishes a connection to the database."""
+        """Get a connection from the pool."""
         try:
-            self.connection = psycopg2.connect(
-                host=self.host,
-                database=self.database,
-                user=self.user,
-                password=self.password,
-                port=self.port
-            )
+            pool = get_connection_pool()
+            self.connection = pool.getconn()
+            self._from_pool = True
             return True
         except Exception as e:
-            print(f"Error while connecting to PostgreSQL: {e}")
+            print(f"Error getting connection from pool: {e}")
             return False
 
     def disconnect(self):
-        """Closes the connection if it is open."""
-        if self.connection and not self.connection.closed:
-            self.connection.close()
-            print("PostgreSQL connection is closed")
+        """Return connection to the pool (don't actually close it)."""
+        if self.connection and self._from_pool:
+            try:
+                pool = get_connection_pool()
+                pool.putconn(self.connection)
+            except Exception as e:
+                print(f"Error returning connection to pool: {e}")
+            self.connection = None
 
     def execute_query(self, query, params=None):
         """Executes a query and returns the results for SELECT queries."""

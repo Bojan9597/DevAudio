@@ -1141,9 +1141,15 @@ def calculate_listen_percentage(db, user_id, book_id, is_playlist, total_duratio
 
 @app.route('/books', methods=['GET'])
 def get_books():
+    import time
+    timings = {}
+    start_total = time.time()
+    
+    start = time.time()
     db = Database()
     if not db.connect():
         return jsonify({"error": "Database connection failed"}), 500
+    timings['db_connect'] = round((time.time() - start) * 1000)
     
     try:
         page = request.args.get('page', 1, type=int)
@@ -1160,7 +1166,7 @@ def get_books():
              is_fav_sql = "(SELECT COUNT(*) FROM favorites WHERE user_id = %s AND book_id = b.id) as is_favorite"
              params.append(user_id)
 
-        # Updated query to check for playlist items existence, get duration, and ratings
+        # Main query with correlated subqueries (these are fine - DB optimizes them)
         base_select = f"""
             SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug,
                    u.name as posted_by_name, b.description, b.price, b.posted_by_user_id, b.duration_seconds, b.pdf_path,
@@ -1177,84 +1183,570 @@ def get_books():
         sort_by = request.args.get('sort', 'newest', type=str)
 
         if search_query:
-             query = base_select + " WHERE b.title LIKE %s"
+             query = base_select + " WHERE b.title ILIKE %s"
              params.append(f"%{search_query}%")
         else:
             query = base_select
             
         if sort_by == 'popular':
-            # Sort by total rating score (average * count)
-            # We use the subqueries from SELECT via alias if supported, or repeat logic.
-            # MySQL supports aliases in ORDER BY.
-            query += " ORDER BY (average_rating * rating_count) DESC, b.id DESC"
+            # PostgreSQL doesn't allow column aliases in ORDER BY, must repeat the subqueries
+            query += """ ORDER BY (
+                (SELECT AVG(stars) FROM book_ratings WHERE book_id = b.id) * 
+                (SELECT COUNT(*) FROM book_ratings WHERE book_id = b.id)
+            ) DESC NULLS LAST, b.id DESC"""
         else:
-            # Default to newest
             query += " ORDER BY b.id DESC" 
         
         query += " LIMIT %s OFFSET %s"
         params.extend([limit, offset])
         
+        start = time.time()
         books_result = db.execute_query(query, tuple(params))
+        timings['main_query'] = round((time.time() - start) * 1000)
         
+        if not books_result:
+            timings['total'] = round((time.time() - start_total) * 1000)
+            print(f"[TIMING] get_books (empty): {timings}")
+            return jsonify([])
+        
+        # Collect all book IDs for batch queries
+        book_ids = [row['id'] for row in books_result]
+        
+        # ============ BATCH QUERY 1: Subcategories for all books ============
+        subcats_by_book = {}
+        if book_ids:
+            placeholders = ','.join(['%s'] * len(book_ids))
+            subcats_query = f"""
+                SELECT bc.book_id, c.slug 
+                FROM book_categories bc
+                JOIN categories c ON bc.category_id = c.id
+                WHERE bc.book_id IN ({placeholders})
+            """
+            subcats_result = db.execute_query(subcats_query, tuple(book_ids))
+            if subcats_result:
+                for row in subcats_result:
+                    bid = row['book_id']
+                    if bid not in subcats_by_book:
+                        subcats_by_book[bid] = []
+                    subcats_by_book[bid].append(row['slug'])
+        
+        # ============ BATCH QUERY 2: User progress data (if user_id provided) ============
+        progress_by_book = {}
+        read_status_by_book = {}
+        
+        if user_id and book_ids:
+            placeholders = ','.join(['%s'] * len(book_ids))
+            
+            # 2a: Batch query for read status
+            read_query = f"""
+                SELECT book_id, is_read 
+                FROM user_books 
+                WHERE user_id = %s AND book_id IN ({placeholders})
+            """
+            read_result = db.execute_query(read_query, (user_id, *book_ids))
+            if read_result:
+                for row in read_result:
+                    read_status_by_book[row['book_id']] = row.get('is_read', False)
+            
+            # 2b: Batch query for single-book progress (non-playlist books)
+            single_progress_query = f"""
+                SELECT book_id, COALESCE(MAX(played_seconds), 0) as last_position
+                FROM playback_history
+                WHERE user_id = %s AND book_id IN ({placeholders})
+                GROUP BY book_id
+            """
+            single_result = db.execute_query(single_progress_query, (user_id, *book_ids))
+            if single_result:
+                for row in single_result:
+                    progress_by_book[row['book_id']] = {'single_progress': row['last_position']}
+            
+            # 2c: Batch query for playlist progress (all tracks for all books)
+            playlist_progress_query = f"""
+                SELECT 
+                    pi.book_id,
+                    pi.id as playlist_item_id,
+                    pi.duration_seconds,
+                    COALESCE(MAX(ph.played_seconds), 0) as last_position,
+                    (SELECT COUNT(*) FROM user_completed_tracks WHERE user_id = %s AND track_id = pi.id) as is_completed
+                FROM playlist_items pi
+                LEFT JOIN playback_history ph ON ph.playlist_item_id = pi.id AND ph.user_id = %s
+                WHERE pi.book_id IN ({placeholders})
+                GROUP BY pi.book_id, pi.id, pi.duration_seconds
+            """
+            playlist_result = db.execute_query(playlist_progress_query, (user_id, user_id, *book_ids))
+            if playlist_result:
+                for row in playlist_result:
+                    bid = row['book_id']
+                    if bid not in progress_by_book:
+                        progress_by_book[bid] = {'tracks': []}
+                    if 'tracks' not in progress_by_book[bid]:
+                        progress_by_book[bid]['tracks'] = []
+                    progress_by_book[bid]['tracks'].append({
+                        'duration': row['duration_seconds'] or 0,
+                        'last_position': row['last_position'] or 0,
+                        'is_completed': row['is_completed'] > 0
+                    })
+        
+        # ============ Build response ============
+        start = time.time()
         books = []
-        if books_result:
+        for row in books_result:
+            book_id = row['id']
+            
+            # Get subcategories from batch result
+            subcategory_ids = subcats_by_book.get(book_id, [])
+            
+            # Resolve URLs
+            audio_path = resolve_stored_url(row['audio_path'], "AudioBooks")
+            cover_path, cover_thumbnail_path = resolve_cover_urls(row['cover_image_path'])
+
+            # Calculate listen percentage from batch data
+            percentage = None
+            if user_id:
+                # Check if book is marked as read
+                if read_status_by_book.get(book_id):
+                    percentage = 100.0
+                else:
+                    total_duration = row['duration_seconds'] or 0
+                    is_playlist = row['playlist_count'] > 0
+                    
+                    if total_duration > 0:
+                        if is_playlist:
+                            # Calculate from track data
+                            tracks = progress_by_book.get(book_id, {}).get('tracks', [])
+                            total_listened = 0
+                            for track in tracks:
+                                if track['is_completed'] and track['duration'] > 0:
+                                    total_listened += track['duration']
+                                else:
+                                    total_listened += min(track['last_position'], track['duration']) if track['duration'] > 0 else track['last_position']
+                            percentage = round((total_listened / total_duration * 100), 2) if total_duration > 0 else 0
+                        else:
+                            # Single book progress
+                            single_progress = progress_by_book.get(book_id, {}).get('single_progress', 0)
+                            percentage = round((single_progress / total_duration * 100), 2) if total_duration > 0 else 0
+                    else:
+                        percentage = 0
+            
+            book_data = {
+                "id": str(book_id),
+                "title": row['title'],
+                "author": row['author'],
+                "audioUrl": audio_path,
+                "coverUrl": cover_path,
+                "coverUrlThumbnail": cover_thumbnail_path,
+                "categoryId": row['category_slug'] or "",
+                "subcategoryIds": subcategory_ids,
+                "postedBy": row['posted_by_name'] or "Unknown",
+                "description": row['description'],
+                "price": float(row['price']) if row['price'] else 0.0,
+                "postedByUserId": str(row['posted_by_user_id']),
+                "isPlaylist": row['playlist_count'] > 0,
+                "duration": row['duration_seconds'] or 0,
+                "averageRating": round(float(row['average_rating']), 1) if row['average_rating'] else 0.0,
+                "ratingCount": row['rating_count'] or 0,
+                "pdfUrl": resolve_stored_url(row['pdf_path'], "AudioBooks"),
+                "premium": row['premium'] or 0,
+                "isFavorite": bool(row.get('is_favorite', 0))
+            }
+            
+            if percentage is not None:
+                book_data["percentage"] = percentage
+            
+            books.append(book_data)
+        
+        timings['build_response'] = round((time.time() - start) * 1000)
+        timings['total'] = round((time.time() - start_total) * 1000)
+        print(f"[TIMING] get_books: {timings}")
+        
+        return jsonify(books)
+        
+    except Exception as e:
+        print(f"Error in get_books: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
+
+
+# ===================== COMBINED DISCOVER ENDPOINT =====================
+@app.route('/discover', methods=['GET'])
+def get_discover():
+    """
+    Combined endpoint that returns all data needed for the discover screen in one call:
+    - newReleases: 5 newest books
+    - topPicks: 5 most popular books
+    - allBooks: paginated list of all books
+    - favorites: list of favorite book IDs for the user
+    - isSubscribed: subscription status
+    - listenHistory: books the user has started listening to
+    """
+    import time
+    start_total = time.time()
+    
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        user_id = request.args.get('user_id', None, type=int)
+        page = request.args.get('page', 1, type=int)
+        limit = request.args.get('limit', 10, type=int)
+        offset = (page - 1) * limit
+        
+        # Helper function to build book list from query results
+        def build_books(books_result, subcats_by_book, progress_by_book, read_status_by_book, favIds):
+            books = []
             for row in books_result:
                 book_id = row['id']
-                
-                # Fetch subcategory slugs
-                sub_query = """
-                    SELECT c.slug 
-                    FROM book_categories bc
-                    JOIN categories c ON bc.category_id = c.id
-                    WHERE bc.book_id = %s
-                """
-                sub_result = db.execute_query(sub_query, (book_id,))
-                subcategory_ids = [sub['slug'] for sub in sub_result] if sub_result else []
-                
-                # Resolve audio URL (handles R2 refs, http, and relative paths)
+                subcategory_ids = subcats_by_book.get(book_id, [])
                 audio_path = resolve_stored_url(row['audio_path'], "AudioBooks")
-
-                # Resolve cover URL and thumbnail (handles R2 and local)
                 cover_path, cover_thumbnail_path = resolve_cover_urls(row['cover_image_path'])
-
-                # Calculate listen percentage if user_id is provided
+                
                 percentage = None
                 if user_id:
-                    is_playlist = row['playlist_count'] > 0
-                    total_duration = row['duration_seconds'] or 0
-                    percentage = calculate_listen_percentage(db, user_id, book_id, is_playlist, total_duration)
+                    if read_status_by_book.get(book_id):
+                        percentage = 100.0
+                    else:
+                        total_duration = row['duration_seconds'] or 0
+                        is_playlist = row.get('playlist_count', 0) > 0
+                        if total_duration > 0:
+                            if is_playlist:
+                                tracks = progress_by_book.get(book_id, {}).get('tracks', [])
+                                total_listened = 0
+                                for track in tracks:
+                                    if track['is_completed'] and track['duration'] > 0:
+                                        total_listened += track['duration']
+                                    else:
+                                        total_listened += min(track['last_position'], track['duration']) if track['duration'] > 0 else track['last_position']
+                                percentage = round((total_listened / total_duration * 100), 2)
+                            else:
+                                single_progress = progress_by_book.get(book_id, {}).get('single_progress', 0)
+                                percentage = round((single_progress / total_duration * 100), 2)
+                        else:
+                            percentage = 0
                 
-                book_data = {
+                books.append({
                     "id": str(book_id),
                     "title": row['title'],
                     "author": row['author'],
                     "audioUrl": audio_path,
                     "coverUrl": cover_path,
-                    "coverUrlThumbnail": cover_thumbnail_path,  # Thumbnail for list views
-                    "categoryId": row['category_slug'] or "",
+                    "coverUrlThumbnail": cover_thumbnail_path,
+                    "categoryId": row.get('category_slug') or "",
                     "subcategoryIds": subcategory_ids,
-                    "postedBy": row['posted_by_name'] or "Unknown",
-                    "description": row['description'],
-                    "price": float(row['price']) if row['price'] else 0.0,
-                    "postedByUserId": str(row['posted_by_user_id']),
-                    "isPlaylist": row['playlist_count'] > 0,
+                    "postedBy": row.get('posted_by_name') or "Unknown",
+                    "description": row.get('description'),
+                    "price": float(row['price']) if row.get('price') else 0.0,
+                    "postedByUserId": str(row.get('posted_by_user_id', 0)),
+                    "isPlaylist": row.get('playlist_count', 0) > 0,
                     "duration": row['duration_seconds'] or 0,
-                    "averageRating": round(float(row['average_rating']), 1) if row['average_rating'] else 0.0,
-                    "ratingCount": row['rating_count'] or 0,
-                    "pdfUrl": resolve_stored_url(row['pdf_path'], "AudioBooks"),
-                    "premium": row['premium'] or 0,
-                    "isFavorite": bool(row.get('is_favorite', 0))
-                }
-                
-                # Add percentage if calculated
-                if percentage is not None:
-                    book_data["percentage"] = percentage
-                
-                books.append(book_data)
+                    "averageRating": round(float(row['average_rating']), 1) if row.get('average_rating') else 0.0,
+                    "ratingCount": row.get('rating_count') or 0,
+                    "pdfUrl": resolve_stored_url(row.get('pdf_path'), "AudioBooks"),
+                    "premium": row.get('premium') or 0,
+                    "isFavorite": int(book_id) in favIds,
+                    "percentage": percentage,
+                    "lastPosition": row.get('last_position'),
+                })
+            return books
         
-        return jsonify(books)
+        # Get favorites for user
+        favIds = []
+        if user_id:
+            fav_result = db.execute_query("SELECT book_id FROM favorites WHERE user_id = %s", (user_id,))
+            if fav_result:
+                favIds = [row['book_id'] for row in fav_result]
+        
+        # Get subscription status
+        is_subscribed = False
+        if user_id:
+            is_subscribed = is_subscriber(user_id, db)
+        
+        # Base query for books
+        base_select = """
+            SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug,
+                   u.name as posted_by_name, b.description, b.price, b.posted_by_user_id, b.duration_seconds, b.pdf_path,
+                   b.premium,
+                   (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count,
+                   (SELECT AVG(stars) FROM book_ratings WHERE book_id = b.id) as average_rating,
+                   (SELECT COUNT(*) FROM book_ratings WHERE book_id = b.id) as rating_count
+            FROM books b
+            LEFT JOIN categories c ON b.primary_category_id = c.id
+            LEFT JOIN users u ON b.posted_by_user_id = u.id
+        """
+        
+        # Fetch all three book lists in one go (newest, popular, paginated)
+        newest_result = db.execute_query(base_select + " ORDER BY b.id DESC LIMIT 5")
+        popular_result = db.execute_query(base_select + """ ORDER BY (
+            (SELECT AVG(stars) FROM book_ratings WHERE book_id = b.id) * 
+            (SELECT COUNT(*) FROM book_ratings WHERE book_id = b.id)
+        ) DESC NULLS LAST, b.id DESC LIMIT 5""")
+        all_result = db.execute_query(base_select + " ORDER BY b.id DESC LIMIT %s OFFSET %s", (limit, offset))
+        
+        # Collect all book IDs for batch subcategory/progress queries
+        all_book_ids = set()
+        for result in [newest_result, popular_result, all_result]:
+            if result:
+                for row in result:
+                    all_book_ids.add(row['id'])
+        all_book_ids = list(all_book_ids)
+        
+        # Batch fetch subcategories
+        subcats_by_book = {}
+        if all_book_ids:
+            placeholders = ','.join(['%s'] * len(all_book_ids))
+            subcats_result = db.execute_query(f"""
+                SELECT bc.book_id, c.slug 
+                FROM book_categories bc
+                JOIN categories c ON bc.category_id = c.id
+                WHERE bc.book_id IN ({placeholders})
+            """, tuple(all_book_ids))
+            if subcats_result:
+                for row in subcats_result:
+                    bid = row['book_id']
+                    if bid not in subcats_by_book:
+                        subcats_by_book[bid] = []
+                    subcats_by_book[bid].append(row['slug'])
+        
+        # Batch fetch progress data (if user logged in)
+        progress_by_book = {}
+        read_status_by_book = {}
+        if user_id and all_book_ids:
+            placeholders = ','.join(['%s'] * len(all_book_ids))
+            
+            read_result = db.execute_query(f"""
+                SELECT book_id, is_read FROM user_books 
+                WHERE user_id = %s AND book_id IN ({placeholders})
+            """, (user_id, *all_book_ids))
+            if read_result:
+                for row in read_result:
+                    read_status_by_book[row['book_id']] = row.get('is_read', False)
+            
+            single_result = db.execute_query(f"""
+                SELECT book_id, COALESCE(MAX(played_seconds), 0) as last_position
+                FROM playback_history WHERE user_id = %s AND book_id IN ({placeholders})
+                GROUP BY book_id
+            """, (user_id, *all_book_ids))
+            if single_result:
+                for row in single_result:
+                    progress_by_book[row['book_id']] = {'single_progress': row['last_position']}
+        
+        # Get listen history (using user_books table like /listen-history endpoint)
+        listen_history = []
+        if user_id:
+            history_query = """
+                SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, b.duration_seconds,
+                       b.premium, b.pdf_path, c.slug as category_slug,
+                       ub.last_played_position_seconds as last_position,
+                       (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count,
+                       (SELECT AVG(stars) FROM book_ratings WHERE book_id = b.id) as average_rating,
+                       (SELECT COUNT(*) FROM book_ratings WHERE book_id = b.id) as rating_count
+                FROM user_books ub
+                JOIN books b ON ub.book_id = b.id
+                LEFT JOIN categories c ON b.primary_category_id = c.id
+                WHERE ub.user_id = %s AND ub.last_played_position_seconds > 0
+                ORDER BY ub.last_accessed_at DESC
+            """
+            history_result = db.execute_query(history_query, (user_id,))
+            if history_result:
+                listen_history = build_books(history_result, subcats_by_book, progress_by_book, read_status_by_book, favIds)
+        
+        # Build response
+        # Fetch categories (reuse the same logic as /categories endpoint)
+        categories_result = db.execute_query("SELECT id, name, slug, parent_id FROM categories ORDER BY id ASC")
+        categories_tree = build_category_tree(categories_result) if categories_result else []
+        
+        # Build response
+        response = {
+            "newReleases": build_books(newest_result or [], subcats_by_book, progress_by_book, read_status_by_book, favIds),
+            "topPicks": build_books(popular_result or [], subcats_by_book, progress_by_book, read_status_by_book, favIds),
+            "allBooks": build_books(all_result or [], subcats_by_book, progress_by_book, read_status_by_book, favIds),
+            "favorites": favIds,
+            "isSubscribed": is_subscribed,
+            "listenHistory": listen_history,
+            "categories": categories_tree,
+        }
+        
+        print(f"[TIMING] get_discover: total={round((time.time() - start_total) * 1000)}ms")
+        return jsonify(response)
         
     except Exception as e:
+        print(f"Error in get_discover: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
+
+
+# ===================== COMBINED LIBRARY ENDPOINT =====================
+@app.route('/library', methods=['GET'])
+@jwt_required
+def get_library():
+    """
+    Combined endpoint that returns all data needed for the library screen in one call:
+    - allBooks: all books with favorites marked
+    - purchasedIds: list of book IDs the user has access to
+    - listenHistory: books with progress data
+    - uploadedBooks: books uploaded by this user (if admin)
+    - isSubscribed: subscription status
+    """
+    import time
+    start_total = time.time()
+    
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        user_id = request.args.get('user_id', type=int)
+        
+        # Get subscription status
+        is_subscribed = is_subscriber(user_id, db) if user_id else False
+        
+        # Get all books
+        books_query = """
+            SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, b.duration_seconds,
+                   b.premium, b.pdf_path, c.slug as category_slug,
+                   (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count,
+                   (SELECT AVG(stars) FROM book_ratings WHERE book_id = b.id) as average_rating,
+                   (SELECT COUNT(*) FROM book_ratings WHERE book_id = b.id) as rating_count
+            FROM books b
+            LEFT JOIN categories c ON b.primary_category_id = c.id
+            ORDER BY b.id DESC
+        """
+        all_books_result = db.execute_query(books_query)
+        
+        # Get favorites
+        favIds = []
+        if user_id:
+            fav_result = db.execute_query("SELECT book_id FROM favorites WHERE user_id = %s", (user_id,))
+            if fav_result:
+                favIds = [row['book_id'] for row in fav_result]
+        
+        # Get purchased/accessible book IDs
+        purchased_ids = []
+        if user_id:
+            if is_subscribed:
+                # Subscriber gets all books
+                purchased_ids = [str(row['id']) for row in all_books_result] if all_books_result else []
+            else:
+                # Non-subscriber: only their purchased books
+                purchased_result = db.execute_query(
+                    "SELECT book_id FROM user_books WHERE user_id = %s", (user_id,)
+                )
+                if purchased_result:
+                    purchased_ids = [str(row['book_id']) for row in purchased_result]
+        
+        # Get listen history with progress
+        listen_history = []
+        if user_id:
+            history_query = """
+                SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, b.duration_seconds,
+                       b.premium, b.pdf_path, c.slug as category_slug,
+                       ub.last_played_position_seconds as last_position,
+                       ub.last_accessed_at,
+                       (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count,
+                       (SELECT AVG(stars) FROM book_ratings WHERE book_id = b.id) as average_rating,
+                       (SELECT COUNT(*) FROM book_ratings WHERE book_id = b.id) as rating_count
+                FROM user_books ub
+                JOIN books b ON ub.book_id = b.id
+                LEFT JOIN categories c ON b.primary_category_id = c.id
+                WHERE ub.user_id = %s AND ub.last_played_position_seconds > 0
+                ORDER BY ub.last_accessed_at DESC
+            """
+            history_result = db.execute_query(history_query, (user_id,))
+            if history_result:
+                for book in history_result:
+                    cover_path, cover_thumb = resolve_cover_urls(book['cover_image_path'])
+                    audio_path = resolve_stored_url(book['audio_path'], "AudioBooks")
+                    listen_history.append({
+                        "id": str(book['id']),
+                        "title": book['title'],
+                        "author": book['author'],
+                        "audioUrl": audio_path,
+                        "coverUrl": cover_path,
+                        "coverThumbnailUrl": cover_thumb,
+                        "categorySlug": book['category_slug'],
+                        "durationSeconds": book['duration_seconds'],
+                        "lastPosition": book['last_position'],
+                        "premium": book.get('premium', False),
+                        "averageRating": float(book['average_rating']) if book['average_rating'] else None,
+                        "ratingCount": book['rating_count'] or 0,
+                        "isFavorite": book['id'] in favIds,
+                    })
+        
+        # Get uploaded books (for admin users)
+        uploaded_books = []
+        if user_id:
+            upload_query = """
+                SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, b.duration_seconds,
+                       b.premium, b.pdf_path, c.slug as category_slug,
+                       (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count,
+                       (SELECT AVG(stars) FROM book_ratings WHERE book_id = b.id) as average_rating,
+                       (SELECT COUNT(*) FROM book_ratings WHERE book_id = b.id) as rating_count
+                FROM books b
+                LEFT JOIN categories c ON b.primary_category_id = c.id
+                WHERE b.uploader_id = %s
+                ORDER BY b.id DESC
+            """
+            upload_result = db.execute_query(upload_query, (user_id,))
+            if upload_result:
+                for book in upload_result:
+                    cover_path, cover_thumb = resolve_cover_urls(book['cover_image_path'])
+                    audio_path = resolve_stored_url(book['audio_path'], "AudioBooks")
+                    uploaded_books.append({
+                        "id": str(book['id']),
+                        "title": book['title'],
+                        "author": book['author'],
+                        "audioUrl": audio_path,
+                        "coverUrl": cover_path,
+                        "coverThumbnailUrl": cover_thumb,
+                        "categorySlug": book['category_slug'],
+                        "durationSeconds": book['duration_seconds'],
+                        "premium": book.get('premium', False),
+                        "averageRating": float(book['average_rating']) if book['average_rating'] else None,
+                        "ratingCount": book['rating_count'] or 0,
+                        "isFavorite": book['id'] in favIds,
+                    })
+        
+        # Build all books response
+        all_books = []
+        if all_books_result:
+            for book in all_books_result:
+                cover_path, cover_thumb = resolve_cover_urls(book['cover_image_path'])
+                audio_path = resolve_stored_url(book['audio_path'], "AudioBooks")
+                all_books.append({
+                    "id": str(book['id']),
+                    "title": book['title'],
+                    "author": book['author'],
+                    "audioUrl": audio_path,
+                    "coverUrl": cover_path,
+                    "coverThumbnailUrl": cover_thumb,
+                    "categorySlug": book['category_slug'],
+                    "durationSeconds": book['duration_seconds'],
+                    "premium": book.get('premium', False),
+                    "averageRating": float(book['average_rating']) if book['average_rating'] else None,
+                    "ratingCount": book['rating_count'] or 0,
+                    "isFavorite": book['id'] in favIds,
+                })
+        
+        response = {
+            "allBooks": all_books,
+            "purchasedIds": purchased_ids,
+            "favoriteIds": favIds,
+            "listenHistory": listen_history,
+            "uploadedBooks": uploaded_books,
+            "isSubscribed": is_subscribed,
+        }
+        
+        print(f"[TIMING] get_library: total={round((time.time() - start_total) * 1000)}ms")
+        return jsonify(response)
+        
+    except Exception as e:
+        print(f"Error in get_library: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
     finally:
         db.disconnect()

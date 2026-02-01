@@ -15,6 +15,34 @@ class BookRepository {
 
   final ApiClient _apiClient = ApiClient();
 
+  // Favorites cache (in-memory with TTL)
+  static List<int>? _cachedFavorites;
+  static DateTime? _favoritesCacheTime;
+  static const Duration _favoritesCacheTTL = Duration(minutes: 5);
+
+  /// Set favorites from external source (e.g., /discover endpoint)
+  void setFavorites(List<int> favorites) {
+    _cachedFavorites = favorites;
+    _favoritesCacheTime = DateTime.now();
+  }
+
+  /// Get cached favorites if still valid
+  List<int>? getCachedFavorites() {
+    if (_cachedFavorites == null || _favoritesCacheTime == null) {
+      return null;
+    }
+    if (DateTime.now().difference(_favoritesCacheTime!) < _favoritesCacheTTL) {
+      return _cachedFavorites;
+    }
+    return null;
+  }
+
+  /// Clear favorites cache (call on logout or when favorites change)
+  void clearFavoritesCache() {
+    _cachedFavorites = null;
+    _favoritesCacheTime = null;
+  }
+
   Future<Map<String, String>> _getHeaders() async {
     final token = await _authService.getAccessToken();
     return {
@@ -54,6 +82,197 @@ class BookRepository {
         return data.map((json) => Book.fromJson(json)).toList();
       }
       return [];
+    }
+  }
+
+  /// Fetches all discover screen data in a single API call.
+  /// Returns a map with: newReleases, topPicks, allBooks, favorites, isSubscribed, listenHistory, categories
+  Future<Map<String, dynamic>> getDiscoverData({
+    int page = 1,
+    int limit = 10,
+  }) async {
+    try {
+      final userId = await _authService.getCurrentUserId();
+
+      final uri = Uri.parse('${ApiConstants.baseUrl}/discover').replace(
+        queryParameters: {
+          'page': page.toString(),
+          'limit': limit.toString(),
+          if (userId != null) 'user_id': userId.toString(),
+        },
+      );
+
+      final headers = await _getHeaders();
+      final response = await _apiClient.get(uri, headers: headers);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+
+        // Parse book lists
+        final newReleases = (data['newReleases'] as List? ?? [])
+            .map((json) => Book.fromJson(json))
+            .toList();
+        final topPicks = (data['topPicks'] as List? ?? [])
+            .map((json) => Book.fromJson(json))
+            .toList();
+        final allBooks = (data['allBooks'] as List? ?? [])
+            .map((json) => Book.fromJson(json))
+            .toList();
+        final listenHistory = (data['listenHistory'] as List? ?? [])
+            .map((json) => Book.fromJson(json))
+            .toList();
+
+        // Parse favorites and subscription
+        final favorites = (data['favorites'] as List? ?? [])
+            .map((e) => e as int)
+            .toList();
+        final isSubscribed = data['isSubscribed'] as bool? ?? false;
+
+        // Parse categories (tree structure)
+        final categories = data['categories'] as List? ?? [];
+
+        // Cache for offline
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cached_discover', response.body);
+
+        return {
+          'newReleases': newReleases,
+          'topPicks': topPicks,
+          'allBooks': allBooks,
+          'listenHistory': listenHistory,
+          'favorites': favorites,
+          'isSubscribed': isSubscribed,
+          'categories': categories,
+        };
+      } else {
+        throw Exception('Failed to load discover data');
+      }
+    } catch (e) {
+      print('Error fetching discover data: $e. Trying cache...');
+      final prefs = await SharedPreferences.getInstance();
+      final cachedData = prefs.getString('cached_discover');
+      if (cachedData != null) {
+        final Map<String, dynamic> data = json.decode(cachedData);
+        return {
+          'newReleases': (data['newReleases'] as List? ?? [])
+              .map((json) => Book.fromJson(json))
+              .toList(),
+          'topPicks': (data['topPicks'] as List? ?? [])
+              .map((json) => Book.fromJson(json))
+              .toList(),
+          'allBooks': (data['allBooks'] as List? ?? [])
+              .map((json) => Book.fromJson(json))
+              .toList(),
+          'listenHistory': (data['listenHistory'] as List? ?? [])
+              .map((json) => Book.fromJson(json))
+              .toList(),
+          'favorites': (data['favorites'] as List? ?? [])
+              .map((e) => e as int)
+              .toList(),
+          'isSubscribed': data['isSubscribed'] as bool? ?? false,
+          'categories': data['categories'] as List? ?? [],
+        };
+      }
+      return {
+        'newReleases': <Book>[],
+        'topPicks': <Book>[],
+        'allBooks': <Book>[],
+        'listenHistory': <Book>[],
+        'favorites': <int>[],
+        'isSubscribed': false,
+        'categories': <dynamic>[],
+      };
+    }
+  }
+
+  /// Fetches all library screen data in a single API call.
+  /// Returns a map with: allBooks, purchasedIds, favoriteIds, listenHistory, uploadedBooks, isSubscribed
+  Future<Map<String, dynamic>> getLibraryData() async {
+    try {
+      final userId = await _authService.getCurrentUserId();
+
+      final uri = Uri.parse('${ApiConstants.baseUrl}/library').replace(
+        queryParameters: {if (userId != null) 'user_id': userId.toString()},
+      );
+
+      final headers = await _getHeaders();
+      final response = await _apiClient.get(uri, headers: headers);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+
+        // Parse book lists
+        final allBooks = (data['allBooks'] as List? ?? [])
+            .map((json) => Book.fromJson(json))
+            .toList();
+        final listenHistory = (data['listenHistory'] as List? ?? [])
+            .map((json) => Book.fromJson(json))
+            .toList();
+        final uploadedBooks = (data['uploadedBooks'] as List? ?? [])
+            .map((json) => Book.fromJson(json))
+            .toList();
+
+        // Parse IDs
+        final purchasedIds = (data['purchasedIds'] as List? ?? [])
+            .map((e) => e.toString())
+            .toList();
+        final favoriteIds = (data['favoriteIds'] as List? ?? [])
+            .map((e) => e as int)
+            .toList();
+        final isSubscribed = data['isSubscribed'] as bool? ?? false;
+
+        // Cache subscription and favorites
+        AuthService().setSubscriptionStatus(isSubscribed);
+        setFavorites(favoriteIds);
+
+        // Cache for offline
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cached_library', response.body);
+
+        return {
+          'allBooks': allBooks,
+          'purchasedIds': purchasedIds,
+          'favoriteIds': favoriteIds,
+          'listenHistory': listenHistory,
+          'uploadedBooks': uploadedBooks,
+          'isSubscribed': isSubscribed,
+        };
+      } else {
+        throw Exception('Failed to load library data');
+      }
+    } catch (e) {
+      print('Error fetching library data: $e. Trying cache...');
+      final prefs = await SharedPreferences.getInstance();
+      final cachedData = prefs.getString('cached_library');
+      if (cachedData != null) {
+        final Map<String, dynamic> data = json.decode(cachedData);
+        return {
+          'allBooks': (data['allBooks'] as List? ?? [])
+              .map((json) => Book.fromJson(json))
+              .toList(),
+          'purchasedIds': (data['purchasedIds'] as List? ?? [])
+              .map((e) => e.toString())
+              .toList(),
+          'favoriteIds': (data['favoriteIds'] as List? ?? [])
+              .map((e) => e as int)
+              .toList(),
+          'listenHistory': (data['listenHistory'] as List? ?? [])
+              .map((json) => Book.fromJson(json))
+              .toList(),
+          'uploadedBooks': (data['uploadedBooks'] as List? ?? [])
+              .map((json) => Book.fromJson(json))
+              .toList(),
+          'isSubscribed': data['isSubscribed'] as bool? ?? false,
+        };
+      }
+      return {
+        'allBooks': <Book>[],
+        'purchasedIds': <String>[],
+        'favoriteIds': <int>[],
+        'listenHistory': <Book>[],
+        'uploadedBooks': <Book>[],
+        'isSubscribed': false,
+      };
     }
   }
 
