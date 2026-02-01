@@ -16,7 +16,8 @@
       "Bash(\"c:\\\\Users\\\\bojan\\\\Desktop\\\\TrainingFlutter\\\\Server\\\\venv\\\\Scripts\\\\pip.exe\" install -r \"c:\\\\Users\\\\bojan\\\\Desktop\\\\TrainingFlutter\\\\Server\\\\requirements.txt\")",
       "Bash(\"c:\\\\Users\\\\bojan\\\\Desktop\\\\TrainingFlutter\\\\Server\\\\venv\\\\Scripts\\\\pip.exe\" freeze:*)",
       "Bash(\"c:\\\\Users\\\\bojan\\\\Desktop\\\\TrainingFlutter\\\\Server\\\\venv\\\\Scripts\\\\pip.exe\" install:*)",
-      "WebFetch(domain:pub.dev)"
+      "WebFetch(domain:pub.dev)",
+      "Bash(pip show:*)"
     ]
   }
 }

@@ -1084,6 +1084,12 @@ def calculate_listen_percentage(db, user_id, book_id, is_playlist, total_duratio
     Calculate the listen percentage for a book.
     For completed tracks, uses full duration. For in-progress tracks, uses last position.
     """
+    # Check if marked as read (completed) - Force 100%
+    read_query = "SELECT is_read FROM user_books WHERE user_id = %s AND book_id = %s"
+    read_res = db.execute_query(read_query, (user_id, book_id))
+    if read_res and read_res[0].get('is_read') == 1:
+        return 100.0
+
     if total_duration <= 0:
         return 0.0
     
@@ -1148,11 +1154,18 @@ def get_books():
         offset = (page - 1) * limit
 
         params = []
+
+        is_fav_sql = "0 as is_favorite"
+        if user_id:
+             is_fav_sql = "(SELECT COUNT(*) FROM favorites WHERE user_id = %s AND book_id = b.id) as is_favorite"
+             params.append(user_id)
+
         # Updated query to check for playlist items existence, get duration, and ratings
-        base_select = """
+        base_select = f"""
             SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug,
                    u.name as posted_by_name, b.description, b.price, b.posted_by_user_id, b.duration_seconds, b.pdf_path,
                    b.premium,
+                   {is_fav_sql},
                    (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count,
                    (SELECT AVG(stars) FROM book_ratings WHERE book_id = b.id) as average_rating,
                    (SELECT COUNT(*) FROM book_ratings WHERE book_id = b.id) as rating_count
@@ -1229,7 +1242,8 @@ def get_books():
                     "averageRating": round(float(row['average_rating']), 1) if row['average_rating'] else 0.0,
                     "ratingCount": row['rating_count'] or 0,
                     "pdfUrl": resolve_stored_url(row['pdf_path'], "AudioBooks"),
-                    "premium": row['premium'] or 0
+                    "premium": row['premium'] or 0,
+                    "isFavorite": bool(row.get('is_favorite', 0))
                 }
                 
                 # Add percentage if calculated
@@ -1344,7 +1358,7 @@ def complete_track():
         
     try:
         # 1. Mark track as completed
-        query = "INSERT IGNORE INTO user_completed_tracks (user_id, track_id) VALUES (%s, %s)"
+        query = "INSERT INTO user_completed_tracks (user_id, track_id) VALUES (%s, %s) ON CONFLICT (user_id, track_id) DO NOTHING"
         db.execute_query(query, (user_id, track_id))
         
         # 2. Check if ALL tracks for this book are completed
@@ -1851,7 +1865,7 @@ def add_favorite():
         return jsonify({"error": "Database connection failed"}), 500
 
     try:
-        query = "INSERT IGNORE INTO favorites (user_id, book_id) VALUES (%s, %s)"
+        query = "INSERT INTO favorites (user_id, book_id) VALUES (%s, %s) ON CONFLICT (user_id, book_id) DO NOTHING"
         db.execute_query(query, (user_id, book_id))
         return jsonify({"message": "Added to favorites"}), 200
     except Exception as e:

@@ -28,9 +28,14 @@ class BookRepository {
       if (ConnectivityService().isOffline) {
         throw Exception('Offline mode');
       }
-      final response = await _apiClient.get(
-        Uri.parse('${ApiConstants.baseUrl}/books?limit=1000'),
-      );
+
+      final userId = await _authService.getCurrentUserId();
+      String url = '${ApiConstants.baseUrl}/books?limit=1000';
+      if (userId != null) {
+        url += '&user_id=$userId';
+      }
+
+      final response = await _apiClient.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -59,12 +64,15 @@ class BookRepository {
     String? sort,
   }) async {
     try {
+      final userId = await _authService.getCurrentUserId();
+
       final uri = Uri.parse('${ApiConstants.baseUrl}/books').replace(
         queryParameters: {
           'page': page.toString(),
           'limit': limit.toString(),
           if (query.isNotEmpty) 'q': query,
           if (sort != null) 'sort': sort,
+          if (userId != null) 'user_id': userId.toString(),
         },
       );
 

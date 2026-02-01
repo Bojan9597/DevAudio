@@ -1,4 +1,5 @@
 from datetime import datetime
+from psycopg2.extras import RealDictCursor
 
 class BadgeService:
     def __init__(self, db_connection):
@@ -13,7 +14,7 @@ class BadgeService:
         
         # 2. Fetch unearned badges
         unearned_badges = []
-        cursor = self.conn.cursor(dictionary=True)
+        cursor = self.conn.cursor(cursor_factory=RealDictCursor)
         try:
             cursor.execute("""
                 SELECT * FROM badges 
@@ -44,7 +45,7 @@ class BadgeService:
         """
         stats = self._get_user_stats(user_id)
         
-        cursor = self.conn.cursor(dictionary=True)
+        cursor = self.conn.cursor(cursor_factory=RealDictCursor)
         try:
             cursor.execute("""
                 SELECT b.id, b.category, b.name, b.description, b.code, b.threshold, ub.earned_at
@@ -84,7 +85,7 @@ class BadgeService:
             cursor.close()
 
     def _get_user_stats(self, user_id):
-        cursor = self.conn.cursor(dictionary=True)
+        cursor = self.conn.cursor(cursor_factory=RealDictCursor)
         try:
             # Books completed
             cursor.execute("SELECT COUNT(*) as cnt FROM user_books WHERE user_id = %s AND is_read = 1", (user_id,))
