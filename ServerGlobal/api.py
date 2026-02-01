@@ -1742,7 +1742,7 @@ def get_library():
                        (SELECT COUNT(*) FROM book_ratings WHERE book_id = b.id) as rating_count
                 FROM books b
                 LEFT JOIN categories c ON b.primary_category_id = c.id
-                WHERE b.uploader_id = %s
+                WHERE b.posted_by_user_id = %s
                 ORDER BY b.id DESC
             """
             upload_result = db.execute_query(upload_query, (user_id,))

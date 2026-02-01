@@ -885,9 +885,9 @@ class _ContentAreaState extends State<ContentArea> {
       return;
     }
 
-    final error = await BookRepository().rateBook(userId, book.id, stars);
+    final result = await BookRepository().rateBook(userId, book.id, stars);
 
-    if (error == null && mounted) {
+    if (!result.containsKey('error') && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -900,7 +900,7 @@ class _ContentAreaState extends State<ContentArea> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            error ?? AppLocalizations.of(context)!.failedToSubmitRating,
+            (result['error'] as String?) ?? AppLocalizations.of(context)!.failedToSubmitRating,
           ),
         ),
       );

@@ -102,6 +102,8 @@ class Book {
     bool? isEncrypted,
     String? pdfUrl,
     bool? isPremium,
+    double? averageRating,
+    int? ratingCount,
   }) {
     return Book(
       id: id,
@@ -121,8 +123,8 @@ class Book {
       coverUrl: coverUrl ?? this.coverUrl,
       coverUrlThumbnail: coverUrlThumbnail,
       isEncrypted: isEncrypted ?? this.isEncrypted,
-      averageRating: averageRating,
-      ratingCount: ratingCount,
+      averageRating: averageRating ?? this.averageRating,
+      ratingCount: ratingCount ?? this.ratingCount,
       pdfUrl: pdfUrl ?? this.pdfUrl,
       isPremium: isPremium ?? this.isPremium,
     );

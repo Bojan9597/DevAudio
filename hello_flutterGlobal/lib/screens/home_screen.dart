@@ -997,9 +997,15 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    final error = await _bookRepository.rateBook(userId, book.id, stars);
+    final result = await _bookRepository.rateBook(userId, book.id, stars);
 
-    if (error == null && mounted) {
+    if (!result.containsKey('error') && mounted) {
+      // Update stars immediately in all lists
+      final newAvg = result['averageRating'] as double;
+      final newCount = result['ratingCount'] as int;
+      setState(() {
+        _updateBookRating(book.id, newAvg, newCount);
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -1007,16 +1013,32 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       );
-      _resetAndLoad();
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            error ?? AppLocalizations.of(context)!.failedToSubmitRating,
+            (result['error'] as String?) ?? AppLocalizations.of(context)!.failedToSubmitRating,
           ),
         ),
       );
     }
+  }
+
+  void _updateBookRating(String bookId, double averageRating, int ratingCount) {
+    void updateList(List<Book> list) {
+      final index = list.indexWhere((b) => b.id == bookId);
+      if (index != -1) {
+        list[index] = list[index].copyWith(
+          averageRating: averageRating,
+          ratingCount: ratingCount,
+        );
+      }
+    }
+
+    updateList(_books);
+    updateList(_newReleases);
+    updateList(_topPicks);
+    updateList(_listenHistory);
   }
 
   String _formatCount(int count) {
@@ -1221,7 +1243,7 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => PlaylistScreen(book: book)),
-    );
+    ).then((_) => _resetAndLoad());
   }
 
   Widget _buildSubscriptionCTA(Color textColor) {

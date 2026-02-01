@@ -780,9 +780,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       return;
     }
 
-    final error = await _bookRepository.rateBook(userId, book.id, stars);
+    final result = await _bookRepository.rateBook(userId, book.id, stars);
 
-    if (error == null && mounted) {
+    if (!result.containsKey('error') && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -795,7 +795,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            error ?? AppLocalizations.of(context)!.failedToSubmitRating,
+            (result['error'] as String?) ?? AppLocalizations.of(context)!.failedToSubmitRating,
           ),
         ),
       );

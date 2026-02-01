@@ -755,10 +755,12 @@ class BookRepository {
   }
 
   /// Returns null on success, or an error message string on failure
-  Future<String?> rateBook(int userId, String bookId, int stars) async {
+  /// Returns a map with 'averageRating' and 'ratingCount' on success,
+  /// or a map with 'error' key on failure.
+  Future<Map<String, dynamic>> rateBook(int userId, String bookId, int stars) async {
     try {
       if (ConnectivityService().isOffline) {
-        return 'Cannot rate while offline';
+        return {'error': 'Cannot rate while offline'};
       }
 
       final headers = await _getHeaders();
@@ -771,14 +773,18 @@ class BookRepository {
       );
 
       if (response.statusCode == 200) {
-        return null; // Success
+        final data = json.decode(response.body);
+        return {
+          'averageRating': (data['averageRating'] as num?)?.toDouble() ?? 0.0,
+          'ratingCount': data['ratingCount'] as int? ?? 0,
+        };
       } else {
         final data = json.decode(response.body);
-        return data['message'] ?? data['error'] ?? 'Failed to submit rating';
+        return {'error': data['message'] ?? data['error'] ?? 'Failed to submit rating'};
       }
     } catch (e) {
       print('Error rating book: $e');
-      return 'Error: $e';
+      return {'error': 'Error: $e'};
     }
   }
 }
