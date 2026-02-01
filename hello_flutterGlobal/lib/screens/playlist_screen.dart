@@ -214,11 +214,28 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
         forceRefresh: forceRefresh,
       );
 
-      // We know it is premium here
-      final hasAccess = isAdmin || isSubscribed;
+      // Check if downloaded locally (User explicitly owns/downloaded it)
+      final userId = await AuthService().getCurrentUserId();
+      final downloadService = DownloadService();
+      // Check both playlist (multi-track) and single book file
+      final isDownloaded =
+          await downloadService.isPlaylistDownloaded(
+            widget.book.id,
+            userId: userId,
+          ) ||
+          await downloadService.isBookDownloaded(
+            widget.book.id,
+            userId: userId,
+          );
+
+      // Access Rules:
+      // 1. Admin always has access
+      // 2. Subscriber has access
+      // 3. Downloaded content (Offline) has access
+      final hasAccess = isAdmin || isSubscribed || isDownloaded;
 
       print(
-        '[PlaylistScreen] Access check (Premium Book): isAdmin=$isAdmin, isSubscribed=$isSubscribed, hasAccess=$hasAccess',
+        '[PlaylistScreen] Access check (Premium Book): isAdmin=$isAdmin, isSubscribed=$isSubscribed, isDownloaded=$isDownloaded, hasAccess=$hasAccess',
       );
 
       if (mounted) {

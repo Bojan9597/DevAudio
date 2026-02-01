@@ -240,10 +240,11 @@ class _ContentAreaState extends State<ContentArea> {
         ? _uploadedBooks.map((b) => b.id).toSet()
         : <String>{};
 
-    final myBooks = _allBooks
-        .where(
-          (b) => _purchasedIds.contains(b.id) && !uploadedIds.contains(b.id),
-        )
+    // FIX: For "My Books" (Downloads), we should check ALL books for download status,
+    // not just the ones the server says we "purchased". This ensures books locally
+    // downloaded (e.g. from previous subscription) still appear.
+    final booksToCheckForDownloads = _allBooks
+        .where((b) => !uploadedIds.contains(b.id))
         .toList();
 
     // Build tabs list - only include Uploaded tab for admin
@@ -268,7 +269,7 @@ class _ContentAreaState extends State<ContentArea> {
       // Favorites Tab with list/grid toggle and clickable hearts
       _buildFavoritesTab(favoriteBooks),
       // My Books Tab - show only downloaded books
-      _buildMyBooksTab(myBooks),
+      _buildMyBooksTab(booksToCheckForDownloads),
       // Uploaded Tab with FAB (only for admin)
       if (_isAdmin)
         Stack(
@@ -453,23 +454,31 @@ class _ContentAreaState extends State<ContentArea> {
 
   Future<List<Book>> _filterDownloadedBooks(List<Book> books) async {
     final downloadService = DownloadService();
-    final downloadedBooks = <Book>[];
-    for (final book in books) {
-      // Check if playlist is downloaded for this book (using current userId)
-      final isPlaylistDownloaded = await downloadService.isPlaylistDownloaded(
-        book.id,
-        userId: _userId,
-      );
-      // Also check if book itself is downloaded (user-specific)
-      final isBookDownloaded = await downloadService.isBookDownloaded(
-        book.id,
-        userId: _userId,
-      );
-      if (isPlaylistDownloaded || isBookDownloaded) {
-        downloadedBooks.add(book);
-      }
-    }
-    return downloadedBooks;
+
+    // Parallelize checks for performance
+    // Returns List<Book?> where null means not downloaded
+    final results = await Future.wait(
+      books.map((book) async {
+        // Check if playlist is downloaded for this book
+        final isPlaylistDownloaded = await downloadService.isPlaylistDownloaded(
+          book.id,
+          userId: _userId,
+        );
+        if (isPlaylistDownloaded) return book;
+
+        // Also check if book itself is downloaded
+        final isBookDownloaded = await downloadService.isBookDownloaded(
+          book.id,
+          userId: _userId,
+        );
+        if (isBookDownloaded) return book;
+
+        return null;
+      }),
+    );
+
+    // Filter out nulls
+    return results.whereType<Book>().toList();
   }
 
   Future<void> _toggleFavorite(Book book) async {
