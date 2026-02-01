@@ -1,25 +1,32 @@
-import mysql.connector
-import mysql.connector
-import json
+#!/usr/bin/env python3
+"""
+Database Migration for Badges System (PostgreSQL version)
+Creates badges, user_badges tables and adds columns to user_books.
+"""
+from database import Database
 
-def get_db_connection():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="Pijanista123!",
-        database="audiobooks"
-    )
+def column_exists(db, table, column):
+    """Check if a column exists in a table using PostgreSQL information_schema."""
+    result = db.execute_query("""
+        SELECT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_schema = 'public' AND table_name = %s AND column_name = %s
+        )
+    """, (table, column))
+    return result and result[0].get('exists', False)
 
 def migrate_db():
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    db = Database()
+    if not db.connect():
+        print("Failed to connect to database")
+        return
 
     try:
         # 1. Create badges table
         print("Creating 'badges' table...")
-        cursor.execute("""
+        db.execute_query("""
             CREATE TABLE IF NOT EXISTS badges (
-                id INT AUTO_INCREMENT PRIMARY KEY,
+                id SERIAL PRIMARY KEY,
                 category VARCHAR(50) NOT NULL,
                 name VARCHAR(100) NOT NULL,
                 description TEXT,
@@ -31,28 +38,27 @@ def migrate_db():
 
         # 2. Create user_badges table
         print("Creating 'user_badges' table...")
-        cursor.execute("""
+        db.execute_query("""
             CREATE TABLE IF NOT EXISTS user_badges (
-                user_id INT UNSIGNED NOT NULL,
+                user_id INT NOT NULL,
                 badge_id INT NOT NULL,
                 earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (user_id, badge_id),
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                FOREIGN KEY (badge_id) REFERENCES badges(id) ON DELETE CASCADE
+                CONSTRAINT fk_user_badges_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                CONSTRAINT fk_user_badges_badge FOREIGN KEY (badge_id) REFERENCES badges(id) ON DELETE CASCADE
             )
         """)
 
         # 3. Alter user_books table to add started_at and completed_at
         print("Checking columns in 'user_books'...")
-        cursor.execute("SHOW COLUMNS FROM user_books LIKE 'started_at'")
-        if not cursor.fetchone():
-            print("Adding 'started_at' to user_books...")
-            cursor.execute("ALTER TABLE user_books ADD COLUMN started_at TIMESTAMP NULL DEFAULT NULL")
         
-        cursor.execute("SHOW COLUMNS FROM user_books LIKE 'completed_at'")
-        if not cursor.fetchone():
+        if not column_exists(db, 'user_books', 'started_at'):
+            print("Adding 'started_at' to user_books...")
+            db.execute_query("ALTER TABLE user_books ADD COLUMN started_at TIMESTAMP NULL DEFAULT NULL")
+        
+        if not column_exists(db, 'user_books', 'completed_at'):
             print("Adding 'completed_at' to user_books...")
-            cursor.execute("ALTER TABLE user_books ADD COLUMN completed_at TIMESTAMP NULL DEFAULT NULL")
+            db.execute_query("ALTER TABLE user_books ADD COLUMN completed_at TIMESTAMP NULL DEFAULT NULL")
 
         # 4. Insert Badge Definitions
         print("Inserting badge definitions...")
@@ -99,21 +105,21 @@ def migrate_db():
 
         for b in badges:
             try:
-                cursor.execute("""
+                # Use ON CONFLICT to handle duplicates
+                db.execute_query("""
                     INSERT INTO badges (category, name, description, code, threshold) 
                     VALUES (%s, %s, %s, %s, %s)
+                    ON CONFLICT (code) DO NOTHING
                 """, b)
-            except mysql.connector.errors.IntegrityError:
-                pass # Already exists
+            except Exception as e:
+                print(f"Warning inserting badge {b[3]}: {e}")
 
-        conn.commit()
         print("Migration successful!")
 
     except Exception as e:
         print(f"Error during migration: {e}")
     finally:
-        cursor.close()
-        conn.close()
+        db.disconnect()
 
 if __name__ == "__main__":
     migrate_db()

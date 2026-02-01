@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+"""Clear all data from tables in PostgreSQL database."""
+
 from database import Database
 
 def clear_data():
@@ -7,7 +10,7 @@ def clear_data():
         return
 
     tables_to_clear = [
-        'user_sessions', # NEW
+        'user_sessions',
         'token_blacklist',
         'user_badges', 
         'user_completed_tracks',
@@ -21,35 +24,21 @@ def clear_data():
         'quiz_questions',
         'quizzes',
         'playlist_items',
-        'book_categories', # Wait, this clears links. 
+        'book_categories',
         'books',
         'users'
     ]
 
     print("Clearing tables...")
-    cursor = db.connection.cursor()
-    
-    # Disable FK checks
-    cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
     
     for table in tables_to_clear:
         try:
             print(f"Clearing {table}...")
-            cursor.execute(f"DELETE FROM {table}") 
+            # Use TRUNCATE with CASCADE to handle foreign keys and RESTART IDENTITY to reset sequences
+            db.execute_query(f"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE")
         except Exception as e:
             print(f"Skipping {table}: {e}")
-            
-    # Reset Auto Increment
-    try:
-        cursor.execute("ALTER TABLE users AUTO_INCREMENT = 1")
-        cursor.execute("ALTER TABLE books AUTO_INCREMENT = 1")
-    except:
-        pass
 
-    # Enable FK checks
-    cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
-    db.connection.commit()
-    cursor.close()
     db.disconnect()
     
     # Clear Files

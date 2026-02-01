@@ -1,24 +1,23 @@
+#!/usr/bin/env python3
+"""Create the playlist_items table for PostgreSQL."""
+
 from database import Database
 
 def create_playlist_items_table():
     db = Database()
     if db.connect():
         try:
-            # Drop table if exists (optional, but good for dev)
-            # cursor = db.connection.cursor()
-            # cursor.execute("DROP TABLE IF EXISTS playlist_items")
-
             # Create table
             query = """
             CREATE TABLE IF NOT EXISTS playlist_items (
-                id INT AUTO_INCREMENT PRIMARY KEY,
+                id SERIAL PRIMARY KEY,
                 book_id INT NOT NULL,
                 file_path VARCHAR(512) NOT NULL,
                 title VARCHAR(255) NOT NULL,
                 duration_seconds INT DEFAULT 0,
                 track_order INT DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+                CONSTRAINT fk_playlist_items_book FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
             )
             """
             print("Creating playlist_items table...")

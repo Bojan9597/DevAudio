@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+"""Create the user_completed_tracks table for PostgreSQL."""
+
 from database import Database
 
 def init_lesson_map_table():
@@ -10,13 +13,13 @@ def init_lesson_map_table():
     try:
         query = """
         CREATE TABLE IF NOT EXISTS user_completed_tracks (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            user_id INT UNSIGNED NOT NULL,
+            id SERIAL PRIMARY KEY,
+            user_id INT NOT NULL,
             track_id INT NOT NULL,
             completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY unique_completion (user_id, track_id),
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-            FOREIGN KEY (track_id) REFERENCES playlist_items(id) ON DELETE CASCADE
+            CONSTRAINT unique_completion UNIQUE (user_id, track_id),
+            CONSTRAINT fk_user_completed_tracks_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            CONSTRAINT fk_user_completed_tracks_track FOREIGN KEY (track_id) REFERENCES playlist_items(id) ON DELETE CASCADE
         )
         """
         db.execute_query(query)

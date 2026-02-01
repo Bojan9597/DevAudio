@@ -1,10 +1,11 @@
-import mysql.connector
+#!/usr/bin/env python3
+"""Seed default categories into the PostgreSQL database."""
+
 from database import Database
 
 def seed_categories():
     db = Database()
     if db.connect():
-        cursor = db.connection.cursor()
         
         defaults = [
             ("Fiction", "fiction"),
@@ -15,38 +16,34 @@ def seed_categories():
             ("Biography", "biography")
         ]
         
-        # Check which table exists
-        table_name = None
-        cursor.execute("SHOW TABLES LIKE 'categories'")
-        if cursor.fetchone():
-            table_name = 'categories'
-        else:
-            cursor.execute("SHOW TABLES LIKE 'book_categories'")
-            if cursor.fetchone():
-                table_name = 'book_categories'
+        # Check if categories table exists using PostgreSQL information_schema
+        result = db.execute_query("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' AND table_name = 'categories'
+            )
+        """)
+        table_exists = result and result[0].get('exists', False)
         
-        if not table_name:
-            print("Error: Could not find 'categories' or 'book_categories' table.")
-            # Attempt to create it?
-            print("Attempting to create 'categories'...")
-            cursor.execute("""
+        if not table_exists:
+            print("'categories' table not found. Creating it...")
+            db.execute_query("""
                 CREATE TABLE categories (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    id SERIAL PRIMARY KEY,
                     name VARCHAR(255) NOT NULL,
                     slug VARCHAR(255) NOT NULL UNIQUE,
                     parent_id INT DEFAULT NULL
                 )
             """)
-            table_name = 'categories'
-            
-        print(f"Seeding table '{table_name}'...")
+        
+        print("Seeding table 'categories'...")
         
         for name, slug in defaults:
             try:
-                # Check for dupes
-                cursor.execute(f"SELECT id FROM {table_name} WHERE slug = %s", (slug,))
-                if not cursor.fetchone():
-                    cursor.execute(f"INSERT INTO {table_name} (name, slug) VALUES (%s, %s)", (name, slug))
+                # Check for duplicates
+                existing = db.execute_query("SELECT id FROM categories WHERE slug = %s", (slug,))
+                if not existing:
+                    db.execute_query("INSERT INTO categories (name, slug) VALUES (%s, %s)", (name, slug))
                     print(f"Inserted: {name}")
                 else:
                     print(f"Skipped (exists): {name}")

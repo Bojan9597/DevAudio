@@ -2740,18 +2740,18 @@ def rate_book(book_id):
         if not is_subscriber(user_id, db):
             return jsonify({"error": "Only subscribers can rate books"}), 403
         
-        # Create table if not exists
+        # Create table if not exists (PostgreSQL syntax)
         create_table_query = """
             CREATE TABLE IF NOT EXISTS book_ratings (
-                id INT AUTO_INCREMENT PRIMARY KEY,
+                id SERIAL PRIMARY KEY,
                 book_id INT NOT NULL,
                 user_id INT NOT NULL,
                 stars INT NOT NULL CHECK (stars >= 1 AND stars <= 5),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                UNIQUE KEY unique_user_book (user_id, book_id),
-                FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT unique_user_book UNIQUE (user_id, book_id),
+                CONSTRAINT fk_book_ratings_book FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
+                CONSTRAINT fk_book_ratings_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )
         """
         cursor = db.connection.cursor()

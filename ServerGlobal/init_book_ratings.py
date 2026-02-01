@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create the book_ratings table for the rating feature."""
+"""Create the book_ratings table for the rating feature (PostgreSQL)."""
 
 from database import Database
 
@@ -10,23 +10,43 @@ def create_book_ratings_table():
         return
     
     try:
-        create_table_query = """
+        # Create the table
+        db.execute_query("""
             CREATE TABLE IF NOT EXISTS book_ratings (
-                id INT AUTO_INCREMENT PRIMARY KEY,
+                id SERIAL PRIMARY KEY,
                 book_id INT NOT NULL,
                 user_id INT NOT NULL,
                 stars INT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                UNIQUE KEY unique_user_book (user_id, book_id),
-                INDEX idx_book_id (book_id),
-                INDEX idx_user_id (user_id)
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT unique_user_book UNIQUE (user_id, book_id)
             )
-        """
-        cursor = db.connection.cursor()
-        cursor.execute(create_table_query)
-        db.connection.commit()
-        cursor.close()
+        """)
+
+        # Create indices
+        db.execute_query("CREATE INDEX IF NOT EXISTS idx_book_ratings_book_id ON book_ratings(book_id)")
+        db.execute_query("CREATE INDEX IF NOT EXISTS idx_book_ratings_user_id ON book_ratings(user_id)")
+        
+        # Create trigger function for updated_at
+        db.execute_query("""
+            CREATE OR REPLACE FUNCTION update_updated_at_column()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                NEW.updated_at = CURRENT_TIMESTAMP;
+                RETURN NEW;
+            END;
+            $$ language 'plpgsql'
+        """)
+
+        # Create trigger
+        db.execute_query("DROP TRIGGER IF EXISTS update_book_ratings_updated_at ON book_ratings")
+        db.execute_query("""
+            CREATE TRIGGER update_book_ratings_updated_at
+                BEFORE UPDATE ON book_ratings
+                FOR EACH ROW
+                EXECUTE FUNCTION update_updated_at_column()
+        """)
+
         print("✓ book_ratings table created successfully!")
         
     except Exception as e:

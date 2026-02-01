@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+"""Create the user_sessions table for PostgreSQL."""
+
 from database import Database
 
 def create_user_sessions_table():
@@ -6,20 +9,15 @@ def create_user_sessions_table():
         print("Creating user_sessions table...")
         query = """
         CREATE TABLE IF NOT EXISTS user_sessions (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            user_id INT NOT NULL,
+            id SERIAL PRIMARY KEY,
+            user_id INT NOT NULL UNIQUE,
             refresh_token VARCHAR(500) NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             expires_at TIMESTAMP NULL,
-            device_info VARCHAR(255),
-            UNIQUE KEY unique_user (user_id) -- Enforce Single Session per user
+            device_info VARCHAR(255)
         )
         """
-        # Note: UNIQUE KEY unique_user (user_id) ensures only one row per user!
-        # If we wanted multiple devices, we would use UNIQUE (refresh_token) instead.
-        # But for SINGLE SESSION, we want to enforce 1 row per user.
-        # Actually, ON DUPLICATE KEY UPDATE is better handled in code or via this constraint.
-        # Let's use the constraint to be sure.
+        # Note: UNIQUE on user_id ensures only one session per user (Single Session Policy)
         
         try:
             db.execute_query(query)

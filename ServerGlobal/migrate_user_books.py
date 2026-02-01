@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+"""Create the user_books table for PostgreSQL."""
+
 from database import Database
 
 def main():
@@ -8,13 +11,13 @@ def main():
             # Create user_books table
             query = """
             CREATE TABLE IF NOT EXISTS user_books (
-                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                user_id INT UNSIGNED NOT NULL,
-                book_id INT UNSIGNED NOT NULL,
+                id SERIAL PRIMARY KEY,
+                user_id INT NOT NULL,
+                book_id INT NOT NULL,
                 purchase_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
-                UNIQUE KEY unique_user_book (user_id, book_id)
+                CONSTRAINT fk_user_books_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                CONSTRAINT fk_user_books_book FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
+                CONSTRAINT unique_user_book UNIQUE (user_id, book_id)
             )
             """
             db.execute_query(query)
