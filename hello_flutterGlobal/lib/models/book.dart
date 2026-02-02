@@ -56,6 +56,35 @@ class Book {
     this.isPremium = false,
   });
 
+  /// Helper to parse premium field - handles both boolean (PostgreSQL) and int (MySQL)
+  static bool _parsePremium(Map<String, dynamic> json) {
+    final premiumValue = json['premium'];
+    final isPremiumValue = json['isPremium'];
+
+    // Handle boolean type (PostgreSQL returns true/false)
+    if (premiumValue is bool) {
+      return premiumValue;
+    }
+
+    // Handle integer type (0 or 1)
+    if (premiumValue is int) {
+      return premiumValue == 1;
+    }
+
+    // Handle string type (might be "true"/"false" or "0"/"1")
+    if (premiumValue is String) {
+      return premiumValue.toLowerCase() == 'true' || premiumValue == '1';
+    }
+
+    // Fallback to isPremium field if it exists
+    if (isPremiumValue is bool) {
+      return isPremiumValue;
+    }
+
+    // Default to false
+    return false;
+  }
+
   factory Book.fromJson(Map<String, dynamic> json) {
     return Book(
       id: json['id'] as String,
@@ -85,7 +114,7 @@ class Book {
       averageRating: (json['averageRating'] as num?)?.toDouble() ?? 0.0,
       ratingCount: json['ratingCount'] as int? ?? 0,
       pdfUrl: json['pdfUrl'] as String?,
-      isPremium: (json['premium'] as int?) == 1 || (json['isPremium'] as bool? ?? false),
+      isPremium: _parsePremium(json),
     );
   }
 

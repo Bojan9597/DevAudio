@@ -88,7 +88,7 @@ class BadgeService:
         cursor = self.conn.cursor(cursor_factory=RealDictCursor)
         try:
             # Books completed
-            cursor.execute("SELECT COUNT(*) as cnt FROM user_books WHERE user_id = %s AND is_read = TRUE", (user_id,))
+            cursor.execute("SELECT COUNT(*) as cnt FROM user_books WHERE user_id = %s AND is_read = 1", (user_id,))
             res_read = cursor.fetchone()
             books_completed = res_read['cnt'] if res_read else 0
 

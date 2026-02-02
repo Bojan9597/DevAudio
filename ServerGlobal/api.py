@@ -911,7 +911,7 @@ def get_playlist(book_id):
             if quiz_exists and user_id:
                # We need quiz_id. The previous query just checked existence.
                # Let's get quiz_id
-               qid_query = "SELECT id FROM quizzes WHERE book_id = %s"
+               qid_query = "SELECT id FROM quizzes WHERE book_id = %s AND playlist_item_id IS NULL"
                qid_res = db.execute_query(qid_query, (book_id,))
                if qid_res:
                    quiz_id = qid_res[0]['id']
@@ -1400,7 +1400,7 @@ def get_books():
                 "averageRating": round(float(row['average_rating']), 1) if row['average_rating'] else 0.0,
                 "ratingCount": row['rating_count'] or 0,
                 "pdfUrl": resolve_stored_url(row['pdf_path'], "AudioBooks"),
-                "premium": row['premium'] or 0,
+                "premium": bool(row['premium']),
                 "isFavorite": bool(row.get('is_favorite', 0))
             }
             
@@ -1724,7 +1724,7 @@ def get_library():
                         "categoryId": book['category_slug'] or "others",
                         "durationSeconds": book['duration_seconds'],
                         "lastPosition": book['last_position'],
-                        "premium": book.get('premium', 0),
+                        "premium": bool(book.get('premium', False)),
                         "averageRating": float(book['average_rating']) if book['average_rating'] else 0.0,
                         "ratingCount": book['rating_count'] or 0,
                         "isFavorite": book['id'] in favIds,
@@ -1759,7 +1759,7 @@ def get_library():
                         "coverThumbnailUrl": cover_thumb,
                         "categoryId": book['category_slug'] or "others",
                         "durationSeconds": book['duration_seconds'],
-                        "premium": book.get('premium', 0),
+                        "premium": bool(book.get('premium', False)),
                         "averageRating": float(book['average_rating']) if book['average_rating'] else 0.0,
                         "ratingCount": book['rating_count'] or 0,
                         "isFavorite": book['id'] in favIds,
@@ -1782,7 +1782,7 @@ def get_library():
                     "coverThumbnailUrl": cover_thumb,
                     "categoryId": book['category_slug'] or "others",
                     "durationSeconds": book['duration_seconds'],
-                    "premium": book.get('premium', 0),
+                    "premium": bool(book.get('premium', False)),
                     "averageRating": float(book['average_rating']) if book['average_rating'] else 0.0,
                     "ratingCount": book['rating_count'] or 0,
                     "isFavorite": book['id'] in favIds,
@@ -1949,7 +1949,7 @@ def complete_track():
                     quiz_id = book_quiz[0]['id']
                     passed_query = """
                         SELECT is_passed FROM user_quiz_results
-                        WHERE user_id = %s AND quiz_id = %s AND is_passed = TRUE
+                        WHERE user_id = %s AND quiz_id = %s AND is_passed = 1
                         LIMIT 1
                     """
                     passed_res = db.execute_query(passed_query, (user_id, quiz_id))
@@ -1967,7 +1967,7 @@ def complete_track():
                     for tq in track_quizzes:
                         passed_query = """
                             SELECT is_passed FROM user_quiz_results
-                            WHERE user_id = %s AND quiz_id = %s AND is_passed = TRUE
+                            WHERE user_id = %s AND quiz_id = %s AND is_passed = 1
                             LIMIT 1
                         """
                         passed_res = db.execute_query(passed_query, (user_id, tq['id']))
@@ -1981,7 +1981,7 @@ def complete_track():
                     print(f"User {user_id} fully completed book {book_id} (all tracks + all quizzes)")
 
                     # Mark book as read
-                    update_read = "UPDATE user_books SET is_read = TRUE, last_accessed_at = CURRENT_TIMESTAMP WHERE user_id = %s AND book_id = %s"
+                    update_read = "UPDATE user_books SET is_read = 1, last_accessed_at = CURRENT_TIMESTAMP WHERE user_id = %s AND book_id = %s"
                     db.execute_query(update_read, (user_id, book_id))
 
                     # Check Badges (since book is now read)
@@ -2058,7 +2058,7 @@ def update_progress():
             params = [position]
             
             if is_read:
-                update_sql += ", is_read = TRUE"
+                update_sql += ", is_read = 1"
             
             if playlist_item_id:
                 update_sql += ", current_playlist_item_id = %s"
@@ -2334,7 +2334,7 @@ def get_listen_history(user_id):
                     "lastAccessed": str(book['last_accessed_at']),
                     "averageRating": float(book['average_rating'] or 0),
                     "ratingCount": int(book['rating_count'] or 0),
-                    "premium": book['premium'] or 0
+                    "premium": bool(book['premium'])
                 })
                 
         return jsonify(history)
@@ -2473,6 +2473,7 @@ def upload_book():
         user_id = request.form.get('user_id')
         description = request.form.get('description', '')
         price = request.form.get('price', 0.0)
+        is_premium = request.form.get('is_premium', '0')  # Default to 0 (not premium)
 
         if not all([title, author, category_id, user_id]):
              return jsonify({"error": "Missing required fields"}), 400
@@ -2676,11 +2677,11 @@ def upload_book():
         
         insert_query = """
             INSERT INTO books
-            (title, author, primary_category_id, audio_path, cover_image_path, posted_by_user_id, description, price, duration_seconds, pdf_path)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            (title, author, primary_category_id, audio_path, cover_image_path, posted_by_user_id, description, price, duration_seconds, pdf_path, premium)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         """
-        params = (title, author, numeric_cat_id, main_audio_path, db_cover_path, user_id, description, price, total_duration, db_pdf_path)
+        params = (title, author, numeric_cat_id, main_audio_path, db_cover_path, user_id, description, price, total_duration, db_pdf_path, int(is_premium))
         
         cursor = db.connection.cursor()
         cursor.execute(insert_query, params)
@@ -2770,9 +2771,15 @@ def save_quiz_result():
     user_id = data.get('user_id')
     book_id = data.get('book_id')
     score_percentage = data.get('score_percentage')
-    
+
     if not all([user_id, book_id, score_percentage is not None]):
         return jsonify({"error": "Missing data"}), 400
+
+    # Ensure correct types (Flutter may send book_id as string)
+    try:
+        book_id = int(book_id)
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid book_id"}), 400
         
     db = Database()
     if not db.connect():
@@ -2802,7 +2809,7 @@ def save_quiz_result():
             return jsonify({"error": "Quiz not found"}), 404
         quiz_id = q_res[0]['id']
         
-        is_passed = float(score_percentage) > 50.0
+        is_passed = 1 if float(score_percentage) > 50.0 else 0
         
         ins_query = """
             INSERT INTO user_quiz_results (user_id, quiz_id, score_percentage, is_passed)
@@ -2843,7 +2850,7 @@ def save_quiz_result():
                     bq_id = book_quiz[0]['id']
                     passed_query = """
                         SELECT is_passed FROM user_quiz_results
-                        WHERE user_id = %s AND quiz_id = %s AND is_passed = TRUE
+                        WHERE user_id = %s AND quiz_id = %s AND is_passed = 1
                         LIMIT 1
                     """
                     passed_res = db.execute_query(passed_query, (user_id, bq_id))
@@ -2861,7 +2868,7 @@ def save_quiz_result():
                     for tq in track_quizzes:
                         passed_query = """
                             SELECT is_passed FROM user_quiz_results
-                            WHERE user_id = %s AND quiz_id = %s AND is_passed = TRUE
+                            WHERE user_id = %s AND quiz_id = %s AND is_passed = 1
                             LIMIT 1
                         """
                         passed_res = db.execute_query(passed_query, (user_id, tq['id']))
@@ -2873,7 +2880,7 @@ def save_quiz_result():
                     print(f"User {user_id} fully completed book {book_id} after passing quiz")
 
                     # Mark book as read
-                    update_read = "UPDATE user_books SET is_read = TRUE, last_accessed_at = CURRENT_TIMESTAMP WHERE user_id = %s AND book_id = %s"
+                    update_read = "UPDATE user_books SET is_read = 1, last_accessed_at = CURRENT_TIMESTAMP WHERE user_id = %s AND book_id = %s"
                     db.execute_query(update_read, (user_id, book_id))
 
                     # Check badges

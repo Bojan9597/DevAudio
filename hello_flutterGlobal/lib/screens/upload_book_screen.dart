@@ -27,6 +27,7 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
   String? _selectedPdfPath;
 
   bool _isUploading = false;
+  bool _isPremium = false; // Premium flag
   List<Category> _categories = [];
   bool _isLoadingCategories = true;
 
@@ -187,6 +188,7 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
         price: double.tryParse(_priceController.text) ?? 0.0,
         duration: totalDuration,
         isEncrypted: true, // Always true - server encrypts when serving
+        isPremium: _isPremium,
       );
 
       if (mounted) {
@@ -264,6 +266,23 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
                 controller: _priceController,
                 decoration: const InputDecoration(labelText: 'Price'),
                 keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+
+              // Premium Checkbox
+              CheckboxListTile(
+                title: const Text('Premium Content'),
+                subtitle: const Text('Only subscribers can access this book'),
+                value: _isPremium,
+                onChanged: (bool? value) {
+                  setState(() {
+                    _isPremium = value ?? false;
+                  });
+                },
+                tileColor: Colors.grey.withOpacity(0.1),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               const SizedBox(height: 24),
 

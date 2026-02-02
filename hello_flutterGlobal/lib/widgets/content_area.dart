@@ -254,6 +254,10 @@ class _ContentAreaState extends State<ContentArea> {
         text: AppLocalizations.of(context)!.favorites,
       ),
       Tab(
+        icon: const Icon(Icons.play_circle_outline),
+        text: 'Continue Listening',
+      ),
+      Tab(
         icon: const Icon(Icons.menu_book),
         text: AppLocalizations.of(context)!.myBooks,
       ),
@@ -268,6 +272,8 @@ class _ContentAreaState extends State<ContentArea> {
     final tabViews = <Widget>[
       // Favorites Tab with list/grid toggle and clickable hearts
       _buildFavoritesTab(favoriteBooks),
+      // Continue Listening Tab - show books with listening progress
+      _buildContinueListeningTab(_historyBooks),
       // My Books Tab - show only downloaded books
       _buildMyBooksTab(booksToCheckForDownloads),
       // Uploaded Tab with FAB (only for admin)
@@ -449,6 +455,61 @@ class _ContentAreaState extends State<ContentArea> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildContinueListeningTab(List<Book> historyBooks) {
+    if (historyBooks.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.play_circle_outline, size: 48, color: Colors.grey),
+            const SizedBox(height: 16),
+            const Text('No listening history'),
+            const SizedBox(height: 8),
+            const Text(
+              'Books you start listening to will appear here',
+              style: TextStyle(color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          // View toggle row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              IconButton(
+                icon: Icon(
+                  _isLibraryGridView ? Icons.view_list : Icons.grid_view,
+                ),
+                onPressed: () =>
+                    setState(() => _isLibraryGridView = !_isLibraryGridView),
+                tooltip: _isLibraryGridView
+                    ? AppLocalizations.of(context)!.switchToList
+                    : AppLocalizations.of(context)!.switchToGrid,
+              ),
+            ],
+          ),
+          Expanded(
+            child: _isLibraryGridView
+                ? _buildBookGrid(historyBooks)
+                : ListView.builder(
+                    itemCount: historyBooks.length,
+                    itemBuilder: (context, index) {
+                      final book = historyBooks[index];
+                      return _buildMyBookTile(book);
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -888,6 +949,11 @@ class _ContentAreaState extends State<ContentArea> {
     final result = await BookRepository().rateBook(userId, book.id, stars);
 
     if (!result.containsKey('error') && mounted) {
+      final newAvg = result['averageRating'] as double;
+      final newCount = result['ratingCount'] as int;
+      setState(() {
+        _updateBookRating(book.id, newAvg, newCount);
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -895,7 +961,6 @@ class _ContentAreaState extends State<ContentArea> {
           ),
         ),
       );
-      _loadBooks();
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -905,6 +970,22 @@ class _ContentAreaState extends State<ContentArea> {
         ),
       );
     }
+  }
+
+  void _updateBookRating(String bookId, double averageRating, int ratingCount) {
+    void updateList(List<Book> list) {
+      final index = list.indexWhere((b) => b.id == bookId);
+      if (index != -1) {
+        list[index] = list[index].copyWith(
+          averageRating: averageRating,
+          ratingCount: ratingCount,
+        );
+      }
+    }
+
+    updateList(_allBooks);
+    updateList(_historyBooks);
+    updateList(_uploadedBooks);
   }
 
   String _formatCount(int count) {

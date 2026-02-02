@@ -666,6 +666,7 @@ class BookRepository {
     double price = 0.0,
     required int duration,
     bool isEncrypted = false,
+    bool isPremium = false,
   }) async {
     if (ConnectivityService().isOffline) {
       throw Exception("Cannot upload while offline.");
@@ -695,6 +696,7 @@ class BookRepository {
     request.fields['price'] = price.toString();
     request.fields['duration'] = duration.toString();
     request.fields['is_encrypted'] = isEncrypted.toString();
+    request.fields['is_premium'] = isPremium ? '1' : '0';
 
     for (var path in audioPaths) {
       if (path.isNotEmpty) {

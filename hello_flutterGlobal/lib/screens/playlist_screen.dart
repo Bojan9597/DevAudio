@@ -49,6 +49,46 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   String? _pdfUrl;
 
   void _downloadFullPlaylist() async {
+    print('[PlaylistScreen] _downloadFullPlaylist called. _isCheckingAccess=$_isCheckingAccess, _hasAccess=$_hasAccess, isPremium=${widget.book.isPremium}');
+
+    // Wait for access check to complete if still checking
+    if (_isCheckingAccess) {
+      print('[PlaylistScreen] Access check still in progress, waiting...');
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (_isCheckingAccess) {
+        print('[PlaylistScreen] Still checking access for download after delay');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please wait, checking subscription status...'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+        return;
+      }
+    }
+
+    print('[PlaylistScreen] Access check complete. _hasAccess=$_hasAccess');
+
+    // For DOWNLOADING (not playing), check subscription without considering isDownloaded
+    // This prevents users from downloading premium content just because it's partially cached
+    if (widget.book.isPremium) {
+      final isAdmin = _isAdmin;
+      final isSubscribed = await SubscriptionService().isSubscribed();
+      final canDownload = isAdmin || isSubscribed;
+
+      print('[PlaylistScreen] Download permission check: isPremium=true, isAdmin=$isAdmin, isSubscribed=$isSubscribed, canDownload=$canDownload');
+
+      if (!canDownload) {
+        print('[PlaylistScreen] ❌ DOWNLOAD ACCESS DENIED - Premium book requires subscription');
+        _showSubscriptionSheet();
+        return;
+      }
+    }
+
+    print('[PlaylistScreen] ✅ Download access granted, proceeding with download check');
+
     // 1. Check if already downloaded
     bool isFullyDownloaded = false;
     try {
@@ -56,56 +96,6 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       final List<Map<String, dynamic>> playlist = _tracks
           .map((e) => Map<String, dynamic>.from(e))
           .toList();
-
-      // Note: isPlaylistFullyDownloaded check assumes we know bookId context if strict.
-      // added bookId param to helper or just iterate manually?
-      // The helper I added `isPlaylistFullyDownloaded` takes `playlist` and `userId`.
-      // It doesn't take bookId in signature I proposed above, but it calls `isBookDownloaded`.
-      // `isBookDownloaded` is better with bookId.
-      // I should update `isPlaylistFullyDownloaded` signature in next step if I forgot,
-      // OR I can just use it as is if I didn't add bookId param to it.
-      // Wait, I didn't add bookId to `isPlaylistFullyDownloaded` in the previous tool call?
-      // I used: `isPlaylistFullyDownloaded(List<Map<String, dynamic>> playlist, {int? userId})`
-      // It iterates and calls `isBookDownloaded(uniqueId, userId: userId)`.
-      // It DOES NOT pass bookId. This means it falls back to legacy/flat structure or might miss folder.
-      // I should probably fix `isPlaylistFullyDownloaded` first to accept bookId for safety.
-      // BUT for now, let's assume it works or I'll fix it in a sec.
-      // Actually, I can just rely on `DownloadService` logic.
-
-      // Let's assume I will fix the signature in a followup if needed.
-      // Actually I just wrote the code, let's check what I wrote.
-      // I wrote: `isPlaylistFullyDownloaded(List<Map<String, dynamic>> playlist, {int? userId})`.
-      // It calls `isBookDownloaded(uniqueId, userId: userId)`.
-      // This is slightly risky if files are in book_ID folder.
-      // `isBookDownloaded` does:
-      // `getLocalBookPath(fileKey, userId: userId, bookId: bookId)` -> NEEDS bookId for folder.
-      // If bookId is null, it returns `.../user_X/file.mp3`.
-      // If file is in `.../user_X/book_Y/file.mp3`, `isBookDownloaded` without bookId might return FALSE.
-      // So `isPlaylistFullyDownloaded` MIGHT return false even if downloaded in new folder structure.
-
-      // Correction: I should update `PlaylistScreen` to call a BETTER version or just check manually here.
-      // Or I can update `DownloadService` again to add `bookId`.
-      // Let's just use it for now and I will fix the Service signature in next turn if I made a mistake.
-      // Wait, I am controlling the edit. I can see I missed bookId in previous step's signature.
-      // However, `isBookDownloaded` falls back?
-      // `getLocalBookPath` with NO bookId -> `userPath/uniqueId.mp3`.
-      // If file is in `userPath/bookId/uniqueId.mp3`, `File(legacyPath).exists()` will be FALSE.
-      // So `isBookDownloaded` returns FALSE.
-      // So `isFullyDownloaded` returns FALSE.
-      // So it tries to download.
-      // Inside `downloadPlaylist`, I added `isBookDownloaded(..., bookId: bookId)`. THIS ONE IS CORRECT.
-      // So `downloadPlaylist` will skip existing ones correctly.
-      // The only "bug" is that the "Already downloaded" snackbar might not show if files are in new folder structure,
-      // it will instead say "Downloading..." and then finish instantly because `downloadPlaylist` skips them.
-      // That is acceptable behavior for now (it fixes the re-download waste), but not the UI message the user wants.
-
-      // To get the UI message right, I really should fix `isPlaylistFullyDownloaded` to accept bookId.
-      // I will do that in `DownloadService` first.
-
-      // For this step (PlaylistScreen), let's assume I WILL fix `DownloadService` to take bookId.
-      // So I will write the code here assuming `bookId` parameter exists or I'll rely on `downloadPlaylist` skipping fast.
-      // User specifically asked "say that book is already downloaded".
-      // So I MUST Ensure `isFullyDownloaded` returns TRUE.
 
       isFullyDownloaded = await DownloadService().isPlaylistFullyDownloaded(
         playlist,
@@ -125,12 +115,6 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
           ),
         );
       }
-      return;
-    }
-
-    // Check access before downloading
-    if (!_hasAccess) {
-      _showSubscriptionSheet();
       return;
     }
 
@@ -199,6 +183,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
 
     // 1. Immediate check for Free Books
     if (!widget.book.isPremium) {
+      print('[PlaylistScreen] Book is FREE, granting access');
       if (mounted) {
         setState(() {
           _hasAccess = true;
@@ -209,24 +194,34 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     }
 
     try {
+      final userId = await AuthService().getCurrentUserId();
+      print('[PlaylistScreen] User ID: $userId');
+
       final isAdmin = await AuthService().isAdmin();
+      print('[PlaylistScreen] isAdmin: $isAdmin');
+
       final isSubscribed = await SubscriptionService().isSubscribed(
         forceRefresh: forceRefresh,
       );
+      print('[PlaylistScreen] isSubscribed: $isSubscribed');
 
       // Check if downloaded locally (User explicitly owns/downloaded it)
-      final userId = await AuthService().getCurrentUserId();
       final downloadService = DownloadService();
       // Check both playlist (multi-track) and single book file
-      final isDownloaded =
-          await downloadService.isPlaylistDownloaded(
-            widget.book.id,
-            userId: userId,
-          ) ||
-          await downloadService.isBookDownloaded(
-            widget.book.id,
-            userId: userId,
-          );
+      final isPlaylistDownloaded = await downloadService.isPlaylistDownloaded(
+        widget.book.id,
+        userId: userId,
+      );
+      print('[PlaylistScreen] isPlaylistDownloaded: $isPlaylistDownloaded');
+
+      final isBookDownloaded = await downloadService.isBookDownloaded(
+        widget.book.id,
+        userId: userId,
+      );
+      print('[PlaylistScreen] isBookDownloaded: $isBookDownloaded');
+
+      final isDownloaded = isPlaylistDownloaded || isBookDownloaded;
+      print('[PlaylistScreen] isDownloaded (combined): $isDownloaded');
 
       // Access Rules:
       // 1. Admin always has access
@@ -235,7 +230,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       final hasAccess = isAdmin || isSubscribed || isDownloaded;
 
       print(
-        '[PlaylistScreen] Access check (Premium Book): isAdmin=$isAdmin, isSubscribed=$isSubscribed, isDownloaded=$isDownloaded, hasAccess=$hasAccess',
+        '[PlaylistScreen] FINAL ACCESS DECISION: isAdmin=$isAdmin, isSubscribed=$isSubscribed, isDownloaded=$isDownloaded, hasAccess=$hasAccess',
       );
 
       if (mounted) {
@@ -250,8 +245,8 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       if (mounted) {
         setState(() {
           _isCheckingAccess = false;
-          // Fallback
-          _hasAccess = true;
+          // Fallback - deny access on error for security
+          _hasAccess = false;
         });
       }
     }
@@ -626,6 +621,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       isPlaylist: false,
       isFavorite: widget.book.isFavorite,
       isEncrypted: widget.book.isEncrypted,
+      isPremium: widget.book.isPremium, // CRITICAL: Pass premium status to player
     );
 
     bool justFinishedLastTrack = false;
@@ -673,6 +669,45 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
 
   Future<void> _openPdfViewer() async {
     if (_pdfUrl == null || _pdfUrl!.isEmpty) return;
+
+    print('[PlaylistScreen] _openPdfViewer called. _isCheckingAccess=$_isCheckingAccess, _hasAccess=$_hasAccess, isPremium=${widget.book.isPremium}');
+
+    // Wait for access check to complete if still checking
+    if (_isCheckingAccess) {
+      print('[PlaylistScreen] Access check still in progress for PDF, waiting...');
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (_isCheckingAccess) {
+        print('[PlaylistScreen] Still checking access for PDF after delay');
+        return;
+      }
+    }
+
+    print('[PlaylistScreen] PDF access check complete. _hasAccess=$_hasAccess');
+
+    // For PDF access, check subscription without considering isDownloaded
+    // This prevents users from viewing/downloading premium PDFs just because audio is cached
+    if (widget.book.isPremium) {
+      final isAdmin = _isAdmin;
+      final isSubscribed = await SubscriptionService().isSubscribed();
+
+      // Check if PDF is already downloaded locally (allow offline viewing)
+      final isPdfDownloaded = await DownloadService().isPdfDownloaded(
+        widget.book.id,
+        userId: _userId,
+      );
+
+      final canAccessPdf = isAdmin || isSubscribed || isPdfDownloaded;
+
+      print('[PlaylistScreen] PDF access check: isPremium=true, isAdmin=$isAdmin, isSubscribed=$isSubscribed, isPdfDownloaded=$isPdfDownloaded, canAccessPdf=$canAccessPdf');
+
+      if (!canAccessPdf) {
+        print('[PlaylistScreen] ❌ PDF ACCESS DENIED - Premium PDF requires subscription');
+        _showSubscriptionSheet();
+        return;
+      }
+    }
+
+    print('[PlaylistScreen] ✅ PDF access granted, proceeding with download/view');
 
     // Check if PDF is downloaded
     final isDownloaded = await DownloadService().isPdfDownloaded(

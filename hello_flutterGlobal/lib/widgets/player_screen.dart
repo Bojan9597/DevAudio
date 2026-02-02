@@ -5,6 +5,7 @@ import '../l10n/generated/app_localizations.dart';
 import '../models/book.dart';
 import '../screens/playlist_screen.dart';
 import 'dart:async';
+import 'dart:convert'; // For JSON encoding/decoding
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
 import 'dart:ui'; // For BackdropFilter
@@ -116,10 +117,38 @@ class _PlayerScreenState extends State<PlayerScreen>
   bool _isHandlingCompletion =
       false; // Prevent double-handling of track completion
 
+  // Track which tracks have shown completion video (to show only once)
+  final Set<String> _completedTracksWithVideo = {};
+
   final GlobalKey _speedButtonKey = GlobalKey();
   final GlobalKey _moreButtonKey = GlobalKey();
 
   Timer? _progressTimer;
+
+  /// Load completion video history from persistent storage
+  Future<void> _loadCompletionVideoHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final history = prefs.getStringList('completion_videos_shown') ?? [];
+      _completedTracksWithVideo.addAll(history);
+    } catch (e) {
+      print('Error loading completion video history: $e');
+    }
+  }
+
+  /// Save that this track has shown the completion video
+  Future<void> _saveCompletionVideoShown(String trackKey) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _completedTracksWithVideo.add(trackKey);
+      await prefs.setStringList(
+        'completion_videos_shown',
+        _completedTracksWithVideo.toList(),
+      );
+    } catch (e) {
+      print('Error saving completion video history: $e');
+    }
+  }
 
   @override
   void initState() {
@@ -128,6 +157,11 @@ class _PlayerScreenState extends State<PlayerScreen>
     _currentBook = widget.book;
     _currentIndex = widget.initialIndex;
     _isFavorite = widget.book.isFavorite;
+    _init();
+  }
+
+  Future<void> _init() async {
+    await _loadCompletionVideoHistory(); // Load which books have shown owl video (must await!)
     _initPlayer();
     _checkOwnership();
 
@@ -157,7 +191,12 @@ class _PlayerScreenState extends State<PlayerScreen>
 
         // Handle Single Book Completion (Show Overlay)
         if (widget.playlist == null) {
-          if (mounted) {
+          // Only show owl video if this is the first time completing this track
+          final trackKey = completedTrackId ?? widget.book.id;
+          final showVideo = !_completedTracksWithVideo.contains(trackKey);
+
+          if (showVideo && mounted) {
+            await _saveCompletionVideoShown(trackKey);
             // Show video overlay and wait for it to close
             await Navigator.of(context).push(
               PageRouteBuilder(
@@ -169,7 +208,7 @@ class _PlayerScreenState extends State<PlayerScreen>
             );
           }
 
-          // After video is closed, show badges if any
+          // After video is closed (or skipped), show badges if any
           if (badgeFuture != null) {
             badgeFuture.then((newBadges) {
               if (mounted && newBadges.isNotEmpty) {
@@ -214,12 +253,12 @@ class _PlayerScreenState extends State<PlayerScreen>
 
           if (hasQuiz && !isPassed && PlayerScreen.isAppInForeground) {
             // Stop audio before navigating to quiz (only in foreground)
-            _player.stop();
+            await _player.stop();
 
             // Navigate to Quiz for the COMPLETED track
-            Future.microtask(() {
+            Future.microtask(() async {
               if (mounted) {
-                Navigator.push(
+                await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => QuizTakerScreen(
@@ -227,10 +266,39 @@ class _PlayerScreenState extends State<PlayerScreen>
                       playlistItemId: int.parse(completedTrackId!),
                     ),
                   ),
-                ).then((result) {
-                  _isHandlingCompletion = false;
-                  if (mounted) _playNext();
-                });
+                );
+
+                // After quiz, advance to next track but don't auto-play
+                _isHandlingCompletion = false;
+                if (mounted && widget.playlist != null) {
+                  // Move to next track if not at end
+                  if (_currentIndex < widget.playlist!.length - 1) {
+                    // Stop current playback
+                    await _player.stop();
+
+                    // Update to next track WITHOUT initializing player
+                    setState(() {
+                      _currentIndex++;
+                      final track = widget.playlist![_currentIndex];
+                      _currentBook = Book(
+                        id: widget.book.id,
+                        title: track['title'],
+                        author: widget.book.author,
+                        audioUrl: _getAbsoluteUrl(track['file_path']),
+                        coverUrl: widget.book.absoluteCoverUrl,
+                        categoryId: widget.book.categoryId,
+                        subcategoryIds: const [],
+                        postedBy: widget.book.postedBy,
+                        description: widget.book.description,
+                        price: widget.book.price,
+                        postedByUserId: widget.book.postedByUserId,
+                        isPlaylist: false,
+                        isFavorite: _isFavorite,
+                      );
+                    });
+                    // User can now manually press play to start the next track
+                  }
+                }
               }
             });
           } else {
@@ -269,10 +337,18 @@ class _PlayerScreenState extends State<PlayerScreen>
     if (widget.playlist == null) return;
 
     if (_currentIndex >= widget.playlist!.length - 1) {
-      // End of playlist - save progress immediately before closing
+      // End of playlist - save progress and stay on last track
       _saveProgressImmediately();
-      // Close player with result to reload playlist.
-      Navigator.of(context).pop(true); // true = should reload
+      // Don't close the player, allow user to replay or navigate manually
+      // User can manually go back or close the player
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Playlist completed!'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
       return;
     }
 
@@ -350,17 +426,21 @@ class _PlayerScreenState extends State<PlayerScreen>
     try {
       final userId = await AuthService().getCurrentUserId();
       if (userId == null) {
-        setState(() {
-          _isLoadingOwnership = false;
-          _isPurchased = false;
-        });
+        if (mounted) {
+          setState(() {
+            _isLoadingOwnership = false;
+            _isPurchased = false;
+          });
+        }
         return;
       }
 
-      _userId = userId;
+      if (mounted) {
+        _userId = userId;
 
-      // Set userId on audioHandler for background progress sync
-      audioHandler.setUserId(userId);
+        // Set userId on audioHandler for background progress sync
+        audioHandler.setUserId(userId);
+      }
 
       // Check if user is admin - admin always has access
       final isAdmin = await AuthService().isAdmin();
@@ -397,19 +477,26 @@ class _PlayerScreenState extends State<PlayerScreen>
       final isSubscribed = await SubscriptionService().isSubscribed();
       final isFree = !widget.book.isPremium;
 
-      setState(() {
-        _isAdmin = isAdmin;
-        _isPurchased = isAdmin || isOwned || isSubscribed || isFree;
-        _isFavorite = isFav; // Update favorite status from backend
-        _isLoadingOwnership = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isAdmin = isAdmin;
+          _isPurchased = isAdmin || isOwned || isSubscribed || isFree;
+          _isFavorite = isFav; // Update favorite status from backend
+          _isLoadingOwnership = false;
+        });
+      }
 
-      if (_isPurchased) {
+      if (_isPurchased && mounted) {
         _startProgressSync();
+      } else if (!_isPurchased && mounted) {
+        // Stop playback if user doesn't have access
+        await _player.stop();
       }
     } catch (e) {
       print("Error checking ownership/favorites: $e");
-      setState(() => _isLoadingOwnership = false);
+      if (mounted) {
+        setState(() => _isLoadingOwnership = false);
+      }
     }
   }
 
@@ -606,8 +693,9 @@ class _PlayerScreenState extends State<PlayerScreen>
         await audioHandler.loadAudio(cleanUrl, mediaItem);
       }
 
-      // Auto-play
-      await audioHandler.play();
+      // Don't auto-play - let user manually start playback
+      // This prevents audio from playing when returning to the same book
+      // await audioHandler.play();
 
       // Clear any previous error since we succeeded
       _lastError = null;
@@ -940,6 +1028,19 @@ class _PlayerScreenState extends State<PlayerScreen>
       );
 
       if (response.statusCode == 200 && mounted) {
+        // Update local book rating if response includes updated rating
+        if (response.data != null && response.data is Map) {
+          final data = response.data as Map<String, dynamic>;
+          if (data['averageRating'] != null) {
+            setState(() {
+              _currentBook = _currentBook.copyWith(
+                averageRating: (data['averageRating'] as num).toDouble(),
+                ratingCount: data['ratingCount'] as int? ?? _currentBook.ratingCount,
+              );
+            });
+          }
+        }
+
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Thanks for rating! ⭐' * stars)));
@@ -1352,38 +1453,19 @@ class _PlayerScreenState extends State<PlayerScreen>
                           } else if (playing != true) {
                             return GestureDetector(
                               onTap: () async {
-                                if (_isPurchased) {
-                                  // Check if player has audio loaded
-                                  if (_player.processingState ==
-                                      ProcessingState.idle) {
-                                    // No audio loaded - try to initialize
-                                    final storageId = _getUniqueAudioId();
-                                    final downloadService = DownloadService();
-                                    final isDownloaded = await downloadService
-                                        .isBookDownloaded(
-                                          storageId,
-                                          userId: _userId,
-                                          bookId: widget.book.id,
-                                        );
-
-                                    if (!isDownloaded &&
-                                        !downloadService.isDownloadInProgress(
-                                          storageId,
-                                        )) {
-                                      // Not downloaded and not downloading - start download
-                                      if (!_isDownloading) {
-                                        _showDownloadingMessage();
-                                        _downloadBook();
-                                      }
-                                      // Still try to stream while downloading
-                                      _initPlayer();
-                                      return;
-                                    }
-                                    // Either downloaded or download in progress - init player
-                                    _initPlayer();
-                                    return;
-                                  }
+                                // Check if user has access before playing
+                                if (!_isPurchased) {
+                                  _showSubscriptionSheet();
+                                  return;
                                 }
+                                // Check if player has audio loaded
+                                if (_player.processingState ==
+                                    ProcessingState.idle) {
+                                  // No audio loaded - initialize player (will stream)
+                                  _initPlayer();
+                                  return;
+                                }
+                                // Player ready, just play
                                 _player.play();
                               },
                               child: Container(
