@@ -40,11 +40,16 @@ class _ReelsScreenState extends State<ReelsScreen> {
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
 
+  int _offset = 0;
+  final int _limit = 5;
+  bool _isFetchingMore = false;
+  bool _backendHasMore = true;
+
   @override
   void initState() {
     super.initState();
     _initAudioSession();
-    _loadData();
+    _loadInitialData();
 
     _audioPlayer.playerStateStream.listen((state) {
       if (mounted) {
@@ -79,20 +84,56 @@ class _ReelsScreenState extends State<ReelsScreen> {
     super.dispose();
   }
 
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
-    final data = await _bookRepository.getReelsData();
-    if (mounted) {
-      setState(() {
-        _isSubscribed = data['isSubscribed'];
-        _books = data['books'];
-        _isLoading = false;
-      });
+  Future<void> _loadInitialData() async {
+    setState(() {
+      _isLoading = true;
+      _offset = 0;
+      _books.clear();
+    });
 
+    await _fetchReels();
+
+    if (mounted) {
+      setState(() => _isLoading = false);
       if (_isSubscribed && _books.isNotEmpty) {
         _playTrack(0, 0);
       }
     }
+  }
+
+  Future<void> _fetchReels() async {
+    final data = await _bookRepository.getReelsData(
+      offset: _offset,
+      limit: _limit,
+    );
+    if (!mounted) return;
+
+    final newBooks = data['books'] as List<Book>;
+    final hasMore = data['hasMore'] as bool;
+    final isSubscribed = data['isSubscribed'] as bool;
+
+    setState(() {
+      _isSubscribed = isSubscribed;
+      _books.addAll(newBooks);
+      _backendHasMore = hasMore;
+      _offset += newBooks.length;
+    });
+  }
+
+  Future<void> _loadMoreReels() async {
+    if (_isFetchingMore) return;
+    setState(() => _isFetchingMore = true);
+
+    // Looping logic:
+    // If backend has no more, we start fetching from offset 0 again
+    // But we append to our local list so user can scroll up.
+    if (!_backendHasMore) {
+      _offset = 0;
+    }
+
+    await _fetchReels();
+
+    if (mounted) setState(() => _isFetchingMore = false);
   }
 
   void _onTrackFinished() {
@@ -119,11 +160,19 @@ class _ReelsScreenState extends State<ReelsScreen> {
         );
       } else {
         // Loop back to the beginning
-        _verticalController.animateToPage(
-          0,
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
-        );
+        // We reached the end of the list.
+        // Wait, if infinite scroll is working, we should have loaded more by now.
+        // If we really are at the end, try loading more immediately?
+        // Or if loop logic failed?
+        _loadMoreReels().then((_) {
+          if (_currentBookIndex < _books.length - 1) {
+            _verticalController.animateToPage(
+              _currentBookIndex + 1,
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeInOut,
+            );
+          }
+        });
       }
     }
   }
@@ -242,8 +291,14 @@ class _ReelsScreenState extends State<ReelsScreen> {
         onPageChanged: (index) {
           // Play first track of new book
           _playTrack(index, 0);
+
+          // Pre-load next batch if we are near the end (e.g., 2 items remaining)
+          if (index >= _books.length - 2) {
+            _loadMoreReels();
+          }
         },
         itemBuilder: (context, bookIndex) {
+          if (bookIndex >= _books.length) return null;
           final book = _books[bookIndex];
 
           // Horizontal PageView for tracks
@@ -334,7 +389,7 @@ class _ReelsScreenState extends State<ReelsScreen> {
                     SizedBox(height: maxHeight * 0.05), // 5% spacer
                     // Track Info
                     Text(
-                      title ?? 'Unknown Track',
+                      book.title,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 24,

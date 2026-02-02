@@ -58,7 +58,10 @@ class _AppLayoutState extends State<AppLayout> {
         final catId = globalLayoutState.selectedCategoryId;
         final isOnDiscover =
             catId == 'categories' ||
-            (catId != 'home' && catId != 'library' && catId != 'profile');
+            (catId != 'home' &&
+                catId != 'library' &&
+                catId != 'profile' &&
+                catId != 'reels');
 
         if (catId == 'categories')
           _selectedIndex = 0;

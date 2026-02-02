@@ -278,12 +278,17 @@ class BookRepository {
 
   /// Fetches all data for the Reels screen (subscribers only).
   /// Returns a map with: isSubscribed, books (list of Book with tracks)
-  Future<Map<String, dynamic>> getReelsData() async {
+  Future<Map<String, dynamic>> getReelsData({
+    int offset = 0,
+    int limit = 5,
+  }) async {
     try {
       final userId = await _authService.getCurrentUserId();
       if (userId == null) throw Exception('User not logged in');
 
-      final uri = Uri.parse('${ApiConstants.baseUrl}/reels?user_id=$userId');
+      final uri = Uri.parse(
+        '${ApiConstants.baseUrl}/reels?user_id=$userId&offset=$offset&limit=$limit',
+      );
       final headers = await _getHeaders();
       final response = await _apiClient.get(uri, headers: headers);
 
@@ -291,17 +296,22 @@ class BookRepository {
         final Map<String, dynamic> data = json.decode(response.body);
 
         final isSubscribed = data['isSubscribed'] as bool? ?? false;
+        final hasMore = data['hasMore'] as bool? ?? false;
         final booksList = (data['books'] as List? ?? [])
             .map((json) => Book.fromJson(json))
             .toList();
 
-        return {'isSubscribed': isSubscribed, 'books': booksList};
+        return {
+          'isSubscribed': isSubscribed,
+          'books': booksList,
+          'hasMore': hasMore,
+        };
       } else {
         throw Exception('Failed to load reels data');
       }
     } catch (e) {
       print('Error fetching reels data: $e');
-      return {'isSubscribed': false, 'books': <Book>[]};
+      return {'isSubscribed': false, 'books': <Book>[], 'hasMore': false};
     }
   }
 
