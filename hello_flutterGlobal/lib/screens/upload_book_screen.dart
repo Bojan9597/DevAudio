@@ -31,10 +31,81 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
   List<Category> _categories = [];
   bool _isLoadingCategories = true;
 
+  // Background Music State
+  List<Map<String, dynamic>> _bgMusicList = [];
+  int? _selectedBgMusicId;
+
+  // Tab 2 State
+  final _bgTitleController = TextEditingController();
+  String? _selectedBgMusicPath;
+  bool _isBgDefault = false;
+
   @override
   void initState() {
     super.initState();
     _loadCategories();
+    _loadBgMusic();
+  }
+
+  Future<void> _loadBgMusic() async {
+    try {
+      final list = await BookRepository().getBackgroundMusicList();
+      if (mounted) {
+        setState(() {
+          _bgMusicList = list;
+        });
+      }
+    } catch (e) {
+      print('Error loading bg music: $e');
+    }
+  }
+
+  Future<void> _pickBgMusic() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.audio, // Audio type
+    );
+    if (result != null) {
+      setState(() {
+        _selectedBgMusicPath = result.files.single.path;
+      });
+    }
+  }
+
+  Future<void> _submitBgMusic() async {
+    if (_bgTitleController.text.isEmpty || _selectedBgMusicPath == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select file and enter title')),
+      );
+      return;
+    }
+
+    setState(() => _isUploading = true);
+    try {
+      await BookRepository().uploadBackgroundMusic(
+        _bgTitleController.text,
+        _selectedBgMusicPath!,
+        _isBgDefault,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Background music uploaded!')),
+        );
+        _bgTitleController.clear();
+        setState(() {
+          _selectedBgMusicPath = null;
+          _isBgDefault = false;
+        });
+        _loadBgMusic(); // Refresh list
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
   }
 
   Future<void> _loadCategories() async {
@@ -116,14 +187,18 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCategoryId == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.pleaseSelectCategory)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.pleaseSelectCategory),
+        ),
+      );
       return;
     }
     if (_selectedAudioPaths.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.pleaseSelectAudioFile)),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.pleaseSelectAudioFile),
+        ),
       );
       return;
     }
@@ -189,19 +264,26 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
         duration: totalDuration,
         isEncrypted: true, // Always true - server encrypts when serving
         isPremium: _isPremium,
+        backgroundMusicId: _selectedBgMusicId,
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.uploadSuccessful)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.uploadSuccessful),
+          ),
+        );
         Navigator.pop(context, true); // Return success
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.uploadFailed(e.toString()))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.uploadFailed(e.toString()),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -212,152 +294,236 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(AppLocalizations.of(context)!.uploadAudioBook)),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(labelText: 'Title *'),
-                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _authorController,
-                decoration: const InputDecoration(labelText: 'Author *'),
-                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-              ),
-              const SizedBox(height: 16),
-              _isLoadingCategories
-                  ? const Center(child: CircularProgressIndicator())
-                  : DropdownButtonFormField<String>(
-                      isExpanded: true, // Allow dropdown to take full width
-                      value: _selectedCategoryId,
-                      decoration: const InputDecoration(
-                        labelText: 'Category *',
-                      ),
-                      items: _categories.map((c) {
-                        return DropdownMenuItem(
-                          value: c.id,
-                          child: Text(
-                            c.title,
-                            overflow:
-                                TextOverflow.ellipsis, // Truncate long text
-                            maxLines: 1,
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (val) =>
-                          setState(() => _selectedCategoryId = val),
-                    ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Description'),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _priceController,
-                decoration: const InputDecoration(labelText: 'Price'),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 16),
-
-              // Premium Checkbox
-              CheckboxListTile(
-                title: const Text('Premium Content'),
-                subtitle: const Text('Only subscribers can access this book'),
-                value: _isPremium,
-                onChanged: (bool? value) {
-                  setState(() {
-                    _isPremium = value ?? false;
-                  });
-                },
-                tileColor: Colors.grey.withOpacity(0.1),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Audio Picker
-              ListTile(
-                title: Text(
-                  _selectedAudioPaths.isEmpty
-                      ? 'Select Audio File(s) *'
-                      : _selectedAudioPaths.length == 1
-                      ? 'Audio Selected: ...${_selectedAudioPaths.first.split(r'\').last}'
-                      : '${_selectedAudioPaths.length} Audio Files Selected',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                leading: const Icon(Icons.audio_file),
-                tileColor: Colors.grey.withOpacity(0.1),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                onTap: _pickAudio,
-              ),
-              const SizedBox(height: 16),
-
-              // Cover Picker
-              ListTile(
-                title: Text(
-                  _selectedCoverPath == null
-                      ? 'Select Cover Image (Optional)'
-                      : 'Cover Selected: ...${_selectedCoverPath!.split(r'\').last}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                leading: const Icon(Icons.image),
-                tileColor: Colors.grey.withOpacity(0.1),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                onTap: _pickCover,
-              ),
-              const SizedBox(height: 16),
-
-              // PDF Picker
-              ListTile(
-                title: Text(
-                  _selectedPdfPath == null
-                      ? 'Select PDF (Optional)'
-                      : 'PDF Selected: ...${_selectedPdfPath!.split(r'\').last}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                leading: const Icon(Icons.picture_as_pdf),
-                tileColor: Colors.grey.withOpacity(0.1),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                onTap: _pickPdf,
-              ),
-              const SizedBox(height: 32),
-
-              ElevatedButton(
-                onPressed: _isUploading ? null : _submit,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: _isUploading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(AppLocalizations.of(context)!.uploadBook, style: const TextStyle(fontSize: 16)),
-              ),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(AppLocalizations.of(context)!.uploadAudioBook),
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'Audio Upload'),
+              Tab(text: 'Background Music Upload'),
             ],
           ),
         ),
+        body: TabBarView(
+          children: [_buildBookUploadTab(), _buildBgMusicUploadTab()],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBookUploadTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextFormField(
+              controller: _titleController,
+              decoration: const InputDecoration(labelText: 'Title *'),
+              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _authorController,
+              decoration: const InputDecoration(labelText: 'Author *'),
+              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+            ),
+            const SizedBox(height: 16),
+            _isLoadingCategories
+                ? const Center(child: CircularProgressIndicator())
+                : DropdownButtonFormField<String>(
+                    isExpanded: true,
+                    value: _selectedCategoryId,
+                    decoration: const InputDecoration(labelText: 'Category *'),
+                    items: _categories.map((c) {
+                      return DropdownMenuItem(
+                        value: c.id,
+                        child: Text(
+                          c.title,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (val) =>
+                        setState(() => _selectedCategoryId = val),
+                  ),
+            const SizedBox(height: 16),
+
+            // Background Music Dropdown
+            DropdownButtonFormField<int>(
+              isExpanded: true,
+              value: _selectedBgMusicId,
+              decoration: const InputDecoration(
+                labelText: 'Default Background Music (Optional)',
+              ),
+              items: [
+                const DropdownMenuItem<int>(value: null, child: Text('None')),
+                ..._bgMusicList.map((bg) {
+                  return DropdownMenuItem<int>(
+                    value: bg['id'] as int,
+                    child: Text(bg['title'] ?? 'Unknown'),
+                  );
+                }).toList(),
+              ],
+              onChanged: (val) => setState(() => _selectedBgMusicId = val),
+            ),
+            const SizedBox(height: 16),
+
+            TextFormField(
+              controller: _descriptionController,
+              decoration: const InputDecoration(labelText: 'Description'),
+              maxLines: 3,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _priceController,
+              decoration: const InputDecoration(labelText: 'Price'),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 16),
+
+            // Premium Checkbox
+            CheckboxListTile(
+              title: const Text('Premium Content'),
+              subtitle: const Text('Only subscribers can access this book'),
+              value: _isPremium,
+              onChanged: (bool? value) {
+                setState(() {
+                  _isPremium = value ?? false;
+                });
+              },
+              tileColor: Colors.grey.withOpacity(0.1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Audio Picker
+            ListTile(
+              title: Text(
+                _selectedAudioPaths.isEmpty
+                    ? 'Select Audio File(s) *'
+                    : _selectedAudioPaths.length == 1
+                    ? 'Audio Selected: ...${_selectedAudioPaths.first.split(r'\').last}'
+                    : '${_selectedAudioPaths.length} Audio Files Selected',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              leading: const Icon(Icons.audio_file),
+              tileColor: Colors.grey.withOpacity(0.1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              onTap: _pickAudio,
+            ),
+            const SizedBox(height: 16),
+
+            // Cover Picker
+            ListTile(
+              title: Text(
+                _selectedCoverPath == null
+                    ? 'Select Cover Image (Optional)'
+                    : 'Cover Selected: ...${_selectedCoverPath!.split(r'\').last}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              leading: const Icon(Icons.image),
+              tileColor: Colors.grey.withOpacity(0.1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              onTap: _pickCover,
+            ),
+            const SizedBox(height: 16),
+
+            // PDF Picker
+            ListTile(
+              title: Text(
+                _selectedPdfPath == null
+                    ? 'Select PDF (Optional)'
+                    : 'PDF Selected: ...${_selectedPdfPath!.split(r'\').last}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              leading: const Icon(Icons.picture_as_pdf),
+              tileColor: Colors.grey.withOpacity(0.1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              onTap: _pickPdf,
+            ),
+            const SizedBox(height: 32),
+
+            ElevatedButton(
+              onPressed: _isUploading ? null : _submit,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: _isUploading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(
+                      AppLocalizations.of(context)!.uploadBook,
+                      style: const TextStyle(fontSize: 16),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBgMusicUploadTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextFormField(
+            controller: _bgTitleController,
+            decoration: const InputDecoration(labelText: 'Music Title *'),
+          ),
+          const SizedBox(height: 16),
+
+          // File Picker
+          ListTile(
+            title: Text(
+              _selectedBgMusicPath == null
+                  ? 'Select Background Music File *'
+                  : 'File: ...${_selectedBgMusicPath!.split(r'\').last}',
+            ),
+            leading: const Icon(Icons.music_note),
+            onTap: _pickBgMusic,
+            tileColor: Colors.grey.withOpacity(0.1),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          ElevatedButton(
+            onPressed: _isUploading ? null : _submitBgMusic,
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            child: _isUploading
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text("Upload Background Music"),
+          ),
+        ],
       ),
     );
   }

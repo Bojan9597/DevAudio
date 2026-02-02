@@ -558,7 +558,7 @@ class BookRepository {
     return [];
   }
 
-  Future<int> getBookStatus(
+  Future<Map<String, dynamic>> getBookStatus(
     int userId,
     String bookId, {
     String? trackId,
@@ -573,13 +573,12 @@ class BookRepository {
       final response = await _apiClient.get(Uri.parse(url), headers: headers);
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return data['position_seconds'] ?? 0;
+        return json.decode(response.body) as Map<String, dynamic>;
       }
-      return 0;
+      return {'position_seconds': 0};
     } catch (e) {
       print('Error fetching book status: $e');
-      return 0;
+      return {'position_seconds': 0};
     }
   }
 
@@ -706,6 +705,7 @@ class BookRepository {
     required int duration,
     bool isEncrypted = false,
     bool isPremium = false,
+    int? backgroundMusicId,
   }) async {
     if (ConnectivityService().isOffline) {
       throw Exception("Cannot upload while offline.");
@@ -736,6 +736,9 @@ class BookRepository {
     request.fields['duration'] = duration.toString();
     request.fields['is_encrypted'] = isEncrypted.toString();
     request.fields['is_premium'] = isPremium ? '1' : '0';
+    if (backgroundMusicId != null) {
+      request.fields['background_music_id'] = backgroundMusicId.toString();
+    }
 
     for (var path in audioPaths) {
       if (path.isNotEmpty) {
@@ -867,6 +870,78 @@ class BookRepository {
       await _apiClient.post(url, headers: headers, body: body);
     } catch (e) {
       print('Error updating reels offset: $e');
+    }
+  }
+
+  Future<void> uploadBackgroundMusic(
+    String title,
+    String filePath,
+    bool isDefault,
+  ) async {
+    if (ConnectivityService().isOffline) {
+      throw Exception("Cannot upload while offline.");
+    }
+
+    final token = await _authService.getAccessToken();
+    final uri = Uri.parse('${ApiConstants.baseUrl}/upload-bg-music');
+    final request = http.MultipartRequest('POST', uri);
+
+    if (token != null) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
+
+    request.fields['title'] = title;
+    request.fields['is_default'] = isDefault.toString();
+
+    if (filePath.isNotEmpty) {
+      request.files.add(await http.MultipartFile.fromPath('file', filePath));
+    }
+
+    final response = await request.send();
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      final respStr = await response.stream.bytesToString();
+      throw Exception('Failed to upload background music: $respStr');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getBackgroundMusicList() async {
+    try {
+      if (ConnectivityService().isOffline) return [];
+
+      final uri = Uri.parse('${ApiConstants.baseUrl}/background-music');
+      final headers = await _getHeaders();
+      final response = await _apiClient.get(uri, headers: headers);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching background music: $e');
+      return [];
+    }
+  }
+
+  Future<void> updateUserBackgroundMusic(int bookId, int? bgMusicId) async {
+    try {
+      final userId = await _authService.getCurrentUserId();
+      if (userId == null) return;
+
+      final url = Uri.parse(
+        '${ApiConstants.baseUrl}/user-books/background-music',
+      );
+      final headers = await _getHeaders();
+      final body = json.encode({
+        'user_id': userId,
+        'book_id': bookId,
+        'background_music_id': bgMusicId,
+      });
+
+      await _apiClient.post(url, headers: headers, body: body);
+    } catch (e) {
+      print('Error updating user background music preference: $e');
     }
   }
 }

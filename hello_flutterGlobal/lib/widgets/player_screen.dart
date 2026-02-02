@@ -5,6 +5,7 @@ import '../l10n/generated/app_localizations.dart';
 import '../models/book.dart';
 import '../screens/playlist_screen.dart';
 import 'dart:async';
+import 'dart:io';
 import 'dart:convert'; // For JSON encoding/decoding
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
@@ -121,6 +122,14 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   Timer? _progressTimer;
 
+  // Background Music
+  final AudioPlayer _bgPlayer = AudioPlayer();
+  double _bgVolume = 0.2;
+  List<Map<String, dynamic>> _bgMusicList = [];
+  int? _selectedBgMusicId;
+  bool _isBgMusicLoaded = false;
+  StreamSubscription? _bgPlayerStateSubscription;
+
   @override
   void initState() {
     super.initState();
@@ -129,6 +138,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     _currentIndex = widget.initialIndex;
     _isFavorite = widget.book.isFavorite;
     _init();
+    _initBgMusic();
   }
 
   Future<void> _init() async {
@@ -660,11 +670,46 @@ class _PlayerScreenState extends State<PlayerScreen>
             ? widget.playlist![_currentIndex]['id'].toString()
             : null;
 
-        final savedPosition = await BookRepository().getBookStatus(
+        final status = await BookRepository().getBookStatus(
           _userId!,
           widget.book.id,
           trackId: trackId,
         );
+
+        final savedPosition = status['position_seconds'] as int? ?? 0;
+
+        // Update Background Music Preference if available
+        if (status.containsKey('background_music_id')) {
+          final bgId = status['background_music_id'];
+          // Only update if explicit preference exists (bgId != null)
+          // If bgId is null, it means no preference -> stick to what _initBgMusic found (Default or None)
+          // OR does it mean "User turned it off"?
+          // If user set "None", DB should probably store NULL?
+          // The API returns NULL if no entry in user_books.
+          // If entry exists but value is NULL, it returns NULL.
+          // To distinguish "Not Set" vs "Set to None", we need distinct values?
+          // Currently: user_books entry created with default NULL music_id if not specified.
+          // If user selects "None", we set it to NULL.
+          // So we can't distinguish "User wants silence" vs "User hasn't chosen".
+          // However, widget.book.backgroundMusicId (from Library) handled the "Default if not set" logic via COALESCE.
+          // API uses: COALESCE(ub.bg_id, b.bg_id).
+          // So if user never set it, ub.bg_id is NULL -> returns b.bg_id (Default).
+          // IF user set "None" (explicitly), how do we store it?
+          // We probably store NULL. COALESCE will then return Default.
+          // So "None" is tricky if a Default exists.
+          // For now, let's trust the API result. The API `get_book_status` implementation just returns raw `user_books.background_music_id`.
+          // It does NOT do the COALESCE logic that `get_library` does.
+          // WE SHOULD UPDATE `get_book_status` to do COALESCE?
+          // Actually, `PlayerScreen` logic (line 1653) handled the Default fallback.
+          // if bgId from status is NOT NULL, use it.
+          if (bgId != null && bgId is int) {
+            if (mounted) {
+              setState(() => _selectedBgMusicId = bgId);
+              _updateBgMusicSource();
+            }
+          }
+        }
+
         if (savedPosition > 0) {
           await _player.seek(Duration(seconds: savedPosition));
         }
@@ -731,6 +776,8 @@ class _PlayerScreenState extends State<PlayerScreen>
     _progressTimer?.cancel();
     _playerStateSubscription?.cancel();
     _saveProgress(); // Try to save on exit
+    _bgPlayer.dispose();
+    _bgPlayerStateSubscription?.cancel();
     // Don't dispose handler player - it's global
     super.dispose();
   }
@@ -1513,6 +1560,14 @@ class _PlayerScreenState extends State<PlayerScreen>
                         onTap: _showMoreMenu,
                         child: _buildBottomOption(Icons.more_vert, '', false),
                       ),
+                      GestureDetector(
+                        onTap: _showBgMusicSettings,
+                        child: _buildBottomOption(
+                          Icons.music_note,
+                          '',
+                          _selectedBgMusicId != null,
+                        ),
+                      ),
                     ],
                   ),
 
@@ -1622,6 +1677,191 @@ class _PlayerScreenState extends State<PlayerScreen>
           ],
         ],
       ),
+    );
+  }
+
+  Future<void> _initBgMusic() async {
+    try {
+      _bgMusicList = await BookRepository().getBackgroundMusicList();
+
+      // Determine default
+      _selectedBgMusicId = widget.book.backgroundMusicId;
+      if (_selectedBgMusicId == null && _bgMusicList.isNotEmpty) {
+        final defaultTrack = _bgMusicList.firstWhere(
+          (e) => e['isDefault'] == true,
+          orElse: () => {},
+        );
+        if (defaultTrack.isNotEmpty) {
+          _selectedBgMusicId = defaultTrack['id'];
+        }
+      }
+
+      await _bgPlayer.setLoopMode(LoopMode.one);
+      await _bgPlayer.setVolume(_bgVolume);
+
+      if (_selectedBgMusicId != null) {
+        await _updateBgMusicSource();
+      }
+
+      // Sync playback
+      _bgPlayerStateSubscription = _player.playingStream.listen((playing) {
+        if (!_isBgMusicLoaded) return;
+        if (playing) {
+          _bgPlayer.play();
+        } else {
+          _bgPlayer.pause();
+        }
+      });
+    } catch (e) {
+      print("Error initializing BG music: $e");
+    }
+  }
+
+  Future<void> _updateBgMusicSource() async {
+    if (_selectedBgMusicId == null) {
+      await _bgPlayer.stop();
+      setState(() => _isBgMusicLoaded = false);
+      return;
+    }
+
+    final track = _bgMusicList.firstWhere(
+      (e) => e['id'] == _selectedBgMusicId,
+      orElse: () => {},
+    );
+    if (track.isEmpty || track['url'] == null) return;
+
+    // Handle URL (ensure absolute)
+    String url = track['url'];
+    if (!url.startsWith('http')) {
+      url = '${ApiConstants.baseUrl}$url';
+    }
+
+    try {
+      // Cache Logic
+      final String fileName = 'bg_music_${track['id']}.mp3';
+      final downloadService = DownloadService();
+
+      // Check cache first to avoid redundant download calls
+      final String filePath = await downloadService.getLocalFilePath(fileName);
+      final file = File(filePath);
+
+      if (!await file.exists()) {
+        // Download if not exists
+        await downloadService.downloadFile(url, fileName);
+      }
+
+      if (await file.exists()) {
+        await _bgPlayer.setFilePath(filePath);
+      } else {
+        // Fallback to URL
+        await _bgPlayer.setUrl(url);
+      }
+
+      setState(() => _isBgMusicLoaded = true);
+      if (_player.playing) {
+        _bgPlayer.play();
+      }
+    } catch (e) {
+      print("Error loading BG music source: $e");
+    }
+  }
+
+  void _showBgMusicSettings() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.grey[900],
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Background Music',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Volume Slider
+                  Row(
+                    children: [
+                      const Icon(Icons.volume_down, color: Colors.white70),
+                      Expanded(
+                        child: Slider(
+                          value: _bgVolume,
+                          onChanged: (val) {
+                            setModalState(
+                              () => _bgVolume = val,
+                            ); // Update modal UI
+                            // Update parent state effectively?
+                            // setState not needed strictly for _bgVolume if applied immediately,
+                            // but good for consistency.
+                            // Actually we MUST call _bgPlayer.setVolume
+                            _bgPlayer.setVolume(val);
+                            // Also update parent variable
+                            setState(() => _bgVolume = val);
+                          },
+                        ),
+                      ),
+                      const Icon(Icons.volume_up, color: Colors.white70),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Track Selection
+                  DropdownButton<int?>(
+                    value: _selectedBgMusicId,
+                    isExpanded: true,
+                    dropdownColor: Colors.grey[800],
+                    style: const TextStyle(color: Colors.white),
+                    items: [
+                      const DropdownMenuItem<int?>(
+                        value: null,
+                        child: Text('None'),
+                      ),
+                      ..._bgMusicList.map(
+                        (bg) => DropdownMenuItem<int>(
+                          value: bg['id'] as int,
+                          child: Text(bg['title'] ?? 'Unknown'),
+                        ),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      setModalState(() => _selectedBgMusicId = val);
+                      setState(() => _selectedBgMusicId = val);
+                      _updateBgMusicSource();
+
+                      // Save Preference
+                      try {
+                        BookRepository().updateUserBackgroundMusic(
+                          int.parse(widget.book.id),
+                          val,
+                        );
+                      } catch (e) {
+                        print("Error saving music pref: $e");
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
