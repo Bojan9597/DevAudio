@@ -64,10 +64,12 @@ class _AppLayoutState extends State<AppLayout> {
           _selectedIndex = 0;
         else if (catId == 'home')
           _selectedIndex = 1;
-        else if (catId == 'library')
+        else if (catId == 'reels')
           _selectedIndex = 2;
-        else if (catId == 'profile')
+        else if (catId == 'library')
           _selectedIndex = 3;
+        else if (catId == 'profile')
+          _selectedIndex = 4;
         else
           _selectedIndex = 0; // Any category selection goes to Discover tab
         // Index 0 is "Discover" (categories)
@@ -92,36 +94,32 @@ class _AppLayoutState extends State<AppLayout> {
                 : null,
             titleSpacing: isOnDiscover ? 0 : null,
             title: Row(
-                    children: [
-                      if (isOnDiscover)
-                        GestureDetector(
-                          onTap: () => globalLayoutState.toggleMenu(),
-                          child: Text(
-                            AppLocalizations.of(context)!.categories,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface,
-                              fontWeight: FontWeight.w500,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      if (!isOnDiscover) ...[
-                        Text(
-                          'DevAudio',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurface,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Image.asset(
-                          'assets/icon/logo1.png',
-                          height: 32,
-                          width: 32,
-                        ),
-                      ],
-                    ],
+              children: [
+                if (isOnDiscover)
+                  GestureDetector(
+                    onTap: () => globalLayoutState.toggleMenu(),
+                    child: Text(
+                      AppLocalizations.of(context)!.categories,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 16,
+                      ),
+                    ),
                   ),
+                if (!isOnDiscover) ...[
+                  Text(
+                    'DevAudio',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Image.asset('assets/icon/logo1.png', height: 32, width: 32),
+                ],
+              ],
+            ),
             actions: [
               if (isOnDiscover)
                 IconButton(
@@ -132,9 +130,7 @@ class _AppLayoutState extends State<AppLayout> {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const SearchOverlay(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const SearchOverlay()),
                     );
                   },
                 ),
@@ -202,9 +198,12 @@ class _AppLayoutState extends State<AppLayout> {
                       globalLayoutState.setCategoryId('home');
                       break;
                     case 2:
-                      globalLayoutState.setCategoryId('library');
+                      globalLayoutState.setCategoryId('reels');
                       break;
                     case 3:
+                      globalLayoutState.setCategoryId('library');
+                      break;
+                    case 4:
                       globalLayoutState.setCategoryId('profile');
                       break;
                   }
@@ -217,6 +216,10 @@ class _AppLayoutState extends State<AppLayout> {
                   BottomNavigationBarItem(
                     icon: const Icon(Icons.home),
                     label: AppLocalizations.of(context)!.home,
+                  ),
+                  const BottomNavigationBarItem(
+                    icon: Icon(Icons.video_library),
+                    label: 'Reels',
                   ),
                   BottomNavigationBarItem(
                     icon: const Icon(Icons.library_books),

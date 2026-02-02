@@ -16,6 +16,7 @@ import '../screens/upload_book_screen.dart';
 import '../screens/playlist_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/login_screen.dart';
+import '../screens/reels_screen.dart';
 import 'category_details_view.dart';
 
 class ContentArea extends StatefulWidget {
@@ -172,6 +173,10 @@ class _ContentAreaState extends State<ContentArea> {
 
         if (categoryId == 'profile') {
           return const ProfileScreen();
+        }
+
+        if (categoryId == 'reels') {
+          return const ReelsScreen();
         }
 
         if (_isLoading) {
@@ -965,7 +970,8 @@ class _ContentAreaState extends State<ContentArea> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            (result['error'] as String?) ?? AppLocalizations.of(context)!.failedToSubmitRating,
+            (result['error'] as String?) ??
+                AppLocalizations.of(context)!.failedToSubmitRating,
           ),
         ),
       );

@@ -276,6 +276,35 @@ class BookRepository {
     }
   }
 
+  /// Fetches all data for the Reels screen (subscribers only).
+  /// Returns a map with: isSubscribed, books (list of Book with tracks)
+  Future<Map<String, dynamic>> getReelsData() async {
+    try {
+      final userId = await _authService.getCurrentUserId();
+      if (userId == null) throw Exception('User not logged in');
+
+      final uri = Uri.parse('${ApiConstants.baseUrl}/reels?user_id=$userId');
+      final headers = await _getHeaders();
+      final response = await _apiClient.get(uri, headers: headers);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+
+        final isSubscribed = data['isSubscribed'] as bool? ?? false;
+        final booksList = (data['books'] as List? ?? [])
+            .map((json) => Book.fromJson(json))
+            .toList();
+
+        return {'isSubscribed': isSubscribed, 'books': booksList};
+      } else {
+        throw Exception('Failed to load reels data');
+      }
+    } catch (e) {
+      print('Error fetching reels data: $e');
+      return {'isSubscribed': false, 'books': <Book>[]};
+    }
+  }
+
   Future<List<Book>> getDiscoverBooks({
     int page = 1,
     int limit = 5,
@@ -759,7 +788,11 @@ class BookRepository {
   /// Returns null on success, or an error message string on failure
   /// Returns a map with 'averageRating' and 'ratingCount' on success,
   /// or a map with 'error' key on failure.
-  Future<Map<String, dynamic>> rateBook(int userId, String bookId, int stars) async {
+  Future<Map<String, dynamic>> rateBook(
+    int userId,
+    String bookId,
+    int stars,
+  ) async {
     try {
       if (ConnectivityService().isOffline) {
         return {'error': 'Cannot rate while offline'};
@@ -782,7 +815,10 @@ class BookRepository {
         };
       } else {
         final data = json.decode(response.body);
-        return {'error': data['message'] ?? data['error'] ?? 'Failed to submit rating'};
+        return {
+          'error':
+              data['message'] ?? data['error'] ?? 'Failed to submit rating',
+        };
       }
     } catch (e) {
       print('Error rating book: $e');

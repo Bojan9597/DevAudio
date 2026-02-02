@@ -1633,6 +1633,144 @@ def get_discover():
     finally:
         db.disconnect()
 
+def is_subscriber(user_id, db):
+    """Check if user has active subscription."""
+    query = "SELECT status, end_date FROM subscriptions WHERE user_id = %s"
+    result = db.execute_query(query, (user_id,))
+    if result and result[0]['status'] == 'active':
+        end_date = result[0]['end_date']
+        if end_date is None:  # Lifetime subscription
+            return True
+        return end_date > datetime.datetime.utcnow()
+    return False
+
+# ===================== REELS ENDPOINT =====================
+@app.route('/reels', methods=['GET'])
+@jwt_required
+def get_reels():
+    """
+    Returns all books with their playlist items for the Reels feature.
+    Restricted to subscribers.
+    """
+    user_id = request.args.get('user_id')
+    
+    if not user_id:
+        return jsonify({"error": "User ID required"}), 400
+        
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+        
+    # Fetch parameters
+    offset = int(request.args.get('offset', 0))
+    limit = int(request.args.get('limit', 5))
+
+    try:
+        # Check subscription
+        if not is_subscriber(user_id, db):
+             return jsonify({
+                 "isSubscribed": False,
+                 "books": [],
+                 "hasMore": False
+             }), 200
+
+        # Fetch books with pagination
+        # We fetch limit + 1 to check if there are more
+        books_query = """
+            SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, b.duration_seconds,
+                   b.description, b.posted_by_user_id
+            FROM books b
+            ORDER BY b.id DESC
+            LIMIT %s OFFSET %s
+        """
+        books_result = db.execute_query(books_query, (limit, offset))
+        
+        if not books_result:
+             return jsonify({"isSubscribed": True, "books": []}), 200
+
+        # Fetch all playlist items (single query for efficiency?)
+        # For simplicity and correctness, let's fetch all items ordered by book_id, track_order
+        playlist_query = """
+            SELECT id, book_id, file_path, title, duration_seconds, track_order
+            FROM playlist_items
+            ORDER BY book_id, track_order
+        """
+        playlist_result = db.execute_query(playlist_query)
+        
+        # Group items by book_id
+        tracks_by_book = {}
+        if playlist_result:
+            for row in playlist_result:
+                bid = row['book_id']
+                if bid not in tracks_by_book:
+                    tracks_by_book[bid] = []
+                
+                # Resolve audio URL
+                audio_path = resolve_stored_url(row['file_path'], "AudioBooks")
+                
+                tracks_by_book[bid].append({
+                    "id": str(row['id']),
+                    "title": row['title'],
+                    "audioUrl": audio_path,
+                    "duration": row['duration_seconds'] or 0,
+                    "order": row['track_order']
+                })
+        
+        # Build response
+        books_data = []
+        for book in books_result:
+            book_id = book['id']
+            
+            # Resolve book URLs
+            cover_path, cover_thumb = resolve_cover_urls(book['cover_image_path'])
+            audio_path = resolve_stored_url(book['audio_path'], "AudioBooks")
+            
+            # Get tracks
+            tracks = tracks_by_book.get(book_id, [])
+            
+            # If no tracks, but book has audio_path (single file), crate synthetic track
+            if not tracks and book['audio_path']:
+                tracks = [{
+                    "id": f"book_{book_id}", # Virtual ID
+                    "title": book['title'],
+                    "audioUrl": audio_path,
+                    "duration": book['duration_seconds'] or 0,
+                    "order": 0
+                }]
+            
+            # Skip books with no audio content at all?
+            if not tracks:
+                continue
+
+            books_data.append({
+                "id": str(book_id),
+                "title": book['title'],
+                "author": book['author'],
+                "coverUrl": cover_path,
+                "description": book['description'],
+                "postedByUserId": str(book['posted_by_user_id']),
+                "categoryId": "", # Required by Book.fromJson
+                "subcategoryIds": [], # Required by Book.fromJson
+                "audioUrl": audio_path if book['audio_path'] else "",
+                "isPlaylist": len(tracks) > 0,
+                "isPremium": True, # Reels are premium
+                "price": 0.0,
+                "averageRating": 0.0,
+                "ratingCount": 0,
+                "tracks": tracks
+            })
+            
+        return jsonify({
+            "isSubscribed": True,
+            "books": books_data
+        }), 200
+        
+    except Exception as e:
+        print(f"Error in get_reels: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
+
 
 # ===================== COMBINED LIBRARY ENDPOINT =====================
 @app.route('/library', methods=['GET'])

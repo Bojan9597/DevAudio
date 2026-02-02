@@ -23,6 +23,7 @@ class Book {
   final int ratingCount;
   final String? pdfUrl;
   final bool isPremium;
+  final List<dynamic> tracks;
 
   /// Returns the absolute cover URL with base URL prepended if needed
   String get absoluteCoverUrl => ensureAbsoluteUrl(coverUrl);
@@ -54,6 +55,7 @@ class Book {
     this.ratingCount = 0,
     this.pdfUrl,
     this.isPremium = false,
+    this.tracks = const [],
   });
 
   /// Helper to parse premium field - handles both boolean (PostgreSQL) and int (MySQL)
@@ -115,6 +117,7 @@ class Book {
       ratingCount: json['ratingCount'] as int? ?? 0,
       pdfUrl: json['pdfUrl'] as String?,
       isPremium: _parsePremium(json),
+      tracks: json['tracks'] as List<dynamic>? ?? [],
     );
   }
 
