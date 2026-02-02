@@ -5,8 +5,6 @@ import '../l10n/generated/app_localizations.dart';
 import '../models/book.dart';
 import '../screens/playlist_screen.dart';
 import 'dart:async';
-import 'dart:io';
-import 'dart:convert'; // For JSON encoding/decoding
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
 import 'dart:ui'; // For BackdropFilter
@@ -122,13 +120,9 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   Timer? _progressTimer;
 
-  // Background Music
-  final AudioPlayer _bgPlayer = AudioPlayer();
-  double _bgVolume = 0.2;
+  // Background Music - managed by audioHandler for background continuity
   List<Map<String, dynamic>> _bgMusicList = [];
-  int? _selectedBgMusicId;
-  bool _isBgMusicLoaded = false;
-  StreamSubscription? _bgPlayerStateSubscription;
+  // Volume and selectedBgMusicId are accessed via audioHandler
 
   @override
   void initState() {
@@ -704,8 +698,8 @@ class _PlayerScreenState extends State<PlayerScreen>
           // if bgId from status is NOT NULL, use it.
           if (bgId != null && bgId is int) {
             if (mounted) {
-              setState(() => _selectedBgMusicId = bgId);
-              _updateBgMusicSource();
+              await audioHandler.setBgMusicSource(bgId, _bgMusicList);
+              setState(() {}); // Refresh UI
             }
           }
         }
@@ -776,9 +770,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     _progressTimer?.cancel();
     _playerStateSubscription?.cancel();
     _saveProgress(); // Try to save on exit
-    _bgPlayer.dispose();
-    _bgPlayerStateSubscription?.cancel();
-    // Don't dispose handler player - it's global
+    // Don't dispose handler players - they're global (both main and background music)
     super.dispose();
   }
 
@@ -1565,7 +1557,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                         child: _buildBottomOption(
                           Icons.music_note,
                           '',
-                          _selectedBgMusicId != null,
+                          audioHandler.selectedBgMusicId != null,
                         ),
                       ),
                     ],
@@ -1684,89 +1676,45 @@ class _PlayerScreenState extends State<PlayerScreen>
     try {
       _bgMusicList = await BookRepository().getBackgroundMusicList();
 
-      // Determine default
-      _selectedBgMusicId = widget.book.backgroundMusicId;
-      if (_selectedBgMusicId == null && _bgMusicList.isNotEmpty) {
-        final defaultTrack = _bgMusicList.firstWhere(
-          (e) => e['isDefault'] == true,
-          orElse: () => {},
-        );
-        if (defaultTrack.isNotEmpty) {
-          _selectedBgMusicId = defaultTrack['id'];
+      // Determine which music to use (prioritize existing selection in audioHandler)
+      int? bgMusicId = audioHandler.selectedBgMusicId;
+
+      // If no current selection, use book's default or global default
+      if (bgMusicId == null) {
+        bgMusicId = widget.book.backgroundMusicId;
+        if (bgMusicId == null && _bgMusicList.isNotEmpty) {
+          final defaultTrack = _bgMusicList.firstWhere(
+            (e) => e['isDefault'] == true,
+            orElse: () => {},
+          );
+          if (defaultTrack.isNotEmpty) {
+            bgMusicId = defaultTrack['id'];
+          }
         }
       }
 
-      await _bgPlayer.setLoopMode(LoopMode.one);
-      await _bgPlayer.setVolume(_bgVolume);
-
-      if (_selectedBgMusicId != null) {
-        await _updateBgMusicSource();
+      // Set the background music source via audioHandler (handles looping, syncing, etc.)
+      if (bgMusicId != null) {
+        await audioHandler.setBgMusicSource(bgMusicId, _bgMusicList);
       }
 
-      // Sync playback
-      _bgPlayerStateSubscription = _player.playingStream.listen((playing) {
-        if (!_isBgMusicLoaded) return;
-        if (playing) {
-          _bgPlayer.play();
-        } else {
-          _bgPlayer.pause();
-        }
-      });
+      if (mounted) setState(() {});
     } catch (e) {
       print("Error initializing BG music: $e");
     }
   }
 
-  Future<void> _updateBgMusicSource() async {
-    if (_selectedBgMusicId == null) {
-      await _bgPlayer.stop();
-      setState(() => _isBgMusicLoaded = false);
-      return;
-    }
-
-    final track = _bgMusicList.firstWhere(
-      (e) => e['id'] == _selectedBgMusicId,
-      orElse: () => {},
-    );
-    if (track.isEmpty || track['url'] == null) return;
-
-    // Handle URL (ensure absolute)
-    String url = track['url'];
-    if (!url.startsWith('http')) {
-      url = '${ApiConstants.baseUrl}$url';
-    }
-
-    try {
-      // Cache Logic
-      final String fileName = 'bg_music_${track['id']}.mp3';
-      final downloadService = DownloadService();
-
-      // Check cache first to avoid redundant download calls
-      final String filePath = await downloadService.getLocalFilePath(fileName);
-      final file = File(filePath);
-
-      if (!await file.exists()) {
-        // Download if not exists
-        await downloadService.downloadFile(url, fileName);
-      }
-
-      if (await file.exists()) {
-        await _bgPlayer.setFilePath(filePath);
-      } else {
-        // Fallback to URL
-        await _bgPlayer.setUrl(url);
-      }
-
-      setState(() => _isBgMusicLoaded = true);
-      if (_player.playing) {
-        _bgPlayer.play();
-      }
-    } catch (e) {
-      print("Error loading BG music source: $e");
-    }
+  Future<void> _updateBgMusicSource(int? bgMusicId) async {
+    // Delegate to audioHandler - it handles caching, looping, and syncing with main player
+    await audioHandler.setBgMusicSource(bgMusicId, _bgMusicList);
+    if (mounted) setState(() {});
   }
 
   void _showBgMusicSettings() {
+    // Use local variables to track state within modal, synced from audioHandler
+    double modalVolume = audioHandler.bgVolume;
+    int? modalSelectedId = audioHandler.selectedBgMusicId;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -1801,18 +1749,11 @@ class _PlayerScreenState extends State<PlayerScreen>
                       const Icon(Icons.volume_down, color: Colors.white70),
                       Expanded(
                         child: Slider(
-                          value: _bgVolume,
+                          value: modalVolume,
                           onChanged: (val) {
-                            setModalState(
-                              () => _bgVolume = val,
-                            ); // Update modal UI
-                            // Update parent state effectively?
-                            // setState not needed strictly for _bgVolume if applied immediately,
-                            // but good for consistency.
-                            // Actually we MUST call _bgPlayer.setVolume
-                            _bgPlayer.setVolume(val);
-                            // Also update parent variable
-                            setState(() => _bgVolume = val);
+                            setModalState(() => modalVolume = val);
+                            audioHandler.setBgMusicVolume(val);
+                            setState(() {}); // Refresh parent UI if needed
                           },
                         ),
                       ),
@@ -1823,7 +1764,7 @@ class _PlayerScreenState extends State<PlayerScreen>
 
                   // Track Selection
                   DropdownButton<int?>(
-                    value: _selectedBgMusicId,
+                    value: modalSelectedId,
                     isExpanded: true,
                     dropdownColor: Colors.grey[800],
                     style: const TextStyle(color: Colors.white),
@@ -1839,10 +1780,9 @@ class _PlayerScreenState extends State<PlayerScreen>
                         ),
                       ),
                     ],
-                    onChanged: (val) {
-                      setModalState(() => _selectedBgMusicId = val);
-                      setState(() => _selectedBgMusicId = val);
-                      _updateBgMusicSource();
+                    onChanged: (val) async {
+                      setModalState(() => modalSelectedId = val);
+                      await _updateBgMusicSource(val);
 
                       // Save Preference
                       try {

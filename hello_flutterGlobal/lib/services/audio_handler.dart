@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
 import '../models/book.dart';
@@ -9,7 +10,19 @@ import 'download_service.dart';
 class MyAudioHandler extends BaseAudioHandler {
   final AudioPlayer _player = AudioPlayer();
 
+  // Background music player - managed separately for background playback
+  final AudioPlayer _bgPlayer = AudioPlayer();
+  double _bgVolume = 0.2;
+  bool _bgMusicEnabled = true;
+  bool _bgMusicLoaded = false;
+  int? _selectedBgMusicId;
+  StreamSubscription? _bgSyncSubscription;
+
   AudioPlayer get player => _player;
+  AudioPlayer get bgPlayer => _bgPlayer;
+  double get bgVolume => _bgVolume;
+  bool get bgMusicEnabled => _bgMusicEnabled;
+  int? get selectedBgMusicId => _selectedBgMusicId;
 
   // Track the current book and playlist for mini player tap
   Book? currentBook;
@@ -22,6 +35,20 @@ class MyAudioHandler extends BaseAudioHandler {
   int? _userId;
 
   MyAudioHandler() {
+    // Initialize background music player settings
+    _bgPlayer.setLoopMode(LoopMode.one);
+    _bgPlayer.setVolume(_bgVolume);
+
+    // Sync background music with main player
+    _bgSyncSubscription = _player.playingStream.listen((playing) {
+      if (!_bgMusicLoaded || !_bgMusicEnabled) return;
+      if (playing) {
+        _bgPlayer.play();
+      } else {
+        _bgPlayer.pause();
+      }
+    });
+
     // Listen to player state and update audio service
     _player.playbackEventStream.listen((event) {
       playbackState.add(
@@ -74,6 +101,93 @@ class MyAudioHandler extends BaseAudioHandler {
 
     // Start background progress sync timer
     _startBackgroundProgressSync();
+  }
+
+  // ============ Background Music Methods ============
+
+  /// Set background music source from URL or local file
+  Future<void> setBgMusicSource(
+    int? bgMusicId,
+    List<Map<String, dynamic>> bgMusicList,
+  ) async {
+    _selectedBgMusicId = bgMusicId;
+
+    if (bgMusicId == null) {
+      await stopBgMusic();
+      return;
+    }
+
+    final track = bgMusicList.firstWhere(
+      (e) => e['id'] == bgMusicId,
+      orElse: () => {},
+    );
+    if (track.isEmpty || track['url'] == null) {
+      await stopBgMusic();
+      return;
+    }
+
+    // Handle URL (ensure absolute)
+    String url = track['url'];
+    if (!url.startsWith('http')) {
+      url = '${ApiConstants.baseUrl}$url';
+    }
+
+    try {
+      // Cache Logic
+      final String fileName = 'bg_music_${track['id']}.mp3';
+      final downloadService = DownloadService();
+
+      // Check cache first to avoid redundant download calls
+      final String filePath = await downloadService.getLocalFilePath(fileName);
+      final file = File(filePath);
+
+      if (!await file.exists()) {
+        // Download if not exists
+        await downloadService.downloadFile(url, fileName);
+      }
+
+      if (await file.exists()) {
+        await _bgPlayer.setFilePath(filePath);
+      } else {
+        // Fallback to URL
+        await _bgPlayer.setUrl(url);
+      }
+
+      _bgMusicLoaded = true;
+
+      // Start playing if main player is playing
+      if (_player.playing && _bgMusicEnabled) {
+        _bgPlayer.play();
+      }
+
+      print('[AudioHandler] Background music loaded: ${track['title']}');
+    } catch (e) {
+      print('[AudioHandler] Error loading BG music source: $e');
+      _bgMusicLoaded = false;
+    }
+  }
+
+  /// Set background music volume
+  Future<void> setBgMusicVolume(double volume) async {
+    _bgVolume = volume;
+    await _bgPlayer.setVolume(volume);
+  }
+
+  /// Stop background music
+  Future<void> stopBgMusic() async {
+    await _bgPlayer.stop();
+    _bgMusicLoaded = false;
+    _selectedBgMusicId = null;
+  }
+
+  /// Toggle background music enabled state
+  void toggleBgMusicEnabled(bool enabled) {
+    _bgMusicEnabled = enabled;
+    if (!enabled) {
+      _bgPlayer.pause();
+    } else if (_bgMusicLoaded && _player.playing) {
+      _bgPlayer.play();
+    }
   }
 
   /// Initialize user ID for background progress sync
@@ -137,6 +251,8 @@ class MyAudioHandler extends BaseAudioHandler {
   /// Clear all playback state (used on logout)
   Future<void> clearState() async {
     await _player.stop();
+    await stopBgMusic();
+    _bgSyncSubscription?.cancel();
     mediaItem.add(null); // Clear media item to hide mini player
     currentBook = null;
     currentPlaylist = null;

@@ -2578,19 +2578,26 @@ def get_book_status(user_id, book_id):
             else:
                  return jsonify({"position_seconds": 0}), 200
         else:
-            # Fetch global book progress
-            query = "SELECT last_played_position_seconds, current_playlist_item_id, background_music_id FROM user_books WHERE user_id = %s AND book_id = %s"
+            # Fetch global book progress with fallback to book's default background music
+            query = """
+                SELECT 
+                    COALESCE(ub.last_played_position_seconds, 0) as last_played_position_seconds, 
+                    ub.current_playlist_item_id, 
+                    COALESCE(ub.background_music_id, b.background_music_id) as background_music_id
+                FROM books b
+                LEFT JOIN user_books ub ON ub.book_id = b.id AND ub.user_id = %s
+                WHERE b.id = %s
+            """
             result = db.execute_query(query, (user_id, book_id))
             
             if result:
                 return jsonify({
-                    "position_seconds": result[0]['last_played_position_seconds'],
+                    "position_seconds": result[0]['last_played_position_seconds'] or 0,
                     "current_playlist_item_id": result[0].get('current_playlist_item_id'),
                     "background_music_id": result[0].get('background_music_id')
                 }), 200
             else:
-                return jsonify({"position_seconds": 0, "current_playlist_item_id": None, "background_music_id": None}), 200 # Not started/owned
-                return jsonify({"position_seconds": 0, "current_playlist_item_id": None}), 200 # Not started/owned
+                return jsonify({"position_seconds": 0, "current_playlist_item_id": None, "background_music_id": None}), 200 # Book not found
             
     except Exception as e:
         return jsonify({"error": str(e)}), 500
