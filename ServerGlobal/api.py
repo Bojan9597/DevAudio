@@ -1764,6 +1764,7 @@ def get_library():
                         "ratingCount": book['rating_count'] or 0,
                         "isFavorite": book['id'] in favIds,
                         "isPlaylist": book['playlist_count'] > 0,
+                        "postedByUserId": str(user_id),
                     })
         
         # Build all books response
@@ -1948,7 +1949,7 @@ def complete_track():
                     quiz_id = book_quiz[0]['id']
                     passed_query = """
                         SELECT is_passed FROM user_quiz_results
-                        WHERE user_id = %s AND quiz_id = %s AND is_passed = 1
+                        WHERE user_id = %s AND quiz_id = %s AND is_passed = TRUE
                         LIMIT 1
                     """
                     passed_res = db.execute_query(passed_query, (user_id, quiz_id))
@@ -1966,7 +1967,7 @@ def complete_track():
                     for tq in track_quizzes:
                         passed_query = """
                             SELECT is_passed FROM user_quiz_results
-                            WHERE user_id = %s AND quiz_id = %s AND is_passed = 1
+                            WHERE user_id = %s AND quiz_id = %s AND is_passed = TRUE
                             LIMIT 1
                         """
                         passed_res = db.execute_query(passed_query, (user_id, tq['id']))
@@ -1980,7 +1981,7 @@ def complete_track():
                     print(f"User {user_id} fully completed book {book_id} (all tracks + all quizzes)")
 
                     # Mark book as read
-                    update_read = "UPDATE user_books SET is_read = 1, last_accessed_at = CURRENT_TIMESTAMP WHERE user_id = %s AND book_id = %s"
+                    update_read = "UPDATE user_books SET is_read = TRUE, last_accessed_at = CURRENT_TIMESTAMP WHERE user_id = %s AND book_id = %s"
                     db.execute_query(update_read, (user_id, book_id))
 
                     # Check Badges (since book is now read)
@@ -2057,7 +2058,7 @@ def update_progress():
             params = [position]
             
             if is_read:
-                update_sql += ", is_read = 1"
+                update_sql += ", is_read = TRUE"
             
             if playlist_item_id:
                 update_sql += ", current_playlist_item_id = %s"
@@ -2842,7 +2843,7 @@ def save_quiz_result():
                     bq_id = book_quiz[0]['id']
                     passed_query = """
                         SELECT is_passed FROM user_quiz_results
-                        WHERE user_id = %s AND quiz_id = %s AND is_passed = 1
+                        WHERE user_id = %s AND quiz_id = %s AND is_passed = TRUE
                         LIMIT 1
                     """
                     passed_res = db.execute_query(passed_query, (user_id, bq_id))
@@ -2860,7 +2861,7 @@ def save_quiz_result():
                     for tq in track_quizzes:
                         passed_query = """
                             SELECT is_passed FROM user_quiz_results
-                            WHERE user_id = %s AND quiz_id = %s AND is_passed = 1
+                            WHERE user_id = %s AND quiz_id = %s AND is_passed = TRUE
                             LIMIT 1
                         """
                         passed_res = db.execute_query(passed_query, (user_id, tq['id']))
@@ -2872,7 +2873,7 @@ def save_quiz_result():
                     print(f"User {user_id} fully completed book {book_id} after passing quiz")
 
                     # Mark book as read
-                    update_read = "UPDATE user_books SET is_read = 1, last_accessed_at = CURRENT_TIMESTAMP WHERE user_id = %s AND book_id = %s"
+                    update_read = "UPDATE user_books SET is_read = TRUE, last_accessed_at = CURRENT_TIMESTAMP WHERE user_id = %s AND book_id = %s"
                     db.execute_query(update_read, (user_id, book_id))
 
                     # Check badges
