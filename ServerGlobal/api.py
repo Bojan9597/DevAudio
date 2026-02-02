@@ -1683,7 +1683,7 @@ def get_reels():
             ORDER BY b.id DESC
             LIMIT %s OFFSET %s
         """
-        books_result = db.execute_query(books_query, (limit, offset))
+        books_result = db.execute_query(books_query, (limit + 1, offset))
         
         if not books_result:
              return jsonify({"isSubscribed": True, "books": []}), 200
@@ -1760,13 +1760,79 @@ def get_reels():
                 "tracks": tracks
             })
             
+        # Slice to limit if we fetched extra
+        if len(books_data) > limit:
+            books_data = books_data[:limit]
+
         return jsonify({
             "isSubscribed": True,
-            "books": books_data
+            "books": books_data,
+            "hasMore": len(books_result) > limit
         }), 200
         
     except Exception as e:
         print(f"Error in get_reels: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/reels/offset', methods=['GET'])
+def get_reels_offset():
+    """Get the saved reels offset for a user."""
+    user_id = request.args.get('user_id')
+    if not user_id:
+        return jsonify({"error": "User ID is required"}), 400
+
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        # Check if column exists (graceful handling if migration missing?)
+        # For now, just query. If it fails, return 0.
+        query = "SELECT reels_offset FROM users WHERE id = %s"
+        try:
+            result = db.execute_query(query, (user_id,))
+            offset = result[0]['reels_offset'] if result and result[0]['reels_offset'] is not None else 0
+            return jsonify({"offset": offset}), 200
+        except Exception as e:
+             # Column likely missing
+             print(f"Error getting offset (col missing?): {e}")
+             return jsonify({"offset": 0}), 200
+             
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/reels/offset', methods=['POST'])
+def update_reels_offset():
+    """Update the saved reels offset for a user."""
+    data = request.json
+    user_id = data.get('user_id')
+    offset = data.get('offset')
+
+    if not user_id or offset is None:
+        return jsonify({"error": "User ID and offset are required"}), 400
+
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        # Validate offset against total books count
+        count_query = "SELECT COUNT(*) as count FROM books"
+        count_result = db.execute_query(count_query)
+        total_books = count_result[0]['count'] if count_result else 0
+        
+        # If offset is beyond total books, reset to 0 (loop)
+        # Also, if offset is exactly equal to total, it means we are at the end, so next fetch would be empty -> reset to 0.
+        final_offset = offset
+        if offset >= total_books:
+            final_offset = 0
+
+        query = "UPDATE users SET reels_offset = %s WHERE id = %s"
+        db.execute_query(query, (final_offset, user_id))
+        return jsonify({"message": "Offset updated", "final_offset": final_offset}), 200
+    except Exception as e:
+        # If it fails (e.g. column missing), we log but maybe don't crash client?
+        print(f"Error updating offset: {e}")
         return jsonify({"error": str(e)}), 500
     finally:
         db.disconnect()

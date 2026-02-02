@@ -3,6 +3,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
 import '../models/book.dart';
 import '../repositories/book_repository.dart';
+import '../services/auth_service.dart';
 // We need access to the global audio player state if we want to sync with MiniPlayer
 // But user said "It should look like that audio player with profile picture and everything"
 // This implies a FULL SCREEN EXPERIENCE.
@@ -16,6 +17,7 @@ class ReelsScreen extends StatefulWidget {
 
 class _ReelsScreenState extends State<ReelsScreen> {
   final BookRepository _bookRepository = BookRepository();
+  final AuthService _authService = AuthService();
   final AudioPlayer _audioPlayer = AudioPlayer(); // Or use a global service?
   // Ideally we should use the SAME player as the rest of the app to avoid double audio.
   // For now, I'll assume we use a local one or need to integrate with a provider.
@@ -85,11 +87,21 @@ class _ReelsScreenState extends State<ReelsScreen> {
   }
 
   Future<void> _loadInitialData() async {
-    setState(() {
-      _isLoading = true;
+    setState(() => _isLoading = true);
+
+    try {
+      final userId = await _authService.getCurrentUserId();
+      if (userId != null) {
+        _offset = await _bookRepository.getReelsOffset(userId);
+      } else {
+        _offset = 0;
+      }
+    } catch (e) {
+      print("Error loading offset: $e");
       _offset = 0;
-      _books.clear();
-    });
+    }
+
+    _books.clear();
 
     await _fetchReels();
 
@@ -98,6 +110,17 @@ class _ReelsScreenState extends State<ReelsScreen> {
       if (_isSubscribed && _books.isNotEmpty) {
         _playTrack(0, 0);
       }
+    }
+  }
+
+  Future<void> _saveOffset() async {
+    try {
+      final userId = await _authService.getCurrentUserId();
+      if (userId != null) {
+        await _bookRepository.updateReelsOffset(_offset);
+      }
+    } catch (e) {
+      print("Error saving offset: $e");
     }
   }
 
@@ -118,6 +141,8 @@ class _ReelsScreenState extends State<ReelsScreen> {
       _backendHasMore = hasMore;
       _offset += newBooks.length;
     });
+
+    _saveOffset();
   }
 
   Future<void> _loadMoreReels() async {
@@ -129,6 +154,7 @@ class _ReelsScreenState extends State<ReelsScreen> {
     // But we append to our local list so user can scroll up.
     if (!_backendHasMore) {
       _offset = 0;
+      _saveOffset();
     }
 
     await _fetchReels();

@@ -835,4 +835,38 @@ class BookRepository {
       return {'error': 'Error: $e'};
     }
   }
+
+  Future<int> getReelsOffset(int userId) async {
+    try {
+      final uri = Uri.parse(
+        '${ApiConstants.baseUrl}/reels/offset?user_id=$userId',
+      );
+      final headers = await _getHeaders();
+      final response = await _apiClient.get(uri, headers: headers);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['offset'] as int? ?? 0;
+      }
+      return 0;
+    } catch (e) {
+      print('Error getting reels offset: $e');
+      return 0;
+    }
+  }
+
+  Future<void> updateReelsOffset(int offset) async {
+    try {
+      final userId = await _authService.getCurrentUserId();
+      if (userId == null) return;
+
+      final url = Uri.parse('${ApiConstants.baseUrl}/reels/offset');
+      final headers = await _getHeaders();
+      final body = json.encode({'user_id': userId, 'offset': offset});
+
+      await _apiClient.post(url, headers: headers, body: body);
+    } catch (e) {
+      print('Error updating reels offset: $e');
+    }
+  }
 }
