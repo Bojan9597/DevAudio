@@ -97,7 +97,7 @@ flutter:
   assets:
     - lib/data/
     - assets/icon/
-    - assets/happy_owl.mp4
+    - assets/icon/
     - assets/Background.png
     - assets/island.png
     - assets/homeImages/

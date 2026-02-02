@@ -10,10 +10,10 @@ import '../services/api_client.dart'; // Import ApiClient
 import '../services/auth_service.dart';
 import 'quiz_creator_screen.dart';
 import 'quiz_taker_screen.dart';
-import '../widgets/completion_video_overlay.dart'; // Added
+import '../widgets/mini_player.dart';
 import '../services/connectivity_service.dart';
 import '../services/subscription_service.dart';
-import '../widgets/mini_player.dart';
+
 import '../widgets/subscription_bottom_sheet.dart';
 import 'pdf_viewer_screen.dart';
 
@@ -49,14 +49,18 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   String? _pdfUrl;
 
   void _downloadFullPlaylist() async {
-    print('[PlaylistScreen] _downloadFullPlaylist called. _isCheckingAccess=$_isCheckingAccess, _hasAccess=$_hasAccess, isPremium=${widget.book.isPremium}');
+    print(
+      '[PlaylistScreen] _downloadFullPlaylist called. _isCheckingAccess=$_isCheckingAccess, _hasAccess=$_hasAccess, isPremium=${widget.book.isPremium}',
+    );
 
     // Wait for access check to complete if still checking
     if (_isCheckingAccess) {
       print('[PlaylistScreen] Access check still in progress, waiting...');
       await Future.delayed(const Duration(milliseconds: 500));
       if (_isCheckingAccess) {
-        print('[PlaylistScreen] Still checking access for download after delay');
+        print(
+          '[PlaylistScreen] Still checking access for download after delay',
+        );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -78,16 +82,22 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       final isSubscribed = await SubscriptionService().isSubscribed();
       final canDownload = isAdmin || isSubscribed;
 
-      print('[PlaylistScreen] Download permission check: isPremium=true, isAdmin=$isAdmin, isSubscribed=$isSubscribed, canDownload=$canDownload');
+      print(
+        '[PlaylistScreen] Download permission check: isPremium=true, isAdmin=$isAdmin, isSubscribed=$isSubscribed, canDownload=$canDownload',
+      );
 
       if (!canDownload) {
-        print('[PlaylistScreen] ❌ DOWNLOAD ACCESS DENIED - Premium book requires subscription');
+        print(
+          '[PlaylistScreen] ❌ DOWNLOAD ACCESS DENIED - Premium book requires subscription',
+        );
         _showSubscriptionSheet();
         return;
       }
     }
 
-    print('[PlaylistScreen] ✅ Download access granted, proceeding with download check');
+    print(
+      '[PlaylistScreen] ✅ Download access granted, proceeding with download check',
+    );
 
     // 1. Check if already downloaded
     bool isFullyDownloaded = false;
@@ -277,24 +287,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   }
 
   Future<void> _updateBackgroundLoop(bool isBookCompleted) async {
-    // Since we're using a static background image, we don't need to manage video loops
-    // Just trigger completion sequence if book is completed
-    if (isBookCompleted) {
-      _playCompletionSequence();
-    }
-  }
-
-  void _playCompletionSequence() {
-    if (mounted) {
-      Navigator.of(context).push(
-        PageRouteBuilder(
-          opaque: false,
-          pageBuilder: (context, _, __) => CompletionVideoOverlay(
-            onDismiss: () => Navigator.of(context).pop(),
-          ),
-        ),
-      );
-    }
+    // No-op
   }
 
   @override
@@ -621,7 +614,8 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       isPlaylist: false,
       isFavorite: widget.book.isFavorite,
       isEncrypted: widget.book.isEncrypted,
-      isPremium: widget.book.isPremium, // CRITICAL: Pass premium status to player
+      isPremium:
+          widget.book.isPremium, // CRITICAL: Pass premium status to player
     );
 
     bool justFinishedLastTrack = false;
@@ -670,11 +664,15 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   Future<void> _openPdfViewer() async {
     if (_pdfUrl == null || _pdfUrl!.isEmpty) return;
 
-    print('[PlaylistScreen] _openPdfViewer called. _isCheckingAccess=$_isCheckingAccess, _hasAccess=$_hasAccess, isPremium=${widget.book.isPremium}');
+    print(
+      '[PlaylistScreen] _openPdfViewer called. _isCheckingAccess=$_isCheckingAccess, _hasAccess=$_hasAccess, isPremium=${widget.book.isPremium}',
+    );
 
     // Wait for access check to complete if still checking
     if (_isCheckingAccess) {
-      print('[PlaylistScreen] Access check still in progress for PDF, waiting...');
+      print(
+        '[PlaylistScreen] Access check still in progress for PDF, waiting...',
+      );
       await Future.delayed(const Duration(milliseconds: 500));
       if (_isCheckingAccess) {
         print('[PlaylistScreen] Still checking access for PDF after delay');
@@ -698,16 +696,22 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
 
       final canAccessPdf = isAdmin || isSubscribed || isPdfDownloaded;
 
-      print('[PlaylistScreen] PDF access check: isPremium=true, isAdmin=$isAdmin, isSubscribed=$isSubscribed, isPdfDownloaded=$isPdfDownloaded, canAccessPdf=$canAccessPdf');
+      print(
+        '[PlaylistScreen] PDF access check: isPremium=true, isAdmin=$isAdmin, isSubscribed=$isSubscribed, isPdfDownloaded=$isPdfDownloaded, canAccessPdf=$canAccessPdf',
+      );
 
       if (!canAccessPdf) {
-        print('[PlaylistScreen] ❌ PDF ACCESS DENIED - Premium PDF requires subscription');
+        print(
+          '[PlaylistScreen] ❌ PDF ACCESS DENIED - Premium PDF requires subscription',
+        );
         _showSubscriptionSheet();
         return;
       }
     }
 
-    print('[PlaylistScreen] ✅ PDF access granted, proceeding with download/view');
+    print(
+      '[PlaylistScreen] ✅ PDF access granted, proceeding with download/view',
+    );
 
     // Check if PDF is downloaded
     final isDownloaded = await DownloadService().isPdfDownloaded(

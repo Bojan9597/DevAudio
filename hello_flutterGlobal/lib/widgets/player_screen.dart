@@ -22,7 +22,6 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../main.dart'; // Import for audioHandler
-import 'completion_video_overlay.dart'; // Import video overlay
 
 class PlayerScreen extends StatefulWidget {
   final Book book;
@@ -117,38 +116,10 @@ class _PlayerScreenState extends State<PlayerScreen>
   bool _isHandlingCompletion =
       false; // Prevent double-handling of track completion
 
-  // Track which tracks have shown completion video (to show only once)
-  final Set<String> _completedTracksWithVideo = {};
-
   final GlobalKey _speedButtonKey = GlobalKey();
   final GlobalKey _moreButtonKey = GlobalKey();
 
   Timer? _progressTimer;
-
-  /// Load completion video history from persistent storage
-  Future<void> _loadCompletionVideoHistory() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final history = prefs.getStringList('completion_videos_shown') ?? [];
-      _completedTracksWithVideo.addAll(history);
-    } catch (e) {
-      print('Error loading completion video history: $e');
-    }
-  }
-
-  /// Save that this track has shown the completion video
-  Future<void> _saveCompletionVideoShown(String trackKey) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      _completedTracksWithVideo.add(trackKey);
-      await prefs.setStringList(
-        'completion_videos_shown',
-        _completedTracksWithVideo.toList(),
-      );
-    } catch (e) {
-      print('Error saving completion video history: $e');
-    }
-  }
 
   @override
   void initState() {
@@ -161,7 +132,6 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 
   Future<void> _init() async {
-    await _loadCompletionVideoHistory(); // Load which books have shown owl video (must await!)
     _initPlayer();
     _checkOwnership();
 
@@ -191,24 +161,8 @@ class _PlayerScreenState extends State<PlayerScreen>
 
         // Handle Single Book Completion (Show Overlay)
         if (widget.playlist == null) {
-          // Only show owl video if this is the first time completing this track
-          final trackKey = completedTrackId ?? widget.book.id;
-          final showVideo = !_completedTracksWithVideo.contains(trackKey);
-
-          if (showVideo && mounted) {
-            await _saveCompletionVideoShown(trackKey);
-            // Show video overlay and wait for it to close
-            await Navigator.of(context).push(
-              PageRouteBuilder(
-                opaque: false,
-                pageBuilder: (context, _, __) => CompletionVideoOverlay(
-                  onDismiss: () => Navigator.of(context).pop(),
-                ),
-              ),
-            );
-          }
-
-          // After video is closed (or skipped), show badges if any
+          // Playlist Track Completion or Single Book Completion
+          // Show badges immediately if any
           if (badgeFuture != null) {
             badgeFuture.then((newBadges) {
               if (mounted && newBadges.isNotEmpty) {
@@ -1035,7 +989,8 @@ class _PlayerScreenState extends State<PlayerScreen>
             setState(() {
               _currentBook = _currentBook.copyWith(
                 averageRating: (data['averageRating'] as num).toDouble(),
-                ratingCount: data['ratingCount'] as int? ?? _currentBook.ratingCount,
+                ratingCount:
+                    data['ratingCount'] as int? ?? _currentBook.ratingCount,
               );
             });
           }
