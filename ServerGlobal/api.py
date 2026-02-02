@@ -14,6 +14,7 @@ from image_utils import ensure_thumbnail_exists, create_thumbnail
 from r2_storage import upload_fileobj_to_r2, upload_local_file_to_r2, is_r2_enabled, is_r2_ref, get_r2_key, resolve_url, generate_presigned_url
 import tempfile
 import shutil
+import wave
 
 import re
 import datetime
@@ -1598,7 +1599,7 @@ def get_discover():
                 FROM user_books ub
                 JOIN books b ON ub.book_id = b.id
                 LEFT JOIN categories c ON b.primary_category_id = c.id
-                WHERE ub.user_id = %s AND ub.last_played_position_seconds > 0
+                WHERE ub.user_id = %s AND ub.last_played_position_seconds > 0 AND (ub.is_read = 0 OR ub.is_read IS NULL)
                 ORDER BY ub.last_accessed_at DESC
             """
             history_result = db.execute_query(history_query, (user_id,))
@@ -1706,7 +1707,7 @@ def get_library():
                 FROM user_books ub
                 JOIN books b ON ub.book_id = b.id
                 LEFT JOIN categories c ON b.primary_category_id = c.id
-                WHERE ub.user_id = %s AND ub.last_played_position_seconds > 0
+                WHERE ub.user_id = %s AND ub.last_played_position_seconds > 0 AND (ub.is_read = 0 OR ub.is_read IS NULL)
                 ORDER BY ub.last_accessed_at DESC
             """
             history_result = db.execute_query(history_query, (user_id,))
@@ -2550,6 +2551,17 @@ def upload_book():
                             print(f"Extracted duration for {safe_fname}: {duration_seconds}s")
                     except Exception as e:
                         print(f"Could not extract duration for {safe_fname}: {e}")
+                    
+                    # Fallback for WAV files if mutagen failed or returned 0
+                    if duration_seconds == 0 and safe_fname.lower().endswith('.wav'):
+                        try:
+                            with wave.open(temp_path, 'r') as f:
+                                frames = f.getnframes()
+                                rate = f.getframerate()
+                                duration_seconds = int(frames / float(rate))
+                                print(f"Extracted WAV duration via wave for {safe_fname}: {duration_seconds}s")
+                        except Exception as e:
+                            print(f"Could not extract WAV duration for {safe_fname}: {e}")
 
                     # Try R2 upload, fallback to local
                     r2_key = f"AudioBooks/{folder_name}/{safe_fname}"
@@ -2591,6 +2603,17 @@ def upload_book():
                         print(f"Extracted duration for single file: {duration_seconds}s")
                 except Exception as e:
                     print(f"Could not extract duration for single file: {e}")
+
+                # Fallback for WAV files if mutagen failed or returned 0
+                if duration_seconds == 0 and audio_filename.lower().endswith('.wav'):
+                    try:
+                        with wave.open(temp_path, 'r') as f:
+                            frames = f.getnframes()
+                            rate = f.getframerate()
+                            duration_seconds = int(frames / float(rate))
+                            print(f"Extracted WAV duration via wave for single file: {duration_seconds}s")
+                    except Exception as e:
+                        print(f"Could not extract WAV duration for single file: {e}")
 
                 # Try R2 upload, fallback to local
                 r2_key = f"AudioBooks/{audio_filename}"
