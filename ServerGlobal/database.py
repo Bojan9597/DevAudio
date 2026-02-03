@@ -1,12 +1,18 @@
 import os
 import time
 import platform
+import threading
 import psycopg2
 from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
 
 # Global connection pool - created once, reused for all requests
 _connection_pool = None
+
+# Track active connections with timestamps for auto-cleanup
+_active_connections = {}  # connection_id -> (connection, acquire_time)
+_connections_lock = threading.Lock()
+MAX_CONNECTION_AGE_SECONDS = 3  # Auto-release connections older than 3 seconds
 
 def get_connection_pool():
     """Get or create the global connection pool."""
@@ -19,23 +25,56 @@ def get_connection_pool():
             host = "localhost"
 
         _connection_pool = pool.ThreadedConnectionPool(
-            minconn=2,      # Minimum connections to keep open
-            maxconn=20,     # Increased pool size - same server so no external limit
+            minconn=1,      # Minimum connections to keep open
+            maxconn=5,      # Small pool for testing - only you using the app
             host=host,
             database="velorusb_echoHistory",
             user="velorusb_echoHistoryAdmin",
             password="Pijanista123!",
             port=5432,
-            connect_timeout=5,  # 5 second timeout for establishing connection
-            options='-c statement_timeout=5000'  # 5 second query timeout (in ms)
+            connect_timeout=3,  # 3 second timeout for establishing connection
+            options='-c statement_timeout=3000'  # 3 second query timeout (in ms)
         )
-        print("Database connection pool created")
+        print("Database connection pool created (maxconn=5, timeout=3s)")
     return _connection_pool
+
+
+def cleanup_stale_connections():
+    """Force-return any connections that have been held for too long."""
+    global _active_connections
+    now = time.time()
+    stale = []
+    
+    with _connections_lock:
+        for conn_id, (conn, acquire_time) in list(_active_connections.items()):
+            age = now - acquire_time
+            if age > MAX_CONNECTION_AGE_SECONDS:
+                print(f"WARNING: Force-releasing stale connection (held for {age:.1f}s)")
+                stale.append(conn_id)
+                try:
+                    p = get_connection_pool()
+                    if not conn.closed:
+                        conn.reset()
+                    p.putconn(conn)
+                except Exception as e:
+                    print(f"Error force-releasing connection: {e}")
+                    try:
+                        p.putconn(conn, close=True)
+                    except:
+                        pass
+        
+        for conn_id in stale:
+            del _active_connections[conn_id]
+    
+    return len(stale)
+
 
 class Database:
     def __init__(self):
         self.connection = None
         self._from_pool = False
+        self._conn_id = None
+        self._acquire_time = None
 
     def __enter__(self):
         """Context manager entry - connects to database."""
@@ -57,11 +96,12 @@ class Database:
 
     def connect(self, retries=2, delay=0.1):
         """Get a connection from the pool with retry logic."""
+        # First, try to cleanup any stale connections
+        cleanup_stale_connections()
+        
         for attempt in range(retries):
             try:
                 p = get_connection_pool()
-                # Use blocking=False to fail immediately if pool exhausted
-                # instead of waiting indefinitely
                 self.connection = p.getconn()
                 # Validate the connection is still alive
                 if self.connection.closed:
@@ -69,10 +109,20 @@ class Database:
                     self.connection = None
                     continue
                 self._from_pool = True
+                self._acquire_time = time.time()
+                self._conn_id = id(self.connection)
+                
+                # Track this connection
+                with _connections_lock:
+                    _active_connections[self._conn_id] = (self.connection, self._acquire_time)
+                
                 return True
             except pool.PoolError as e:
-                # Pool exhausted - short wait and retry once
+                # Pool exhausted - try cleanup and retry
                 print(f"Pool exhausted (attempt {attempt+1}/{retries}): {e}")
+                cleaned = cleanup_stale_connections()
+                if cleaned > 0:
+                    print(f"Cleaned up {cleaned} stale connection(s), retrying...")
                 if attempt < retries - 1:
                     time.sleep(delay)
             except Exception as e:
@@ -84,6 +134,11 @@ class Database:
     def disconnect(self):
         """Return connection to the pool (don't actually close it)."""
         if self.connection and self._from_pool:
+            # Remove from tracking
+            if self._conn_id:
+                with _connections_lock:
+                    _active_connections.pop(self._conn_id, None)
+            
             try:
                 # Reset connection state before returning to pool
                 if not self.connection.closed:
@@ -99,6 +154,7 @@ class Database:
                 except Exception:
                     pass
             self.connection = None
+            self._conn_id = None
 
     def execute_query(self, query, params=None):
         """Executes a query and returns the results for SELECT queries."""
