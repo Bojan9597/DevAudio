@@ -55,11 +55,21 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _loadInitialSubscriptionState();
     _checkLoginStatus();
     _loadBooks(); // Also loads categories from combined endpoint
     _loadHeroImages();
     _scrollController.addListener(_onScroll);
     _searchController.addListener(_onSearchChanged);
+  }
+
+  Future<void> _loadInitialSubscriptionState() async {
+    final isSubscribed = await _authService.getPersistentSubscriptionStatus();
+    if (mounted && isSubscribed) {
+      setState(() {
+        _isSubscribed = true;
+      });
+    }
   }
 
   void _loadHeroImages() {
@@ -999,7 +1009,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            (result['error'] as String?) ?? AppLocalizations.of(context)!.failedToSubmitRating,
+            (result['error'] as String?) ??
+                AppLocalizations.of(context)!.failedToSubmitRating,
           ),
         ),
       );
