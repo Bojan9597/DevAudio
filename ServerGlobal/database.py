@@ -20,14 +20,14 @@ def get_connection_pool():
 
         _connection_pool = pool.ThreadedConnectionPool(
             minconn=2,      # Minimum connections to keep open
-            maxconn=10,     # Increased - hosting limit is 20, we use half
+            maxconn=20,     # Increased pool size - same server so no external limit
             host=host,
             database="velorusb_echoHistory",
             user="velorusb_echoHistoryAdmin",
             password="Pijanista123!",
             port=5432,
-            connect_timeout=2,  # 2 second timeout for establishing connection
-            options='-c statement_timeout=2000'  # 2 second query timeout (in ms)
+            connect_timeout=5,  # 5 second timeout for establishing connection
+            options='-c statement_timeout=5000'  # 5 second query timeout (in ms)
         )
         print("Database connection pool created")
     return _connection_pool
@@ -36,6 +36,24 @@ class Database:
     def __init__(self):
         self.connection = None
         self._from_pool = False
+
+    def __enter__(self):
+        """Context manager entry - connects to database."""
+        self.connect()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit - always disconnects."""
+        self.disconnect()
+        return False  # Don't suppress exceptions
+
+    def __del__(self):
+        """Destructor - safety net to return connection if forgot to disconnect."""
+        if self.connection and self._from_pool:
+            try:
+                self.disconnect()
+            except Exception:
+                pass
 
     def connect(self, retries=2, delay=0.1):
         """Get a connection from the pool with retry logic."""

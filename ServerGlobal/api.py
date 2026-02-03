@@ -3523,6 +3523,8 @@ def send_support_email_endpoint():
         return jsonify({"error": "Authentication required"}), 401
 
     db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
     try:
         data = request.get_json()
         message = data.get('message', '').strip()
