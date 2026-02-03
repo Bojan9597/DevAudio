@@ -40,16 +40,26 @@ class MyAudioHandler extends BaseAudioHandler {
     _bgPlayer.setVolume(_bgVolume);
 
     // Sync background music with main player
-    _bgSyncSubscription = _player.playingStream.listen((playing) {
-      if (playing) {
+    _bgSyncSubscription = _player.playerStateStream.listen((state) {
+      final playing = state.playing;
+      final processingState = state.processingState;
+
+      // Only play if:
+      // 1. Player is actively playing
+      // 2. Audio is NOT finished (completed)
+      // 3. Audio is NOT empty (idle)
+      bool shouldPlay =
+          playing &&
+          processingState != ProcessingState.completed &&
+          processingState != ProcessingState.idle;
+
+      if (shouldPlay) {
         // Only play if loaded and enabled
         if (_bgMusicLoaded && _bgMusicEnabled) {
           _bgPlayer.play();
         }
       } else {
-        // ALWAYS pause background music if main player stops,
-        // regardless of loading state or enabled check.
-        // This failsafe ensures no orphan audio.
+        // ALWAYS pause background music if main player stops or finishes
         _bgPlayer.pause();
       }
     });
@@ -117,14 +127,17 @@ class MyAudioHandler extends BaseAudioHandler {
   ) async {
     // Avoid reloading if same source
     if (_selectedBgMusicId == bgMusicId && _bgMusicLoaded) {
-      if (_bgMusicEnabled && _player.playing && !_bgPlayer.playing) {
-        _bgPlayer.play();
+      if (_bgMusicEnabled && _player.playing) {
+        if (!_bgPlayer.playing) {
+          _bgPlayer.play();
+        }
       }
       return;
     }
 
     _selectedBgMusicId = bgMusicId;
-    _bgMusicLoaded = false; // Disable sync during load
+    _bgMusicLoaded = false;
+    await _bgPlayer.stop(); // FORCE STOP immediately when switching
 
     if (bgMusicId == null) {
       await stopBgMusic();
@@ -169,10 +182,10 @@ class MyAudioHandler extends BaseAudioHandler {
 
       _bgMusicLoaded = true;
 
-      _bgMusicLoaded = true;
-
       // Start playing if main player is playing, otherwise ensure paused
       if (_player.playing && _bgMusicEnabled) {
+        // Ensure starting from beginning
+        await _bgPlayer.seek(Duration.zero);
         _bgPlayer.play();
       } else {
         _bgPlayer.pause();
