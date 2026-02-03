@@ -131,8 +131,17 @@ class _PlayerScreenState extends State<PlayerScreen>
     _currentBook = widget.book;
     _currentIndex = widget.initialIndex;
     _isFavorite = widget.book.isFavorite;
+    _initializeAll();
+  }
+
+  /// Initialize everything in the correct order
+  Future<void> _initializeAll() async {
+    // First, load the background music list - needed by both _initBgMusic and _initPlayer
+    _bgMusicList = await BookRepository().getBackgroundMusicList();
+
+    // Now initialize player and background music (they can run in parallel)
     _init();
-    _initBgMusic();
+    _initBgMusic(); // This will now have _bgMusicList already populated
   }
 
   Future<void> _init() async {
@@ -1674,7 +1683,11 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   Future<void> _initBgMusic() async {
     try {
-      _bgMusicList = await BookRepository().getBackgroundMusicList();
+      // _bgMusicList is already loaded by _initializeAll() - no need to fetch again
+      // Just verify it's not empty to be safe
+      if (_bgMusicList.isEmpty) {
+        _bgMusicList = await BookRepository().getBackgroundMusicList();
+      }
 
       // Determine which music to use (prioritize existing selection in audioHandler)
       int? bgMusicId = audioHandler.selectedBgMusicId;

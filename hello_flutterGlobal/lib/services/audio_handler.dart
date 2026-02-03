@@ -41,10 +41,15 @@ class MyAudioHandler extends BaseAudioHandler {
 
     // Sync background music with main player
     _bgSyncSubscription = _player.playingStream.listen((playing) {
-      if (!_bgMusicLoaded || !_bgMusicEnabled) return;
       if (playing) {
-        _bgPlayer.play();
+        // Only play if loaded and enabled
+        if (_bgMusicLoaded && _bgMusicEnabled) {
+          _bgPlayer.play();
+        }
       } else {
+        // ALWAYS pause background music if main player stops,
+        // regardless of loading state or enabled check.
+        // This failsafe ensures no orphan audio.
         _bgPlayer.pause();
       }
     });
@@ -110,7 +115,16 @@ class MyAudioHandler extends BaseAudioHandler {
     int? bgMusicId,
     List<Map<String, dynamic>> bgMusicList,
   ) async {
+    // Avoid reloading if same source
+    if (_selectedBgMusicId == bgMusicId && _bgMusicLoaded) {
+      if (_bgMusicEnabled && _player.playing && !_bgPlayer.playing) {
+        _bgPlayer.play();
+      }
+      return;
+    }
+
     _selectedBgMusicId = bgMusicId;
+    _bgMusicLoaded = false; // Disable sync during load
 
     if (bgMusicId == null) {
       await stopBgMusic();
@@ -155,9 +169,13 @@ class MyAudioHandler extends BaseAudioHandler {
 
       _bgMusicLoaded = true;
 
-      // Start playing if main player is playing
+      _bgMusicLoaded = true;
+
+      // Start playing if main player is playing, otherwise ensure paused
       if (_player.playing && _bgMusicEnabled) {
         _bgPlayer.play();
+      } else {
+        _bgPlayer.pause();
       }
 
       print('[AudioHandler] Background music loaded: ${track['title']}');
@@ -239,12 +257,17 @@ class MyAudioHandler extends BaseAudioHandler {
 
   // Pause playback
   @override
-  Future<void> pause() => _player.pause();
+  @override
+  Future<void> pause() async {
+    await _player.pause();
+    await _bgPlayer.pause(); // Explicitly pause background music
+  }
 
   // Stop playback and reset
   @override
   Future<void> stop() async {
     await _player.stop();
+    await stopBgMusic();
     await super.stop();
   }
 
