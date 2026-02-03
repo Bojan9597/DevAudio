@@ -163,14 +163,24 @@ def resolve_stored_url(stored_path, path_prefix="AudioBooks"):
 
 def is_subscriber(user_id, db):
     """Check if user has active subscription."""
+    # Check cache (60s)
+    cache_key = f"sub:{user_id}"
+    cached = cache.get(cache_key)
+    if cached is not None: return cached
+
     query = "SELECT status, end_date FROM subscriptions WHERE user_id = %s"
     result = db.execute_query(query, (user_id,))
+    
+    is_active = False
     if result and result[0]['status'] == 'active':
         end_date = result[0]['end_date']
-        if end_date is None:  # Lifetime subscription
-            return True
-        return end_date > datetime.datetime.utcnow()
-    return False
+        if end_date is None:  # Lifetime
+            is_active = True
+        else:
+            is_active = end_date > datetime.datetime.utcnow()
+            
+    cache.set(cache_key, is_active, 60)
+    return is_active
 
 def has_book_access(user_id, book_id, db):
     """Check if user can access a specific book (via subscription or legacy purchase)."""
@@ -872,6 +882,12 @@ def get_categories():
 def get_playlist(book_id):
     user_id = request.args.get('user_id')
     
+    # Check cache (30s)
+    cache_key = f"playlist:{user_id}:{book_id}" if user_id else f"playlist:anon:{book_id}"
+    cached_pl = cache.get(cache_key)
+    if cached_pl:
+        return jsonify(cached_pl)
+        
     db = Database()
     if not db.connect():
         return jsonify({"error": "Database connection failed"}), 500
@@ -962,13 +978,16 @@ def get_playlist(book_id):
             pdf_res = db.execute_query(pdf_query, (book_id,))
             pdf_path = resolve_stored_url(pdf_res[0]['pdf_path'], "AudioBooks") if pdf_res and pdf_res[0]['pdf_path'] else None
 
-            return jsonify({
+            resp = {
                 "tracks": result,
                 "has_quiz": quiz_exists,
                 "quiz_passed": quiz_passed,
                 "track_quizzes": track_quizzes,
                 "pdf_path": pdf_path
-            })
+            }
+            if cache_key:
+                cache.set(cache_key, resp, 30)
+            return jsonify(resp)
         
         # Fallback for "Single Book" treated as Playlist
         book_query = "SELECT title, audio_path, duration_seconds, pdf_path FROM books WHERE id = %s"
@@ -1004,9 +1023,15 @@ def get_playlist(book_id):
                 quiz_exists = True
 
             pdf_path = resolve_stored_url(book['pdf_path'], "AudioBooks") if book.get('pdf_path') else None
-            return jsonify({"tracks": [synthetic_item], "has_quiz": quiz_exists, "pdf_path": pdf_path})
+            resp = {"tracks": [synthetic_item], "has_quiz": quiz_exists, "pdf_path": pdf_path}
+            if cache_key:
+                cache.set(cache_key, resp, 30)
+            return jsonify(resp)
             
-        return jsonify({"tracks": [], "has_quiz": False, "pdf_path": None})
+        resp = {"tracks": [], "has_quiz": False, "pdf_path": None}
+        if cache_key:
+            cache.set(cache_key, resp, 30)
+        return jsonify(resp)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
@@ -1670,16 +1695,7 @@ def get_discover():
     finally:
         db.disconnect()
 
-def is_subscriber(user_id, db):
-    """Check if user has active subscription."""
-    query = "SELECT status, end_date FROM subscriptions WHERE user_id = %s"
-    result = db.execute_query(query, (user_id,))
-    if result and result[0]['status'] == 'active':
-        end_date = result[0]['end_date']
-        if end_date is None:  # Lifetime subscription
-            return True
-        return end_date > datetime.datetime.utcnow()
-    return False
+
 
 # ===================== REELS ENDPOINT =====================
 @app.route('/reels', methods=['GET'])
