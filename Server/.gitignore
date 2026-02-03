@@ -1,6 +1,0 @@
-__pycache__/
-*.pyc
-static/AudioBooks/
-static/BookCovers/
-venv/
-.env
