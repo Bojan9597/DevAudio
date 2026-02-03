@@ -1213,7 +1213,10 @@ class _PlayerScreenState extends State<PlayerScreen>
                     child: Column(
                       children: [
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // 1. Down Arrow (Left)
                             IconButton(
                               icon: const Icon(
                                 Icons.keyboard_arrow_down,
@@ -1222,49 +1225,45 @@ class _PlayerScreenState extends State<PlayerScreen>
                               ),
                               onPressed: () => Navigator.of(context).pop(),
                             ),
-                            const Spacer(),
-                            TextButton.icon(
-                              onPressed: () {
-                                Navigator.of(context).pushReplacement(
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        PlaylistScreen(book: _currentBook),
+
+                            // 2. Center Content (Return to Lesson Map)
+                            Expanded(
+                              child: Center(
+                                child: TextButton.icon(
+                                  onPressed: () {
+                                    Navigator.of(context).pushReplacement(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            PlaylistScreen(book: _currentBook),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(
+                                    Icons.map_outlined,
+                                    color: Colors.white70,
+                                    size: 16,
                                   ),
-                                );
-                              },
-                              icon: const Icon(
-                                Icons.map_outlined,
-                                color: Colors.white70,
-                                size: 16,
-                              ),
-                              label: Text(
-                                AppLocalizations.of(context)!.returnToLessonMap,
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 12,
-                                  letterSpacing: 1,
-                                  fontWeight: FontWeight.bold,
+                                  label: Text(
+                                    AppLocalizations.of(
+                                      context,
+                                    )!.returnToLessonMap,
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 12,
+                                      letterSpacing: 1,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
-                            const Spacer(),
+
+                            // 3. Dummy Right Widget (Balance for centering)
+                            const SizedBox(width: 48), // Approx IconButton size
                           ],
                         ),
-                        // Title below button (max 2 rows)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            _currentBook.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
+
+                        // Removed the "Title" Text widget below as requested ("put it instead of...")
                       ],
                     ),
                   ),
@@ -1273,38 +1272,87 @@ class _PlayerScreenState extends State<PlayerScreen>
 
                   // Album Art
                   // Album Art - 35% of screen height, square
-                  Container(
-                    height: MediaQuery.of(context).size.height * 0.35,
-                    width: MediaQuery.of(context).size.height * 0.35,
-                    clipBehavior: Clip.antiAlias,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade800,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.5),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child:
-                        (_currentBook.coverUrl != null &&
-                            _currentBook.coverUrl!.isNotEmpty)
-                        ? Image.network(
-                            _currentBook.absoluteCoverUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Icon(
-                              Icons.music_note,
-                              size: 80,
-                              color: Colors.white.withOpacity(0.5),
-                            ),
-                          )
-                        : Icon(
-                            Icons.music_note,
-                            size: 80,
-                            color: Colors.white.withOpacity(0.5),
+                  Column(
+                    children: [
+                      // Background Music Button (Moved here, closer to cover)
+                      GestureDetector(
+                        onTap: _showBgMusicSettings,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16, // Bigger horizontal padding
+                            vertical: 10, // Bigger vertical padding
                           ),
+                          decoration: BoxDecoration(
+                            color: audioHandler.selectedBgMusicId != null
+                                ? Colors.blueAccent.withOpacity(0.4)
+                                : Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(
+                              30,
+                            ), // More rounded
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.1),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.music_note,
+                                color: Colors.white,
+                                size: 20, // Bigger icon
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                "Background Music",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14, // Bigger text
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(
+                        height: 20,
+                      ), // Spacing between button and art
+                      Container(
+                        height: MediaQuery.of(context).size.height * 0.35,
+                        width: MediaQuery.of(context).size.height * 0.35,
+                        clipBehavior: Clip.antiAlias,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade800,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.5),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child:
+                            (_currentBook.coverUrl != null &&
+                                _currentBook.coverUrl!.isNotEmpty)
+                            ? Image.network(
+                                _currentBook.absoluteCoverUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Icon(
+                                      Icons.music_note,
+                                      size: 80,
+                                      color: Colors.white.withOpacity(0.5),
+                                    ),
+                              )
+                            : Icon(
+                                Icons.music_note,
+                                size: 80,
+                                color: Colors.white.withOpacity(0.5),
+                              ),
+                      ),
+                    ],
                   ),
 
                   const Spacer(flex: 1),
@@ -1528,51 +1576,51 @@ class _PlayerScreenState extends State<PlayerScreen>
                   const SizedBox(height: 30),
 
                   // Bottom Options
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      GestureDetector(
-                        key: _speedButtonKey,
-                        onTap: _showSpeedMenu,
-                        child: _buildBottomOption(
-                          Icons.speed,
-                          '${_playbackSpeed.toString().replaceAll(RegExp(r"([.]*0)(?!.*\d)"), "")}x',
-                          false,
+                  Padding(
+                    // Added Padding for bottom navigation overlap
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(context).padding.bottom + 20,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        GestureDetector(
+                          key: _speedButtonKey,
+                          onTap: _showSpeedMenu,
+                          child: _buildBottomOption(
+                            Icons.speed,
+                            '${_playbackSpeed.toString().replaceAll(RegExp(r"([.]*0)(?!.*\d)"), "")}x',
+                            false,
+                          ),
                         ),
-                      ),
-                      GestureDetector(
-                        onTap: _toggleSleepMode,
-                        child: _buildBottomOption(
-                          Icons.bedtime,
-                          '',
-                          _isSleepTimerActive,
+                        GestureDetector(
+                          onTap: _toggleSleepMode,
+                          child: _buildBottomOption(
+                            Icons.bedtime,
+                            '',
+                            _isSleepTimerActive,
+                          ),
                         ),
-                      ),
-                      GestureDetector(
-                        onTap: _toggleFavorite,
-                        child: _buildBottomOption(
-                          _isFavorite ? Icons.favorite : Icons.favorite_border,
-                          '',
-                          _isFavorite,
+                        GestureDetector(
+                          onTap: _toggleFavorite,
+                          child: _buildBottomOption(
+                            _isFavorite
+                                ? Icons.favorite
+                                : Icons.favorite_border,
+                            '',
+                            _isFavorite,
+                          ),
                         ),
-                      ),
-                      GestureDetector(
-                        key: _moreButtonKey,
-                        onTap: _showMoreMenu,
-                        child: _buildBottomOption(Icons.more_vert, '', false),
-                      ),
-                      GestureDetector(
-                        onTap: _showBgMusicSettings,
-                        child: _buildBottomOption(
-                          Icons.music_note,
-                          '',
-                          audioHandler.selectedBgMusicId != null,
+                        GestureDetector(
+                          key: _moreButtonKey,
+                          onTap: _showMoreMenu,
+                          child: _buildBottomOption(Icons.more_vert, '', false),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
 
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 20), // Extra safety margin
                 ],
               ),
             ),

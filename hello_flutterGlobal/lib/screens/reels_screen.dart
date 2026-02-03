@@ -679,10 +679,23 @@ class _ReelsScreenState extends State<ReelsScreen> {
                                   : Colors.white.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: const Icon(
-                              Icons.music_note,
-                              color: Colors.white,
-                              size: 20,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.music_note,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  "Background Music",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
