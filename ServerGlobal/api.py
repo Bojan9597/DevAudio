@@ -24,7 +24,7 @@ from jwt_config import generate_access_token, generate_refresh_token
 from jwt_middleware import jwt_required, blacklist_token
 import update_server_ip # Auto-update DB IP on startup
 from session_manager import SessionManager
-from cache_utils import cache
+from cache_utils import cache, invalidate_user_cache
 
 def generate_aes_key():
     """Generate a random 256-bit AES key and return as base64 string."""
@@ -3422,6 +3422,7 @@ def subscribe():
         # end_date is UTC naive datetime, convert properly
         end_date_ts = int(end_date.replace(tzinfo=datetime.timezone.utc).timestamp()) if end_date else None
 
+        invalidate_user_cache(user_id)
         return jsonify({
             "message": f"Subscription {action} successfully",
             "plan_type": plan_type,
@@ -3467,6 +3468,7 @@ def cancel_subscription():
         db.connection.commit()
         cursor.close()
 
+        invalidate_user_cache(user_id)
         return jsonify({"message": "Subscription cancelled"}), 200
 
     except Exception as e:
@@ -3523,6 +3525,7 @@ def admin_set_subscription():
             cursor.execute(update_query, (user_id,))
             db.connection.commit()
             cursor.close()
+            invalidate_user_cache(user_id)
             return jsonify({"message": f"Subscription deactivated for {target_email}"}), 200
 
         # Activate subscription
@@ -3547,6 +3550,7 @@ def admin_set_subscription():
         # end_date is UTC naive datetime, convert properly
         end_date_ts = int(end_date.replace(tzinfo=datetime.timezone.utc).timestamp()) if end_date else "lifetime"
 
+        invalidate_user_cache(user_id)
         return jsonify({
             "message": f"Subscription activated for {target_email}",
             "plan_type": plan_type,

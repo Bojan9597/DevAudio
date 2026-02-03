@@ -113,7 +113,11 @@ def cache_key_for_user(prefix, user_id, *args):
 
 def invalidate_user_cache(user_id):
     """Invalidate all cache entries for a specific user."""
-    cache.delete_pattern(f"user:{user_id}")
+    # Invalidate all user-specific cache keys
+    cache.delete_pattern(f"discover:{user_id}")
+    cache.delete_pattern(f"library:{user_id}")
+    cache.delete_pattern(f"sub:{user_id}")
+    cache.delete_pattern(f"playlist:{user_id}")
 
 
 # Cache TTL constants (in seconds)
