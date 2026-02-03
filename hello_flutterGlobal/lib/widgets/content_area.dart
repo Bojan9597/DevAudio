@@ -26,6 +26,15 @@ class ContentArea extends StatefulWidget {
 }
 
 class _ContentAreaState extends State<ContentArea> {
+  // Static cache for library data (30 seconds)
+  static const Duration _cacheDuration = Duration(seconds: 30);
+  static DateTime? _lastFetchTime;
+  static List<Book> _cachedAllBooks = [];
+  static List<String> _cachedPurchasedIds = [];
+  static List<Book> _cachedHistoryBooks = [];
+  static List<Book> _cachedUploadedBooks = [];
+  static bool _cachedIsSubscribed = false;
+
   List<Book> _allBooks = [];
   List<String> _purchasedIds = [];
   List<Book> _historyBooks = [];
@@ -45,12 +54,36 @@ class _ContentAreaState extends State<ContentArea> {
   void initState() {
     super.initState();
     _checkAdminStatus();
-    _loadBooks(); // Also sets _isSubscribed from library response
+    // Restore from cache if valid, otherwise load fresh
+    if (_isCacheValid()) {
+      _restoreFromCache();
+    } else {
+      _loadBooks();
+    }
 
     // Listen for refresh triggers
     globalLayoutState.addListener(_handleLayoutChange);
     _lastRefreshVersion = globalLayoutState.refreshVersion;
     _lastCategoryId = globalLayoutState.selectedCategoryId;
+  }
+
+  /// Check if cache is valid (within 30 seconds)
+  bool _isCacheValid() {
+    if (_lastFetchTime == null) return false;
+    final cacheAge = DateTime.now().difference(_lastFetchTime!);
+    return cacheAge < _cacheDuration && _cachedAllBooks.isNotEmpty;
+  }
+
+  /// Restore data from static cache
+  void _restoreFromCache() {
+    setState(() {
+      _allBooks = List.from(_cachedAllBooks);
+      _purchasedIds = List.from(_cachedPurchasedIds);
+      _historyBooks = List.from(_cachedHistoryBooks);
+      _uploadedBooks = List.from(_cachedUploadedBooks);
+      _isSubscribed = _cachedIsSubscribed;
+      _isLoading = false;
+    });
   }
 
   Future<void> _checkAdminStatus() async {
@@ -68,27 +101,37 @@ class _ContentAreaState extends State<ContentArea> {
 
   void _handleLayoutChange() {
     bool shouldReload = false;
-    // Check for explicit refresh trigger
+    bool forceRefresh = false;
+
+    // Check for explicit refresh trigger (pull-to-refresh or manual)
     if (globalLayoutState.refreshVersion != _lastRefreshVersion) {
       _lastRefreshVersion = globalLayoutState.refreshVersion;
       shouldReload = true;
+      forceRefresh = true; // User explicitly requested refresh
     }
     // Check if switching TO library from something else
-    // We want to ensure library data (favorites/downloads) is fresh
+    // Use cache if available, otherwise load
     if (globalLayoutState.selectedCategoryId == 'library' &&
         _lastCategoryId != 'library') {
-      shouldReload = true;
+      if (!_isCacheValid()) {
+        shouldReload = true;
+      }
     }
     _lastCategoryId = globalLayoutState.selectedCategoryId;
 
     if (shouldReload) {
       if (mounted) setState(() => _isLoading = true);
-      _loadBooks(); // Reload data
+      _loadBooks(forceRefresh: forceRefresh);
     }
   }
 
+  Future<void> _loadBooks({bool forceRefresh = false}) async {
+    // Skip if cache is valid and not forcing refresh
+    if (!forceRefresh && _isCacheValid()) {
+      _restoreFromCache();
+      return;
+    }
 
-  Future<void> _loadBooks() async {
     try {
       // Single API call gets everything we need!
       final libraryData = await BookRepository().getLibraryData();
@@ -126,6 +169,14 @@ class _ContentAreaState extends State<ContentArea> {
           _isSubscribed = libraryData['isSubscribed'] as bool? ?? false;
           _isLoading = false;
         });
+
+        // Update cache
+        _lastFetchTime = DateTime.now();
+        _cachedAllBooks = List.from(updatedBooks);
+        _cachedPurchasedIds = List.from(purchasedIds);
+        _cachedHistoryBooks = List.from(history);
+        _cachedUploadedBooks = List.from(uploaded);
+        _cachedIsSubscribed = _isSubscribed;
       }
     } catch (e) {
       debugPrint('Error loading books: $e');
@@ -255,65 +306,89 @@ class _ContentAreaState extends State<ContentArea> {
     ];
 
     // Build tab views - only include Uploaded view for admin
+    // Each tab is wrapped with RefreshIndicator for pull-to-refresh
     final tabViews = <Widget>[
       // Favorites Tab with list/grid toggle and clickable hearts
-      _buildFavoritesTab(favoriteBooks),
+      RefreshIndicator(
+        onRefresh: () => _loadBooks(forceRefresh: true),
+        child: _buildFavoritesTab(favoriteBooks),
+      ),
       // Continue Listening Tab - show books with listening progress
-      _buildContinueListeningTab(_historyBooks),
+      RefreshIndicator(
+        onRefresh: () => _loadBooks(forceRefresh: true),
+        child: _buildContinueListeningTab(_historyBooks),
+      ),
       // My Books Tab - show only downloaded books
-      _buildMyBooksTab(booksToCheckForDownloads),
+      RefreshIndicator(
+        onRefresh: () => _loadBooks(forceRefresh: true),
+        child: _buildMyBooksTab(booksToCheckForDownloads),
+      ),
       // Uploaded Tab with FAB (only for admin)
       if (_isAdmin)
-        Stack(
-          children: [
-            _uploadedBooks.isEmpty
-                ? Center(
-                    child: Text(AppLocalizations.of(context)!.noUploadedBooks),
-                  )
-                : Padding(
-                    padding: const EdgeInsets.only(
-                      top: 16.0,
-                      left: 16.0,
-                      right: 16.0,
-                      bottom: 130,
-                    ),
-                    child: ListView.builder(
-                      itemCount: _uploadedBooks.length,
-                      itemBuilder: (context, index) {
-                        final book = _uploadedBooks[index];
-                        return _buildMyBookTile(book);
-                      },
-                    ),
-                  ),
-            Positioned(
-              bottom: 24,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: FloatingActionButton.extended(
-                  onPressed: () async {
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const UploadBookScreen(),
+        RefreshIndicator(
+          onRefresh: () => _loadBooks(forceRefresh: true),
+          child: Stack(
+            children: [
+              _uploadedBooks.isEmpty
+                  ? ListView(
+                      // Need scrollable for RefreshIndicator to work
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.5,
+                          child: Center(
+                            child: Text(
+                              AppLocalizations.of(context)!.noUploadedBooks,
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.only(
+                        top: 16.0,
+                        left: 16.0,
+                        right: 16.0,
+                        bottom: 130,
                       ),
-                    );
+                      child: ListView.builder(
+                        itemCount: _uploadedBooks.length,
+                        itemBuilder: (context, index) {
+                          final book = _uploadedBooks[index];
+                          return _buildMyBookTile(book);
+                        },
+                      ),
+                    ),
+              Positioned(
+                bottom: 24,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: FloatingActionButton.extended(
+                    onPressed: () async {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const UploadBookScreen(),
+                        ),
+                      );
 
-                    if (result == true) {
-                      await Future.delayed(const Duration(milliseconds: 500));
-                      globalLayoutState.triggerRefresh();
-                    }
-                  },
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  icon: const Icon(Icons.cloud_upload),
-                  label: Text(
-                    AppLocalizations.of(context)!.uploadAudioBook,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                      if (result == true) {
+                        await Future.delayed(const Duration(milliseconds: 500));
+                        globalLayoutState.triggerRefresh();
+                      }
+                    },
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    icon: const Icon(Icons.cloud_upload),
+                    label: Text(
+                      AppLocalizations.of(context)!.uploadAudioBook,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
     ];
 
@@ -342,7 +417,17 @@ class _ContentAreaState extends State<ContentArea> {
 
   Widget _buildFavoritesTab(List<Book> favoriteBooks) {
     if (favoriteBooks.isEmpty) {
-      return Center(child: Text(AppLocalizations.of(context)!.noFavoriteBooks));
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.5,
+            child: Center(
+              child: Text(AppLocalizations.of(context)!.noFavoriteBooks),
+            ),
+          ),
+        ],
+      );
     }
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -389,20 +474,32 @@ class _ContentAreaState extends State<ContentArea> {
         }
         final downloadedBooks = snapshot.data ?? [];
         if (downloadedBooks.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.download_done, size: 48, color: Colors.grey),
-                const SizedBox(height: 16),
-                Text(AppLocalizations.of(context)!.noDownloadedBooks),
-                const SizedBox(height: 8),
-                Text(
-                  AppLocalizations.of(context)!.booksDownloadedAppearHere,
-                  style: const TextStyle(color: Colors.grey),
+          return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.5,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.download_done,
+                        size: 48,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(AppLocalizations.of(context)!.noDownloadedBooks),
+                      const SizedBox(height: 8),
+                      Text(
+                        AppLocalizations.of(context)!.booksDownloadedAppearHere,
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
+              ),
+            ],
           );
         }
         return Padding(
@@ -446,21 +543,33 @@ class _ContentAreaState extends State<ContentArea> {
 
   Widget _buildContinueListeningTab(List<Book> historyBooks) {
     if (historyBooks.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.play_circle_outline, size: 48, color: Colors.grey),
-            const SizedBox(height: 16),
-            const Text('No listening history'),
-            const SizedBox(height: 8),
-            const Text(
-              'Books you start listening to will appear here',
-              style: TextStyle(color: Colors.grey),
-              textAlign: TextAlign.center,
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.5,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.play_circle_outline,
+                    size: 48,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('No listening history'),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Books you start listening to will appear here',
+                    style: TextStyle(color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       );
     }
     return Padding(

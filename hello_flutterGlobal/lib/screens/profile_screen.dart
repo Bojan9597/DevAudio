@@ -20,6 +20,18 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  // Static cache for profile data (30 seconds)
+  static const Duration _cacheDuration = Duration(seconds: 30);
+  static DateTime? _lastFetchTime;
+  static Map<String, dynamic>? _cachedUser;
+  static List<Book> _cachedHistory = [];
+  static List<Badge> _cachedBadges = [];
+  static Subscription? _cachedSubscription;
+  static Map<String, dynamic> _cachedStats = {
+    'total_listening_time_seconds': 0,
+    'books_completed': 0,
+  };
+
   Map<String, dynamic>? _user;
   bool _isLoading = true;
   bool _isAdmin = false;
@@ -35,12 +47,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _loadProfileData();
+    // Restore from cache if valid, otherwise load fresh
+    if (_isCacheValid()) {
+      _restoreFromCache();
+    } else {
+      _loadProfileData();
+    }
     _checkAdminStatus();
   }
 
+  /// Check if cache is valid (within 30 seconds)
+  bool _isCacheValid() {
+    if (_lastFetchTime == null) return false;
+    final cacheAge = DateTime.now().difference(_lastFetchTime!);
+    return cacheAge < _cacheDuration && _cachedUser != null;
+  }
+
+  /// Restore data from static cache
+  void _restoreFromCache() {
+    setState(() {
+      _user = _cachedUser;
+      _history = List.from(_cachedHistory);
+      _badges = List.from(_cachedBadges);
+      _subscription = _cachedSubscription;
+      _stats = Map.from(_cachedStats);
+      _isLoading = false;
+    });
+  }
+
   /// Single API call replaces 5 separate calls
-  Future<void> _loadProfileData() async {
+  Future<void> _loadProfileData({bool forceRefresh = false}) async {
+    // Skip if cache is valid and not forcing refresh
+    if (!forceRefresh && _isCacheValid()) {
+      _restoreFromCache();
+      return;
+    }
+
     try {
       // Show cached user immediately
       var user = await AuthService().getUser();
@@ -70,6 +112,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           }
           _isLoading = false;
         });
+
+        // Update cache
+        _lastFetchTime = DateTime.now();
+        _cachedUser = user;
+        _cachedHistory = List.from(_history);
+        _cachedBadges = List.from(_badges);
+        _cachedSubscription = _subscription;
+        _cachedStats = Map.from(_stats);
       }
     } catch (e) {
       print("Error loading profile data: $e");
