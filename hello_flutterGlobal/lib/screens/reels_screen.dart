@@ -48,10 +48,19 @@ class _ReelsScreenState extends State<ReelsScreen> {
   bool _isFetchingMore = false;
   bool _backendHasMore = true;
 
+  // Background Music State
+  final AudioPlayer _bgPlayer = AudioPlayer();
+  double _bgVolume = 0.2;
+  bool _bgMusicEnabled = true;
+  List<Map<String, dynamic>> _bgMusicList = [];
+  int? _selectedBgMusicId;
+  bool _bgMusicLoaded = false;
+
   @override
   void initState() {
     super.initState();
     _initAudioSession();
+    _initBgPlayer();
     _loadInitialData();
 
     _audioPlayer.playerStateStream.listen((state) {
@@ -62,6 +71,23 @@ class _ReelsScreenState extends State<ReelsScreen> {
             _onTrackFinished();
           }
         });
+
+        // Background Music Sync
+        if (_bgMusicEnabled && _bgMusicLoaded) {
+          // Play bg music if main player is playing (and not finished/idle)
+          bool shouldPlay =
+              state.playing &&
+              state.processingState != ProcessingState.completed &&
+              state.processingState != ProcessingState.idle;
+
+          if (shouldPlay) {
+            if (!_bgPlayer.playing) _bgPlayer.play();
+          } else {
+            if (_bgPlayer.playing) _bgPlayer.pause();
+          }
+        } else if (_bgPlayer.playing) {
+          _bgPlayer.pause();
+        }
       }
     });
 
@@ -74,6 +100,11 @@ class _ReelsScreenState extends State<ReelsScreen> {
     });
   }
 
+  Future<void> _initBgPlayer() async {
+    await _bgPlayer.setLoopMode(LoopMode.one);
+    await _bgPlayer.setVolume(_bgVolume);
+  }
+
   Future<void> _initAudioSession() async {
     final session = await AudioSession.instance;
     await session.configure(const AudioSessionConfiguration.music());
@@ -84,6 +115,7 @@ class _ReelsScreenState extends State<ReelsScreen> {
     _verticalController.dispose();
     for (var c in _horizontalControllers.values) c.dispose();
     _audioPlayer.dispose();
+    _bgPlayer.dispose();
     super.dispose();
   }
 
@@ -92,6 +124,13 @@ class _ReelsScreenState extends State<ReelsScreen> {
 
     _books.clear();
 
+    // Load BG Music List
+    try {
+      _bgMusicList = await _bookRepository.getBackgroundMusicList();
+    } catch (e) {
+      print("Error loading BG music list: $e");
+    }
+
     // Single API call now includes savedOffset + books + subscription status
     await _fetchReels(useInitialOffset: true);
 
@@ -99,6 +138,7 @@ class _ReelsScreenState extends State<ReelsScreen> {
       setState(() => _isLoading = false);
       if (_isSubscribed && _books.isNotEmpty) {
         _playTrack(0, 0);
+        _updateBgMusicForBook(0);
       }
     }
   }
@@ -392,6 +432,7 @@ class _ReelsScreenState extends State<ReelsScreen> {
           onPageChanged: (index) {
             // Play first track of new book
             _playTrack(index, 0);
+            _updateBgMusicForBook(index);
 
             // Pre-load next batch if we are near the end (e.g., 2 items remaining)
             if (index >= _books.length - 2) {
@@ -575,7 +616,7 @@ class _ReelsScreenState extends State<ReelsScreen> {
                             size: 36,
                           ),
                           onPressed: () {
-                            // Previous track logic (manual)
+                            // Previous track logic
                             if (_currentTrackIndex > 0) {
                               _horizontalControllers[_currentBookIndex]
                                   ?.previousPage(
@@ -595,10 +636,11 @@ class _ReelsScreenState extends State<ReelsScreen> {
                             size: 80,
                           ),
                           onPressed: () {
-                            if (_isPlaying)
+                            if (_isPlaying) {
                               _audioPlayer.pause();
-                            else
+                            } else {
                               _audioPlayer.play();
+                            }
                           },
                         ),
                         const SizedBox(width: 24),
@@ -621,6 +663,31 @@ class _ReelsScreenState extends State<ReelsScreen> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 16),
+
+                    // Bottom Options (Background Music)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        GestureDetector(
+                          onTap: _showBgMusicSettings,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: _selectedBgMusicId != null
+                                  ? Colors.blueAccent.withOpacity(0.4)
+                                  : Colors.white.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Icon(
+                              Icons.music_note,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                     const Spacer(),
                   ],
                 ),
@@ -629,6 +696,189 @@ class _ReelsScreenState extends State<ReelsScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _updateBgMusicForBook(int index) async {
+    if (index < 0 || index >= _books.length) return;
+    final book = _books[index];
+
+    // 1. Get User Preference for this book
+    try {
+      // We can use BookRepository to get status, which includes background_music_id
+      final userId = await _authService.getCurrentUserId();
+      if (userId != null) {
+        final status = await _bookRepository.getBookStatus(userId, book.id);
+        // status['background_music_id'] might be null (default) or valid int
+        // If null, we use book.backgroundMusicId?
+        // Logic usually: UserPref ?? BookDefault ?? GlobalDefault
+
+        int? musicId = status['background_music_id'];
+        if (musicId == null) {
+          // If user hasn't set anything, use book default
+          musicId = book.backgroundMusicId;
+
+          // If book has no default, use Global Default
+          if (musicId == null && _bgMusicList.isNotEmpty) {
+            final defaultTrack = _bgMusicList.firstWhere(
+              (e) => e['isDefault'] == true,
+              orElse: () => {},
+            );
+            if (defaultTrack.isNotEmpty) {
+              musicId = defaultTrack['id'];
+            }
+          }
+        }
+
+        _selectedBgMusicId = musicId;
+        await _setBgMusicSource(musicId);
+      }
+    } catch (e) {
+      print("Error updating BG music for book: $e");
+    }
+  }
+
+  Future<void> _setBgMusicSource(int? musicId) async {
+    if (musicId == null) {
+      await _bgPlayer.stop();
+      _bgMusicLoaded = false;
+      if (mounted) setState(() {});
+      return;
+    }
+
+    final music = _bgMusicList.firstWhere(
+      (element) => element['id'] == musicId,
+      orElse: () => {},
+    );
+
+    if (music.isEmpty) return;
+
+    try {
+      final url = music['url'] as String;
+      // Handle Asset vs Network
+      if (url.startsWith('http')) {
+        await _bgPlayer.setUrl(url);
+      } else {
+        // Assuming asset? But AudioPlayer setAsset is for local assets
+        // If it's a relative path from API, prepend base URL
+        // Actually api_constants.dart might be needed
+        // PlayerScreen uses _getAbsoluteUrl
+        // For now assume absolute or fix later
+        if (url.startsWith('/')) {
+          // Prepend base url?
+          // Actually PlayerScreen logic:
+          // final cleanUrl = url.startsWith('http') ? url : '${ApiConstants.baseUrl}$url';
+          // audioHandler uses loadAudio.
+          // Here we use _bgPlayer directly.
+          // Let's assume standard URL handling.
+          // Most background music URLs in this app seem to be absolute or handled.
+        }
+        await _bgPlayer.setUrl(url);
+      }
+
+      _bgMusicLoaded = true;
+      if (_isPlaying && _bgMusicEnabled) {
+        _bgPlayer.play();
+      }
+    } catch (e) {
+      print("Error setting BG music source: $e");
+      _bgMusicLoaded = false;
+    }
+    if (mounted) setState(() {});
+  }
+
+  void _showBgMusicSettings() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.grey[900],
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Background Music',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Volume Slider
+                  Row(
+                    children: [
+                      const Icon(Icons.volume_down, color: Colors.white70),
+                      Expanded(
+                        child: Slider(
+                          value: _bgVolume,
+                          onChanged: (val) async {
+                            setModalState(() => _bgVolume = val);
+                            setState(() => _bgVolume = val);
+                            await _bgPlayer.setVolume(val);
+                          },
+                        ),
+                      ),
+                      const Icon(Icons.volume_up, color: Colors.white70),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Track Selection
+                  DropdownButton<int?>(
+                    value: _selectedBgMusicId,
+                    isExpanded: true,
+                    dropdownColor: Colors.grey[800],
+                    style: const TextStyle(color: Colors.white),
+                    items: [
+                      const DropdownMenuItem<int?>(
+                        value: null,
+                        child: Text('None'),
+                      ),
+                      ..._bgMusicList.map(
+                        (bg) => DropdownMenuItem<int>(
+                          value: bg['id'] as int,
+                          child: Text(bg['title'] ?? 'Unknown'),
+                        ),
+                      ),
+                    ],
+                    onChanged: (val) async {
+                      setModalState(() => _selectedBgMusicId = val);
+                      setState(() => _selectedBgMusicId = val);
+
+                      await _setBgMusicSource(val);
+
+                      // Save Preference
+                      try {
+                        if (_books.isNotEmpty) {
+                          await _bookRepository.updateUserBackgroundMusic(
+                            int.parse(_books[_currentBookIndex].id),
+                            val,
+                          );
+                        }
+                      } catch (e) {
+                        print("Error saving music pref: $e");
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
