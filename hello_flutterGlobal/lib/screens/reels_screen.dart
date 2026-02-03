@@ -130,15 +130,20 @@ class _ReelsScreenState extends State<ReelsScreen> {
     final savedOffset = data['savedOffset'] as int? ?? 0;
 
     setState(() {
+      print(
+        "Reels Refresh: isSubscribed=$isSubscribed, newBooks=${newBooks.length}",
+      );
       _isSubscribed = isSubscribed;
-      _books.addAll(newBooks);
-      _backendHasMore = hasMore;
-      // On initial load, use server's savedOffset; otherwise increment from current
+
       if (useInitialOffset) {
+        _books.clear();
         _offset = savedOffset + newBooks.length;
       } else {
         _offset += newBooks.length;
       }
+
+      _books.addAll(newBooks);
+      _backendHasMore = hasMore;
     });
 
     _saveOffset();
