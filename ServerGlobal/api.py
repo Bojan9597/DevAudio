@@ -3313,6 +3313,8 @@ def get_subscription_status():
                     db.connection.commit()
                     cursor.close()
                     
+                    invalidate_user_cache(user_id)
+                    
                     # Update local variable for return
                     sub['start_date'] = new_start
                     sub['end_date'] = new_end
