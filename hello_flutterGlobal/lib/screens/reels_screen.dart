@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:audio_session/audio_session.dart';
 import '../models/book.dart';
 import '../repositories/book_repository.dart';
 import '../services/auth_service.dart';
@@ -21,7 +21,8 @@ class ReelsScreen extends StatefulWidget {
 class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
   final BookRepository _bookRepository = BookRepository();
   final AuthService _authService = AuthService();
-  final AudioPlayer _audioPlayer = AudioPlayer(); // Or use a global service?
+  // REMOVED local players: _audioPlayer, _bgPlayer
+  // We now use AudioConnector.handler for everything.
   // Ideally we should use the SAME player as the rest of the app to avoid double audio.
   // For now, I'll assume we use a local one or need to integrate with a provider.
   // Given the "Next track/book" logic is complex, local might be easier,
@@ -51,12 +52,13 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
   bool _backendHasMore = true;
 
   // Background Music State
-  final AudioPlayer _bgPlayer = AudioPlayer();
+  // Background Music is managed by Global Handler
+  // We keep local state for UI state tracking (volume, enabled)
+  // but actions go to global handler.
   double _bgVolume = 0.2;
-  bool _bgMusicEnabled = true;
+  // bool _bgMusicEnabled = true; // Unused local var, handler manages this
   List<Map<String, dynamic>> _bgMusicList = [];
   int? _selectedBgMusicId;
-  bool _bgMusicLoaded = false;
 
   @override
   void initState() {
@@ -66,51 +68,37 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
     _stopGlobalAudio(); // Stop global audio when entering reels
     _loadInitialData();
 
-    _audioPlayer.playerStateStream.listen((state) {
-      if (mounted) {
-        setState(() {
-          _isPlaying = state.playing;
-          if (state.processingState == ProcessingState.completed) {
-            _onTrackFinished();
-          }
-        });
-
-        // Background Music Sync
-        if (_bgMusicEnabled && _bgMusicLoaded) {
-          // Play bg music if main player is playing (and not finished/idle)
-          bool shouldPlay =
-              state.playing &&
-              state.processingState != ProcessingState.completed &&
-              state.processingState != ProcessingState.idle;
-
-          if (shouldPlay) {
-            if (!_bgPlayer.playing) _bgPlayer.play();
-          } else {
-            if (_bgPlayer.playing) _bgPlayer.pause();
-          }
-        } else if (_bgPlayer.playing) {
-          _bgPlayer.pause();
+    // Listen to global player state
+    final player = AudioConnector.handler?.player;
+    if (player != null) {
+      player.playerStateStream.listen((state) {
+        if (mounted) {
+          setState(() {
+            _isPlaying = state.playing;
+            // Handle track completion
+            if (state.processingState == ProcessingState.completed) {
+              _onTrackFinished();
+            }
+          });
         }
-      }
-    });
+      });
 
-    _audioPlayer.positionStream.listen((p) {
-      if (mounted) setState(() => _position = p);
-    });
+      player.positionStream.listen((p) {
+        if (mounted) setState(() => _position = p);
+      });
 
-    _audioPlayer.durationStream.listen((d) {
-      if (mounted && d != null) setState(() => _duration = d);
-    });
+      player.durationStream.listen((d) {
+        if (mounted && d != null) setState(() => _duration = d);
+      });
+    }
   }
 
   Future<void> _initBgPlayer() async {
-    await _bgPlayer.setLoopMode(LoopMode.one);
-    await _bgPlayer.setVolume(_bgVolume);
+    // Global handler manages this
   }
 
   Future<void> _initAudioSession() async {
-    final session = await AudioSession.instance;
-    await session.configure(const AudioSessionConfiguration.music());
+    // Global handler manages this
   }
 
   @override
@@ -128,10 +116,17 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
     _verticalController.dispose();
     for (var c in _horizontalControllers.values) c.dispose();
 
-    // Ensure players are stopped and disposed to prevent MediaCodec leaks
-    _stopLocalAudio();
-    _audioPlayer.dispose();
-    _bgPlayer.dispose();
+    // We DO NOT dispose the global player here.
+    // But if we are leaving (popping), we should stop playback if that's desired behavior?
+    // User said: "It should stop it, but it did not exit it when in there".
+    // When disposing ReelsScreen (popping), we usually stop playback.
+
+    // Note: didPushNext handles navigating deeper.
+    // This dispose handles popping back.
+    _stopGlobalAudio();
+
+    // _audioPlayer.dispose(); // REMOVED
+    // _bgPlayer.dispose(); // REMOVED
 
     super.dispose();
   }
@@ -141,7 +136,8 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
     // Called when pushing a new route (e.g., opening PlayerScreen)
     // We must stop the Reels audio to prevent "overflow" and cleanup resources
     print("ReelsScreen: didPushNext - Stopping audio");
-    _stopLocalAudio();
+    print("ReelsScreen: didPushNext - Stopping audio");
+    _stopGlobalAudio();
   }
 
   @override
@@ -157,15 +153,6 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
       AudioConnector.handler?.pause();
     } catch (e) {
       print("Error stopping global audio: $e");
-    }
-  }
-
-  void _stopLocalAudio() {
-    try {
-      _audioPlayer.pause(); // Pause first
-      _bgPlayer.pause();
-    } catch (e) {
-      print("Error stopping local audio: $e");
     }
   }
 
@@ -334,8 +321,25 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
 
     try {
       if (url != null) {
-        await _audioPlayer.setUrl(url);
-        _audioPlayer.play();
+        // Create MediaItem for notification support
+        final mediaItem = MediaItem(
+          id: track['id']?.toString() ?? 'reel_$bookIndex\_$trackIndex',
+          album: book.title,
+          title: (track is Map)
+              ? track['title']
+              : (track as dynamic).title ?? 'Track $trackIndex',
+          artist: book.author,
+          artUri: book.absoluteCoverUrl.isNotEmpty
+              ? Uri.parse(book.absoluteCoverUrl)
+              : null,
+          extras: {'isReel': true},
+        );
+
+        await AudioConnector.handler?.loadAudio(url, mediaItem);
+        // Play is called inside loadAudio usually? No, `loadAudio` in handler calls `setUrl`
+        // We need to call play() explicitly or update `loadAudio` to play.
+        // Helper `loadAudio` in handler: `await _player.setUrl(url);`
+        await AudioConnector.handler?.play();
 
         setState(() {
           _currentBookIndex = bookIndex;
@@ -628,7 +632,9 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                             ? _duration.inSeconds.toDouble()
                             : 100,
                         onChanged: (val) {
-                          _audioPlayer.seek(Duration(seconds: val.toInt()));
+                          AudioConnector.handler?.seek(
+                            Duration(seconds: val.toInt()),
+                          );
                         },
                       ),
                     ),
@@ -687,9 +693,10 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                           ),
                           onPressed: () {
                             if (_isPlaying) {
-                              _audioPlayer.pause();
+                              AudioConnector.handler?.pause();
                             } else {
-                              _audioPlayer.play();
+                              AudioConnector.handler
+                                  ?.play(); // Resumes where left off
                             }
                           },
                         ),
@@ -803,50 +810,23 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
 
   Future<void> _setBgMusicSource(int? musicId) async {
     if (musicId == null) {
-      await _bgPlayer.stop();
-      _bgMusicLoaded = false;
+      await AudioConnector.handler?.stopBgMusic();
       if (mounted) setState(() {});
       return;
     }
 
-    final music = _bgMusicList.firstWhere(
-      (element) => element['id'] == musicId,
-      orElse: () => {},
-    );
+    // We just pass the ID and the List to the handler
+    // The handler has the logic to find URL, check cache, etc.
+    // AND it handles synchronization with main player.
+    await AudioConnector.handler?.setBgMusicSource(musicId, _bgMusicList);
 
-    if (music.isEmpty) return;
-
-    try {
-      final url = music['url'] as String;
-      // Handle Asset vs Network
-      if (url.startsWith('http')) {
-        await _bgPlayer.setUrl(url);
-      } else {
-        // Assuming asset? But AudioPlayer setAsset is for local assets
-        // If it's a relative path from API, prepend base URL
-        // Actually api_constants.dart might be needed
-        // PlayerScreen uses _getAbsoluteUrl
-        // For now assume absolute or fix later
-        if (url.startsWith('/')) {
-          // Prepend base url?
-          // Actually PlayerScreen logic:
-          // final cleanUrl = url.startsWith('http') ? url : '${ApiConstants.baseUrl}$url';
-          // audioHandler uses loadAudio.
-          // Here we use _bgPlayer directly.
-          // Let's assume standard URL handling.
-          // Most background music URLs in this app seem to be absolute or handled.
-        }
-        await _bgPlayer.setUrl(url);
-      }
-
-      _bgMusicLoaded = true;
-      if (_isPlaying && _bgMusicEnabled) {
-        _bgPlayer.play();
-      }
-    } catch (e) {
-      print("Error setting BG music source: $e");
-      _bgMusicLoaded = false;
+    // Also sync volume
+    if (AudioConnector.handler != null) {
+      // We might want to ensure volume is set
+      // But handler usually keeps its volume.
+      // We update local state from handler if needed, or just set it.
     }
+
     if (mounted) setState(() {});
   }
 
@@ -889,7 +869,7 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                           onChanged: (val) async {
                             setModalState(() => _bgVolume = val);
                             setState(() => _bgVolume = val);
-                            await _bgPlayer.setVolume(val);
+                            await AudioConnector.handler?.setBgMusicVolume(val);
                           },
                         ),
                       ),
