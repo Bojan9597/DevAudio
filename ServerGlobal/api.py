@@ -24,6 +24,7 @@ from jwt_config import generate_access_token, generate_refresh_token
 from jwt_middleware import jwt_required, blacklist_token
 import update_server_ip # Auto-update DB IP on startup
 from session_manager import SessionManager
+from cache_utils import cache
 
 def generate_aes_key():
     """Generate a random 256-bit AES key and return as base64 string."""
@@ -839,6 +840,11 @@ def build_category_tree(categories, parent_id=None):
 
 @app.route('/categories', methods=['GET'])
 def get_categories():
+    # Check cache
+    cached_data = cache.get("categories")
+    if cached_data:
+        return jsonify(cached_data)
+
     db = Database()
     if not db.connect():
         return jsonify({"error": "Database connection failed"}), 500
@@ -853,6 +859,7 @@ def get_categories():
         # Build tree
         tree = build_category_tree(result)
         
+        cache.set("categories", tree, 300)
         return jsonify(tree)
         
     except Exception as e:
@@ -1452,6 +1459,15 @@ def get_discover():
         user_id = request.args.get('user_id', None, type=int)
         page = request.args.get('page', 1, type=int)
         limit = request.args.get('limit', 10, type=int)
+        
+        # Check cache
+        cache_key = None
+        if user_id:
+            cache_key = f"discover:{user_id}:{page}:{limit}"
+            cached_data = cache.get(cache_key)
+            if cached_data:
+                return jsonify(cached_data)
+
         offset = (page - 1) * limit
         
         # Helper function to build book list from query results
@@ -1640,6 +1656,10 @@ def get_discover():
         }
         
         print(f"[TIMING] get_discover: total={round((time.time() - start_total) * 1000)}ms")
+        
+        if cache_key:
+            cache.set(cache_key, response, 30)
+            
         return jsonify(response)
         
     except Exception as e:
@@ -1894,6 +1914,12 @@ def get_library():
     try:
         user_id = request.args.get('user_id', type=int)
         
+        # Check cache
+        cache_key = f"library:{user_id}" if user_id else "library:anon"
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return jsonify(cached_data)
+
         # Get subscription status
         is_subscribed = is_subscriber(user_id, db) if user_id else False
         
@@ -2066,6 +2092,9 @@ def get_library():
         }
         
         print(f"[TIMING] get_library: total={round((time.time() - start_total) * 1000)}ms")
+        
+        cache.set(cache_key, response, 30)
+        
         return jsonify(response)
         
     except Exception as e:
@@ -3938,6 +3967,11 @@ def app_init():
     Combined endpoint for app startup. Returns categories + background music in ONE call.
     No auth required. Replaces 2 separate API calls.
     """
+    # Check cache
+    cached_data = cache.get("app_init")
+    if cached_data:
+        return jsonify(cached_data), 200
+
     db = Database()
     if not db.connect():
         return jsonify({"error": "Database connection failed"}), 500
@@ -3952,7 +3986,9 @@ def app_init():
                 url = resolve_stored_url(row['file_path'], "BackgroundMusic")
                 music_list.append({"id": row['id'], "title": row['title'], "url": url, "isDefault": bool(row['is_default'])})
 
-        return jsonify({"categories": categories, "backgroundMusic": music_list}), 200
+        response_data = {"categories": categories, "backgroundMusic": music_list}
+        cache.set("app_init", response_data, 300)
+        return jsonify(response_data), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
