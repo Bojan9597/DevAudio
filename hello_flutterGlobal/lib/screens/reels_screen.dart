@@ -4,7 +4,7 @@ import 'package:audio_session/audio_session.dart';
 import '../models/book.dart';
 import '../repositories/book_repository.dart';
 import '../services/auth_service.dart';
-import '../services/subscription_service.dart';
+import '../widgets/subscription_bottom_sheet.dart';
 // We need access to the global audio player state if we want to sync with MiniPlayer
 // But user said "It should look like that audio player with profile picture and everything"
 // This implies a FULL SCREEN EXPERIENCE.
@@ -276,38 +276,36 @@ class _ReelsScreenState extends State<ReelsScreen> {
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () async {
-                  // Navigate to subscription screen or show subscription dialog
-                  // For now, subscribe with test plan for development
-                  final result = await SubscriptionService().subscribe(
-                    'monthly',
+                onPressed: () {
+                  // Show subscription bottom sheet with plan options
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) => SubscriptionBottomSheet(
+                      onSubscribed: () {
+                        Navigator.pop(context);
+                        // Reload to check subscription status
+                        _loadInitialData();
+                      },
+                    ),
                   );
-                  if (result['success'] == true) {
-                    // Reload to check subscription status
-                    if (mounted) {
-                      _loadInitialData();
-                    }
-                  } else {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            result['error'] ?? 'Subscription failed',
-                          ),
-                        ),
-                      );
-                    }
-                  }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.indigoAccent,
-                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.amber[700],
+                  foregroundColor: Colors.black,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 32,
                     vertical: 12,
                   ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
                 ),
-                child: const Text("Subscribe"),
+                child: const Text(
+                  "Subscribe",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),

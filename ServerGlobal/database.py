@@ -25,7 +25,9 @@ def get_connection_pool():
             database="velorusb_echoHistory",
             user="velorusb_echoHistoryAdmin",
             password="Pijanista123!",
-            port=5432
+            port=5432,
+            connect_timeout=2,  # 2 second timeout for establishing connection
+            options='-c statement_timeout=2000'  # 2 second query timeout (in ms)
         )
         print("Database connection pool created")
     return _connection_pool
@@ -40,6 +42,8 @@ class Database:
         for attempt in range(retries):
             try:
                 p = get_connection_pool()
+                # Use blocking=False to fail immediately if pool exhausted
+                # instead of waiting indefinitely
                 self.connection = p.getconn()
                 # Validate the connection is still alive
                 if self.connection.closed:
@@ -47,11 +51,6 @@ class Database:
                     self.connection = None
                     continue
                 self._from_pool = True
-                # Set statement timeout to 10 seconds to prevent long-running queries
-                # from holding connections indefinitely
-                cursor = self.connection.cursor()
-                cursor.execute("SET statement_timeout = '10s'")
-                cursor.close()
                 return True
             except pool.PoolError as e:
                 # Pool exhausted - short wait and retry once
