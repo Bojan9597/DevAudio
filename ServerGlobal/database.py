@@ -25,8 +25,8 @@ def get_connection_pool():
             host = "localhost"
 
         _connection_pool = pool.ThreadedConnectionPool(
-            minconn=1,      # Minimum connections to keep open
-            maxconn=5,      # Small pool for testing - only you using the app
+            minconn=2,      # Minimum connections to keep open
+            maxconn=50,     # Production pool size - PostgreSQL default max is 100
             host=host,
             database="velorusb_echoHistory",
             user="velorusb_echoHistoryAdmin",
