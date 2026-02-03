@@ -5,6 +5,8 @@ import '../models/book.dart';
 import '../repositories/book_repository.dart';
 import '../services/auth_service.dart';
 import '../widgets/subscription_bottom_sheet.dart';
+import '../services/audio_connector.dart';
+import '../main.dart'; // Access to routeObserver
 // We need access to the global audio player state if we want to sync with MiniPlayer
 // But user said "It should look like that audio player with profile picture and everything"
 // This implies a FULL SCREEN EXPERIENCE.
@@ -16,7 +18,7 @@ class ReelsScreen extends StatefulWidget {
   State<ReelsScreen> createState() => _ReelsScreenState();
 }
 
-class _ReelsScreenState extends State<ReelsScreen> {
+class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
   final BookRepository _bookRepository = BookRepository();
   final AuthService _authService = AuthService();
   final AudioPlayer _audioPlayer = AudioPlayer(); // Or use a global service?
@@ -61,6 +63,7 @@ class _ReelsScreenState extends State<ReelsScreen> {
     super.initState();
     _initAudioSession();
     _initBgPlayer();
+    _stopGlobalAudio(); // Stop global audio when entering reels
     _loadInitialData();
 
     _audioPlayer.playerStateStream.listen((state) {
@@ -111,12 +114,59 @@ class _ReelsScreenState extends State<ReelsScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Subscribe to the route observer to track navigation events
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
+  }
+
+  @override
   void dispose() {
+    // Unsubscribe from route observer
+    routeObserver.unsubscribe(this);
+
     _verticalController.dispose();
     for (var c in _horizontalControllers.values) c.dispose();
+
+    // Ensure players are stopped and disposed to prevent MediaCodec leaks
+    _stopLocalAudio();
     _audioPlayer.dispose();
     _bgPlayer.dispose();
+
     super.dispose();
+  }
+
+  @override
+  void didPushNext() {
+    // Called when pushing a new route (e.g., opening PlayerScreen)
+    // We must stop the Reels audio to prevent "overflow" and cleanup resources
+    print("ReelsScreen: didPushNext - Stopping audio");
+    _stopLocalAudio();
+  }
+
+  @override
+  void didPopNext() {
+    // Called when returning to this screen
+    // Optionally resume, or just ensure global audio is still paused
+    _stopGlobalAudio();
+  }
+
+  void _stopGlobalAudio() {
+    // Pause the global player so we don't have two audio sources
+    try {
+      AudioConnector.handler?.pause();
+    } catch (e) {
+      print("Error stopping global audio: $e");
+    }
+  }
+
+  void _stopLocalAudio() {
+    try {
+      _audioPlayer.pause(); // Pause first
+      _bgPlayer.pause();
+    } catch (e) {
+      print("Error stopping local audio: $e");
+    }
   }
 
   Future<void> _loadInitialData() async {

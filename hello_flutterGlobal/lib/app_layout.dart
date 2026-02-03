@@ -179,7 +179,7 @@ class _AppLayoutState extends State<AppLayout> {
             mainAxisSize: MainAxisSize.min,
             children: [
               // Mini Player (above navigation bar)
-              const MiniPlayer(),
+              if (catId != 'reels') const MiniPlayer(),
 
               // Bottom Navigation Bar
               BottomNavigationBar(

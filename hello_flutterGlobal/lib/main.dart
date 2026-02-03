@@ -11,9 +11,14 @@ import 'theme/app_theme.dart';
 import 'services/connectivity_service.dart';
 import 'package:audio_service/audio_service.dart';
 import 'services/audio_handler.dart';
+import 'services/audio_connector.dart';
 
-// Global audio handler instance
+// Global audio handler instance (kept for backward compatibility if used directly in main)
 late MyAudioHandler audioHandler;
+
+// Global RouteObserver for navigation awareness
+final RouteObserver<ModalRoute<void>> routeObserver =
+    RouteObserver<ModalRoute<void>>();
 
 void main() async {
   print("=== 1. APP STARTING ===");
@@ -37,6 +42,9 @@ void main() async {
         androidNotificationOngoing: true,
       ),
     );
+    // Register the handler with the connector
+    AudioConnector.setHandler(audioHandler);
+
     print("=== 7. AudioService initialized successfully! ===");
   } catch (e, stackTrace) {
     print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
@@ -48,6 +56,7 @@ void main() async {
     // Create a fallback handler without the service
     print("=== Creating fallback handler without AudioService ===");
     audioHandler = MyAudioHandler();
+    AudioConnector.setHandler(audioHandler);
     print("=== Fallback handler created ===");
   }
 
@@ -95,6 +104,7 @@ class MyApp extends StatelessWidget {
             Locale('fr'), // French
             Locale('de'), // German
           ],
+          navigatorObservers: [routeObserver], // Register RouteObserver
           home: const AuthWrapper(),
         );
       },
