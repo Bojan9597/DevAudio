@@ -252,6 +252,17 @@ class _ReelsScreenState extends State<ReelsScreen> {
     }
   }
 
+  Future<void> _onRefresh() async {
+    await _fetchReels(useInitialOffset: true);
+    if (mounted) {
+      // Reset indices if needed, or if empty
+      if (_books.isEmpty) {
+        _currentBookIndex = 0;
+        _currentTrackIndex = 0;
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -264,62 +275,99 @@ class _ReelsScreenState extends State<ReelsScreen> {
     if (!_isSubscribed) {
       return Scaffold(
         backgroundColor: Colors.black,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.lock_outline, color: Colors.white54, size: 64),
-              const SizedBox(height: 16),
-              const Text(
-                "Subscribe to listen to Reels",
-                style: TextStyle(fontSize: 18, color: Colors.white),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  // Show subscription bottom sheet with plan options
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (context) => SubscriptionBottomSheet(
-                      onSubscribed: () {
-                        Navigator.pop(context);
-                        // Reload to check subscription status
-                        _loadInitialData();
-                      },
+        body: RefreshIndicator(
+          onRefresh: _onRefresh,
+          color: Colors.black,
+          backgroundColor: Colors.amber,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.lock_outline,
+                          color: Colors.white54,
+                          size: 64,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          "Subscribe to listen to Reels",
+                          style: TextStyle(fontSize: 18, color: Colors.white),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: () {
+                            // Show subscription bottom sheet with plan options
+                            showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (context) => SubscriptionBottomSheet(
+                                onSubscribed: () {
+                                  Navigator.pop(context);
+                                  // Reload to check subscription status
+                                  _loadInitialData();
+                                },
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.amber[700],
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                          ),
+                          child: const Text(
+                            "Subscribe",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber[700],
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25),
                   ),
                 ),
-                child: const Text(
-                  "Subscribe",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
+              );
+            },
           ),
         ),
       );
     }
 
     if (_books.isEmpty) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: Colors.black,
-        body: Center(
-          child: Text(
-            "No reels available",
-            style: TextStyle(color: Colors.white),
+        body: RefreshIndicator(
+          onRefresh: _onRefresh,
+          color: Colors.black,
+          backgroundColor: Colors.amber,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: const Center(
+                    child: Text(
+                      "No reels available",
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ),
       );
@@ -327,39 +375,45 @@ class _ReelsScreenState extends State<ReelsScreen> {
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: PageView.builder(
-        scrollDirection: Axis.vertical,
-        controller: _verticalController,
-        itemCount: _books.length,
-        onPageChanged: (index) {
-          // Play first track of new book
-          _playTrack(index, 0);
+      body: RefreshIndicator(
+        onRefresh: _onRefresh,
+        color: Colors.black,
+        backgroundColor: Colors.amber,
+        child: PageView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          scrollDirection: Axis.vertical,
+          controller: _verticalController,
+          itemCount: _books.length,
+          onPageChanged: (index) {
+            // Play first track of new book
+            _playTrack(index, 0);
 
-          // Pre-load next batch if we are near the end (e.g., 2 items remaining)
-          if (index >= _books.length - 2) {
-            _loadMoreReels();
-          }
-        },
-        itemBuilder: (context, bookIndex) {
-          if (bookIndex >= _books.length) return null;
-          final book = _books[bookIndex];
+            // Pre-load next batch if we are near the end (e.g., 2 items remaining)
+            if (index >= _books.length - 2) {
+              _loadMoreReels();
+            }
+          },
+          itemBuilder: (context, bookIndex) {
+            if (bookIndex >= _books.length) return null;
+            final book = _books[bookIndex];
 
-          // Horizontal PageView for tracks
-          return PageView.builder(
-            scrollDirection: Axis.horizontal,
-            controller: _horizontalControllers.putIfAbsent(
-              bookIndex,
-              () => PageController(),
-            ),
-            itemCount: book.tracks.length, // dependent on model
-            onPageChanged: (trackIndex) {
-              _playTrack(bookIndex, trackIndex);
-            },
-            itemBuilder: (context, trackIndex) {
-              return _buildPlayerPage(book, trackIndex);
-            },
-          );
-        },
+            // Horizontal PageView for tracks
+            return PageView.builder(
+              scrollDirection: Axis.horizontal,
+              controller: _horizontalControllers.putIfAbsent(
+                bookIndex,
+                () => PageController(),
+              ),
+              itemCount: book.tracks.length, // dependent on model
+              onPageChanged: (trackIndex) {
+                _playTrack(bookIndex, trackIndex);
+              },
+              itemBuilder: (context, trackIndex) {
+                return _buildPlayerPage(book, trackIndex);
+              },
+            );
+          },
+        ),
       ),
     );
   }
