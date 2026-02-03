@@ -4,19 +4,21 @@ from jwt_config import verify_token
 from database import Database
 import datetime
 
-def is_token_blacklisted(token):
-    """Check if token is in blacklist."""
-    db = Database()
-    if not db.connect():
-        # Fail safe: if DB is down, assume token valid? Or invalid?
-        # Better safe: invalid. But let's log error.
-        print("Database connection failed during blacklist check")
-        return False # Assume valid to avoid lockout during DB hiccups, or True? 
+def is_token_blacklisted(token, db=None):
+    """Check if token is in blacklist. Accepts optional shared db connection."""
+    own_db = db is None
+    if own_db:
+        db = Database()
+        if not db.connect():
+            print("Database connection failed during blacklist check")
+            return False
 
     query = "SELECT id FROM token_blacklist WHERE token = %s"
     result = db.execute_query(query, (token,))
-    db.disconnect()
-    
+
+    if own_db:
+        db.disconnect()
+
     return len(result) > 0 if result else False
 
 def blacklist_token(token, expires_at):
@@ -52,42 +54,38 @@ def jwt_required(f):
                  return jsonify({"error": "Invalid Authorization header format"}), 401
             
             token = token_parts[1]
-            
-            # Check blacklist
-            if is_token_blacklisted(token):
-                return jsonify({"error": "Token has been revoked"}), 401
 
-            # Verify token and get payload
+            # Verify token and get payload first (no DB needed)
             payload = verify_token(token)
-            
+
             if payload['type'] != 'access':
                  return jsonify({"error": "Invalid token type"}), 401
 
-            # Strict Single Session Enforcement
-            # Check if session_id in token matches the one in DB
             session_id = payload.get('session_id')
             user_id = payload.get('user_id')
-            
+
             if not session_id:
-                # Old token or invalid generation - Reject for strictness
                 return jsonify({"error": "Invalid session (legacy token)"}), 401
-                
-            # Verify against DB
+
+            # Single DB connection for both blacklist + session check
             db = Database()
-            if db.connect():
-                try:
-                    # Check if this specific session is the active one
-                    query = "SELECT id FROM user_sessions WHERE user_id = %s AND session_id = %s"
-                    res = db.execute_query(query, (user_id, session_id))
-                    if not res:
-                        # Session replaced or invalid
-                        return jsonify({"error": "Session expired (logged in elsewhere)"}), 401
-                except Exception as e:
-                    print(f"Session check error: {e}")
-                    # Fail open or closed? Closed for security.
-                    return jsonify({"error": "Session verification failed"}), 401
-                finally:
-                    db.disconnect()
+            if not db.connect():
+                return jsonify({"error": "Authentication service unavailable"}), 503
+            try:
+                # Check blacklist (reuses this connection)
+                if is_token_blacklisted(token, db):
+                    return jsonify({"error": "Token has been revoked"}), 401
+
+                # Check if this specific session is the active one
+                query = "SELECT id FROM user_sessions WHERE user_id = %s AND session_id = %s"
+                res = db.execute_query(query, (user_id, session_id))
+                if not res:
+                    return jsonify({"error": "Session expired (logged in elsewhere)"}), 401
+            except Exception as e:
+                print(f"Session/blacklist check error: {e}")
+                return jsonify({"error": "Session verification failed"}), 401
+            finally:
+                db.disconnect()
 
             # Determine behavior: 
             # Ideally, we pass user_id to the route, but Flask routes expect specific args.

@@ -1216,25 +1216,33 @@ def get_books():
 
         params = []
 
-        is_fav_sql = "0 as is_favorite"
+        is_fav_join = ""
+        is_fav_col = "0 as is_favorite"
         if user_id:
-             is_fav_sql = "(SELECT COUNT(*) FROM favorites WHERE user_id = %s AND book_id = b.id) as is_favorite"
+             is_fav_join = "LEFT JOIN favorites fav ON fav.book_id = b.id AND fav.user_id = %s"
+             is_fav_col = "CASE WHEN fav.book_id IS NOT NULL THEN 1 ELSE 0 END as is_favorite"
              params.append(user_id)
 
-        # Main query with correlated subqueries (these are fine - DB optimizes them)
         base_select = f"""
             SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug,
                    u.name as posted_by_name, b.description, b.price, b.posted_by_user_id, b.duration_seconds, b.pdf_path,
                    b.premium,
-                   {is_fav_sql},
-                   (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count,
-                   (SELECT AVG(stars) FROM book_ratings WHERE book_id = b.id) as average_rating,
-                   (SELECT COUNT(*) FROM book_ratings WHERE book_id = b.id) as rating_count
+                   {is_fav_col},
+                   COALESCE(pi_count.cnt, 0) as playlist_count,
+                   br_stats.avg_rating as average_rating,
+                   COALESCE(br_stats.rating_cnt, 0) as rating_count
             FROM books b
             LEFT JOIN categories c ON b.primary_category_id = c.id
             LEFT JOIN users u ON b.posted_by_user_id = u.id
+            LEFT JOIN (
+                SELECT book_id, COUNT(*) as cnt FROM playlist_items GROUP BY book_id
+            ) pi_count ON pi_count.book_id = b.id
+            LEFT JOIN (
+                SELECT book_id, AVG(stars) as avg_rating, COUNT(*) as rating_cnt FROM book_ratings GROUP BY book_id
+            ) br_stats ON br_stats.book_id = b.id
+            {is_fav_join}
         """
-        
+
         sort_by = request.args.get('sort', 'newest', type=str)
 
         if search_query:
@@ -1242,12 +1250,10 @@ def get_books():
              params.append(f"%{search_query}%")
         else:
             query = base_select
-            
+
         if sort_by == 'popular':
-            # PostgreSQL doesn't allow column aliases in ORDER BY, must repeat the subqueries
             query += """ ORDER BY (
-                (SELECT AVG(stars) FROM book_ratings WHERE book_id = b.id) * 
-                (SELECT COUNT(*) FROM book_ratings WHERE book_id = b.id)
+                COALESCE(br_stats.avg_rating, 0) * COALESCE(br_stats.rating_cnt, 0)
             ) DESC NULLS LAST, b.id DESC"""
         else:
             query += " ORDER BY b.id DESC" 
@@ -1517,24 +1523,29 @@ def get_discover():
         if user_id:
             is_subscribed = is_subscriber(user_id, db)
         
-        # Base query for books
+        # Base query for books - uses JOINs instead of correlated subqueries
         base_select = """
             SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug,
                    u.name as posted_by_name, b.description, b.price, b.posted_by_user_id, b.duration_seconds, b.pdf_path,
                    b.premium,
-                   (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count,
-                   (SELECT AVG(stars) FROM book_ratings WHERE book_id = b.id) as average_rating,
-                   (SELECT COUNT(*) FROM book_ratings WHERE book_id = b.id) as rating_count
+                   COALESCE(pi_count.cnt, 0) as playlist_count,
+                   br_stats.avg_rating as average_rating,
+                   COALESCE(br_stats.rating_cnt, 0) as rating_count
             FROM books b
             LEFT JOIN categories c ON b.primary_category_id = c.id
             LEFT JOIN users u ON b.posted_by_user_id = u.id
+            LEFT JOIN (
+                SELECT book_id, COUNT(*) as cnt FROM playlist_items GROUP BY book_id
+            ) pi_count ON pi_count.book_id = b.id
+            LEFT JOIN (
+                SELECT book_id, AVG(stars) as avg_rating, COUNT(*) as rating_cnt FROM book_ratings GROUP BY book_id
+            ) br_stats ON br_stats.book_id = b.id
         """
-        
+
         # Fetch all three book lists in one go (newest, popular, paginated)
         newest_result = db.execute_query(base_select + " ORDER BY b.id DESC LIMIT 5")
         popular_result = db.execute_query(base_select + """ ORDER BY (
-            (SELECT AVG(stars) FROM book_ratings WHERE book_id = b.id) * 
-            (SELECT COUNT(*) FROM book_ratings WHERE book_id = b.id)
+            COALESCE(br_stats.avg_rating, 0) * COALESCE(br_stats.rating_cnt, 0)
         ) DESC NULLS LAST, b.id DESC LIMIT 5""")
         all_result = db.execute_query(base_select + " ORDER BY b.id DESC LIMIT %s OFFSET %s", (limit, offset))
         
@@ -1593,12 +1604,18 @@ def get_discover():
                 SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, b.duration_seconds,
                        b.premium, b.pdf_path, c.slug as category_slug,
                        ub.last_played_position_seconds as last_position,
-                       (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count,
-                       (SELECT AVG(stars) FROM book_ratings WHERE book_id = b.id) as average_rating,
-                       (SELECT COUNT(*) FROM book_ratings WHERE book_id = b.id) as rating_count
+                       COALESCE(pi_count.cnt, 0) as playlist_count,
+                       br_stats.avg_rating as average_rating,
+                       COALESCE(br_stats.rating_cnt, 0) as rating_count
                 FROM user_books ub
                 JOIN books b ON ub.book_id = b.id
                 LEFT JOIN categories c ON b.primary_category_id = c.id
+                LEFT JOIN (
+                    SELECT book_id, COUNT(*) as cnt FROM playlist_items GROUP BY book_id
+                ) pi_count ON pi_count.book_id = b.id
+                LEFT JOIN (
+                    SELECT book_id, AVG(stars) as avg_rating, COUNT(*) as rating_cnt FROM book_ratings GROUP BY book_id
+                ) br_stats ON br_stats.book_id = b.id
                 WHERE ub.user_id = %s AND ub.last_played_position_seconds > 0 AND (ub.is_read = 0 OR ub.is_read IS NULL)
                 ORDER BY ub.last_accessed_at DESC
             """
@@ -1863,19 +1880,25 @@ def get_library():
         # Get subscription status
         is_subscribed = is_subscriber(user_id, db) if user_id else False
         
-        # Get all books
         # Get all books (with user preference for BG music)
+        # Uses JOINs instead of correlated subqueries for better performance
         books_query = """
             SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, b.duration_seconds,
-                   b.premium, b.pdf_path, 
+                   b.premium, b.pdf_path,
                    COALESCE(ub.background_music_id, b.background_music_id) as background_music_id,
                    c.slug as category_slug,
-                   (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count,
-                   (SELECT AVG(stars) FROM book_ratings WHERE book_id = b.id) as average_rating,
-                   (SELECT COUNT(*) FROM book_ratings WHERE book_id = b.id) as rating_count
+                   COALESCE(pi_count.cnt, 0) as playlist_count,
+                   br_stats.avg_rating as average_rating,
+                   COALESCE(br_stats.rating_cnt, 0) as rating_count
             FROM books b
             LEFT JOIN categories c ON b.primary_category_id = c.id
             LEFT JOIN user_books ub ON ub.book_id = b.id AND ub.user_id = %s
+            LEFT JOIN (
+                SELECT book_id, COUNT(*) as cnt FROM playlist_items GROUP BY book_id
+            ) pi_count ON pi_count.book_id = b.id
+            LEFT JOIN (
+                SELECT book_id, AVG(stars) as avg_rating, COUNT(*) as rating_cnt FROM book_ratings GROUP BY book_id
+            ) br_stats ON br_stats.book_id = b.id
             ORDER BY b.id DESC
         """
         all_books_result = db.execute_query(books_query, (user_id,))
@@ -1906,17 +1929,23 @@ def get_library():
         if user_id:
             history_query = """
                 SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, b.duration_seconds,
-                       b.premium, b.pdf_path, 
+                       b.premium, b.pdf_path,
                        COALESCE(ub.background_music_id, b.background_music_id) as background_music_id,
                        c.slug as category_slug,
                        ub.last_played_position_seconds as last_position,
                        ub.last_accessed_at,
-                       (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count,
-                       (SELECT AVG(stars) FROM book_ratings WHERE book_id = b.id) as average_rating,
-                       (SELECT COUNT(*) FROM book_ratings WHERE book_id = b.id) as rating_count
+                       COALESCE(pi_count.cnt, 0) as playlist_count,
+                       br_stats.avg_rating as average_rating,
+                       COALESCE(br_stats.rating_cnt, 0) as rating_count
                 FROM user_books ub
                 JOIN books b ON ub.book_id = b.id
                 LEFT JOIN categories c ON b.primary_category_id = c.id
+                LEFT JOIN (
+                    SELECT book_id, COUNT(*) as cnt FROM playlist_items GROUP BY book_id
+                ) pi_count ON pi_count.book_id = b.id
+                LEFT JOIN (
+                    SELECT book_id, AVG(stars) as avg_rating, COUNT(*) as rating_cnt FROM book_ratings GROUP BY book_id
+                ) br_stats ON br_stats.book_id = b.id
                 WHERE ub.user_id = %s AND ub.last_played_position_seconds > 0 AND (ub.is_read = 0 OR ub.is_read IS NULL)
                 ORDER BY ub.last_accessed_at DESC
             """
@@ -1950,11 +1979,17 @@ def get_library():
             upload_query = """
                 SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, b.duration_seconds,
                        b.premium, b.pdf_path, b.background_music_id, c.slug as category_slug,
-                       (SELECT COUNT(*) FROM playlist_items WHERE book_id = b.id) as playlist_count,
-                       (SELECT AVG(stars) FROM book_ratings WHERE book_id = b.id) as average_rating,
-                       (SELECT COUNT(*) FROM book_ratings WHERE book_id = b.id) as rating_count
+                       COALESCE(pi_count.cnt, 0) as playlist_count,
+                       br_stats.avg_rating as average_rating,
+                       COALESCE(br_stats.rating_cnt, 0) as rating_count
                 FROM books b
                 LEFT JOIN categories c ON b.primary_category_id = c.id
+                LEFT JOIN (
+                    SELECT book_id, COUNT(*) as cnt FROM playlist_items GROUP BY book_id
+                ) pi_count ON pi_count.book_id = b.id
+                LEFT JOIN (
+                    SELECT book_id, AVG(stars) as avg_rating, COUNT(*) as rating_cnt FROM book_ratings GROUP BY book_id
+                ) br_stats ON br_stats.book_id = b.id
                 WHERE b.posted_by_user_id = %s
                 ORDER BY b.id DESC
             """
@@ -3655,6 +3690,252 @@ def get_user_book_rating(book_id, user_id):
             
     except Exception as e:
         return jsonify({"stars": None}), 200
+    finally:
+        db.disconnect()
+
+
+# ===================== COMBINED PROFILE-INIT ENDPOINT =====================
+@app.route('/profile-init/<int:user_id>', methods=['GET'])
+@jwt_required
+def profile_init(user_id):
+    """
+    Combined endpoint for the profile screen. Returns in ONE call:
+    - user profile, listen history, user stats, badges, subscription status
+    Replaces 5 separate API calls with 1.
+    """
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        # 1. User profile
+        user_data = None
+        auth_header = request.headers.get('Authorization')
+        if auth_header:
+            access_token = auth_header.split()[1]
+            payload = pyjwt.decode(access_token, options={"verify_signature": False})
+            token_user_id = payload.get('user_id')
+            users = db.execute_query(
+                "SELECT id, name, email, profile_picture_url, is_verified FROM users WHERE id = %s",
+                (token_user_id,)
+            )
+            if users:
+                user = users[0]
+                aes_key = get_or_create_user_aes_key(user['id'], db)
+                user_data = {
+                    "id": user['id'],
+                    "name": user['name'],
+                    "email": user['email'],
+                    "profile_picture_url": resolve_stored_url(user['profile_picture_url'], "profilePictures"),
+                    "aes_key": aes_key
+                }
+
+        # 2. Listen history with batched progress queries
+        history = []
+        books_query = """
+            SELECT DISTINCT b.id, b.title, b.author, b.audio_path, b.cover_image_path,
+                   c.slug as category_slug, b.duration_seconds, ub.last_accessed_at,
+                   b.premium,
+                   br_stats.avg_rating as average_rating,
+                   COALESCE(br_stats.rating_cnt, 0) as rating_count,
+                   COALESCE(pi_count.cnt, 0) as playlist_count
+            FROM user_books ub
+            JOIN books b ON ub.book_id = b.id
+            LEFT JOIN categories c ON b.primary_category_id = c.id
+            LEFT JOIN (SELECT book_id, COUNT(*) as cnt FROM playlist_items GROUP BY book_id) pi_count ON pi_count.book_id = b.id
+            LEFT JOIN (SELECT book_id, AVG(stars) as avg_rating, COUNT(*) as rating_cnt FROM book_ratings GROUP BY book_id) br_stats ON br_stats.book_id = b.id
+            WHERE ub.user_id = %s AND ub.last_played_position_seconds > 0
+            ORDER BY ub.last_accessed_at DESC
+        """
+        books_result = db.execute_query(books_query, (user_id,))
+
+        # Batch fetch all progress data once for history + stats
+        all_user_book_ids = []
+        if books_result:
+            all_user_book_ids = [b['id'] for b in books_result]
+
+        # Also get all user books for stats
+        ub_query = """
+            SELECT b.id, b.duration_seconds,
+                   COALESCE(pi_count.cnt, 0) as playlist_count
+            FROM user_books ub
+            JOIN books b ON ub.book_id = b.id
+            LEFT JOIN (SELECT book_id, COUNT(*) as cnt FROM playlist_items GROUP BY book_id) pi_count ON pi_count.book_id = b.id
+            WHERE ub.user_id = %s
+        """
+        ub_result = db.execute_query(ub_query, (user_id,))
+        stat_book_ids = [b['id'] for b in ub_result] if ub_result else []
+
+        # Combine all book IDs for a single batch fetch
+        combined_ids = list(set(all_user_book_ids + stat_book_ids))
+
+        tracks_by_book = {}
+        single_by_book = {}
+        if combined_ids:
+            ph = ','.join(['%s'] * len(combined_ids))
+            tracks_q = f"""
+                SELECT pi.book_id, pi.id as playlist_item_id, pi.duration_seconds,
+                       COALESCE(MAX(ph.played_seconds), 0) as last_position,
+                       CASE WHEN uct.id IS NOT NULL THEN 1 ELSE 0 END as is_completed
+                FROM playlist_items pi
+                LEFT JOIN playback_history ph ON ph.playlist_item_id = pi.id AND ph.user_id = %s
+                LEFT JOIN user_completed_tracks uct ON uct.track_id = pi.id AND uct.user_id = %s
+                WHERE pi.book_id IN ({ph})
+                GROUP BY pi.id, pi.book_id, pi.duration_seconds, uct.id
+            """
+            tracks_result = db.execute_query(tracks_q, (user_id, user_id, *combined_ids))
+            if tracks_result:
+                for t in tracks_result:
+                    bid = t['book_id']
+                    if bid not in tracks_by_book:
+                        tracks_by_book[bid] = []
+                    tracks_by_book[bid].append(t)
+
+            single_q = f"""
+                SELECT book_id, COALESCE(MAX(played_seconds), 0) as last_position
+                FROM playback_history WHERE user_id = %s AND book_id IN ({ph})
+                GROUP BY book_id
+            """
+            single_result = db.execute_query(single_q, (user_id, *combined_ids))
+            if single_result:
+                for r in single_result:
+                    single_by_book[r['book_id']] = r['last_position'] or 0
+
+        # Build history response
+        if books_result:
+            for book in books_result:
+                book_id = book['id']
+                is_playlist = book['playlist_count'] > 0
+                total_listened = 0
+                if is_playlist:
+                    for track in tracks_by_book.get(book_id, []):
+                        td = track['duration_seconds'] or 0
+                        if track['is_completed'] and td > 0:
+                            total_listened += td
+                        else:
+                            lp = track['last_position'] or 0
+                            total_listened += min(lp, td) if td > 0 else lp
+                else:
+                    total_listened = single_by_book.get(book_id, 0)
+
+                cover_path, cover_thumb = resolve_cover_urls(book['cover_image_path'])
+                audio_path = resolve_stored_url(book['audio_path'], "AudioBooks")
+                total_duration = book['duration_seconds'] or 0
+                pct = (total_listened / total_duration * 100) if total_duration > 0 else 0
+
+                history.append({
+                    "id": str(book_id), "title": book['title'], "author": book['author'],
+                    "audioUrl": audio_path, "coverUrl": cover_path, "coverUrlThumbnail": cover_thumb,
+                    "categoryId": book['category_slug'] or "", "lastPosition": int(total_listened),
+                    "duration": total_duration, "percentage": round(pct, 2),
+                    "lastAccessed": str(book['last_accessed_at']),
+                    "averageRating": float(book['average_rating'] or 0),
+                    "ratingCount": int(book['rating_count'] or 0),
+                    "premium": bool(book['premium'])
+                })
+
+        # 3. Stats (reuse batched data)
+        total_seconds = 0
+        completed_count = 0
+        if ub_result:
+            for book in ub_result:
+                bid = book['id']
+                is_playlist = book['playlist_count'] > 0
+                total_duration = book['duration_seconds'] or 0
+                if is_playlist:
+                    book_listened = 0
+                    for track in tracks_by_book.get(bid, []):
+                        td = track['duration_seconds'] or 0
+                        if track['is_completed'] and td > 0:
+                            book_listened += td
+                        else:
+                            lp = track['last_position'] or 0
+                            book_listened += min(lp, td) if td > 0 else lp
+                    total_seconds += book_listened
+                    if total_duration > 0 and book_listened >= total_duration:
+                        completed_count += 1
+                else:
+                    listened = single_by_book.get(bid, 0)
+                    total_seconds += listened
+                    if total_duration > 0 and listened >= (total_duration * 0.95):
+                        completed_count += 1
+        stats = {"total_listening_time_seconds": total_seconds, "books_completed": completed_count}
+
+        # 4. Badges
+        badge_service = BadgeService(db.connection)
+        badges = badge_service.get_all_badges_with_progress(user_id)
+
+        # 5. Subscription
+        sub_data = {"user_id": user_id, "status": "none", "is_active": False}
+        sub_result = db.execute_query(
+            "SELECT id, plan_type, status, start_date, end_date, auto_renew FROM subscriptions WHERE user_id = %s",
+            (user_id,)
+        )
+        if sub_result:
+            sub = sub_result[0]
+            now = datetime.datetime.utcnow()
+            if sub['end_date'] and sub['end_date'] < now and sub['auto_renew']:
+                plan = sub['plan_type']
+                duration = datetime.timedelta(days=30)
+                if plan == 'test_minute': duration = datetime.timedelta(minutes=1)
+                elif plan == 'yearly': duration = datetime.timedelta(days=365)
+                elif plan == 'lifetime': duration = None
+                if duration:
+                    new_start, new_end = now, now + duration
+                    cursor = db.connection.cursor()
+                    cursor.execute("UPDATE subscriptions SET start_date=%s, end_date=%s, status='active' WHERE id=%s", (new_start, new_end, sub['id']))
+                    cursor.execute("INSERT INTO subscription_history (user_id,action,plan_type,notes) VALUES (%s,'renewed',%s,'Auto-renewal via profile-init')", (user_id, plan))
+                    db.connection.commit()
+                    cursor.close()
+                    sub['start_date'], sub['end_date'], sub['status'] = new_start, new_end, 'active'
+            is_active = sub['status'] == 'active'
+            if is_active and sub['end_date']:
+                is_active = sub['end_date'] > now
+            def to_ts(dt):
+                return int(dt.replace(tzinfo=datetime.timezone.utc).timestamp()) if dt else None
+            sub_data = {
+                "id": sub['id'], "user_id": user_id, "plan_type": sub['plan_type'],
+                "status": "active" if is_active else "expired",
+                "start_date": to_ts(sub['start_date']), "end_date": to_ts(sub['end_date']),
+                "auto_renew": bool(sub['auto_renew']), "is_active": is_active
+            }
+
+        return jsonify({
+            "user": user_data, "listenHistory": history, "stats": stats,
+            "badges": badges, "subscription": sub_data,
+        }), 200
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
+
+
+# ===================== COMBINED APP-INIT ENDPOINT =====================
+@app.route('/app-init', methods=['GET'])
+def app_init():
+    """
+    Combined endpoint for app startup. Returns categories + background music in ONE call.
+    No auth required. Replaces 2 separate API calls.
+    """
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+    try:
+        cat_result = db.execute_query("SELECT id, name, slug, parent_id FROM categories ORDER BY id ASC")
+        categories = build_category_tree(cat_result) if cat_result else []
+
+        bg_result = db.execute_query("SELECT id, title, file_path, is_default FROM background_music ORDER BY title ASC")
+        music_list = []
+        if bg_result:
+            for row in bg_result:
+                url = resolve_stored_url(row['file_path'], "BackgroundMusic")
+                music_list.append({"id": row['id'], "title": row['title'], "url": url, "isDefault": bool(row['is_default'])})
+
+        return jsonify({"categories": categories, "backgroundMusic": music_list}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
     finally:
         db.disconnect()
 

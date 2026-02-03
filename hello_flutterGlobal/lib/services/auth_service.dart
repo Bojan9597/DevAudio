@@ -200,6 +200,11 @@ class AuthService {
     }
   }
 
+  /// Public method to save user data from combined endpoints
+  Future<void> saveUserData(Map<String, dynamic> user) async {
+    await _saveUser(Map<String, dynamic>.from(user));
+  }
+
   Future<void> _saveUser(Map<String, dynamic> user) async {
     final prefs = await SharedPreferences.getInstance();
 

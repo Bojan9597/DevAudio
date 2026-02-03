@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/category.dart';
 
 class LayoutState extends ChangeNotifier {
   bool isCollapsed = false;
@@ -9,6 +10,14 @@ class LayoutState extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.dark;
   Locale? _locale;
   String? _currentUserId;
+
+  // Shared categories - loaded once from /discover, used by SideMenu and ContentArea
+  List<Category> categories = [];
+
+  void setCategories(List<Category> cats) {
+    categories = cats;
+    notifyListeners();
+  }
 
   LayoutState() {
     _loadSettings();

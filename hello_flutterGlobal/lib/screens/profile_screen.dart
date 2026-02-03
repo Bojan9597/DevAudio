@@ -35,12 +35,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _loadUser();
-    _loadHistory();
-    _loadStats();
-    _loadBadges();
-    _loadSubscription();
+    _loadProfileData();
     _checkAdminStatus();
+  }
+
+  /// Single API call replaces 5 separate calls
+  Future<void> _loadProfileData() async {
+    try {
+      // Show cached user immediately
+      var user = await AuthService().getUser();
+      if (mounted) setState(() => _user = user);
+
+      final userId = await AuthService().getCurrentUserId();
+      if (userId == null) {
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+
+      final data = await BookRepository().getProfileInit(userId);
+
+      if (data['user'] != null) {
+        await AuthService().saveUserData(data['user'] as Map<String, dynamic>);
+        user = await AuthService().getUser();
+      }
+
+      if (mounted) {
+        setState(() {
+          _user = user;
+          _history = data['listenHistory'] as List<Book>;
+          _stats = data['stats'] as Map<String, dynamic>;
+          _badges = data['badges'] as List<Badge>;
+          if (data['subscription'] != null) {
+            _subscription = Subscription.fromJson(data['subscription']);
+          }
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print("Error loading profile data: $e");
+      // Fallback to individual loads
+      _loadUser();
+      _loadHistory();
+      _loadStats();
+      _loadBadges();
+      _loadSubscription();
+    }
   }
 
   Future<void> _checkAdminStatus() async {

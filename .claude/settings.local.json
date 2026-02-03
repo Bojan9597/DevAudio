@@ -18,7 +18,8 @@
       "Bash(\"c:\\\\Users\\\\bojan\\\\Desktop\\\\TrainingFlutter\\\\Server\\\\venv\\\\Scripts\\\\pip.exe\" install:*)",
       "WebFetch(domain:pub.dev)",
       "Bash(pip show:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(flutter --version:*)"
     ]
   }
 }

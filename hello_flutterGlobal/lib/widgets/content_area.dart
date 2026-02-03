@@ -3,7 +3,6 @@ import '../states/layout_state.dart';
 import '../models/book.dart';
 import '../models/category.dart';
 import '../repositories/book_repository.dart';
-import '../repositories/category_repository.dart';
 import '../services/auth_service.dart';
 import '../services/download_service.dart';
 import '../l10n/generated/app_localizations.dart';
@@ -31,7 +30,6 @@ class _ContentAreaState extends State<ContentArea> {
   List<String> _purchasedIds = [];
   List<Book> _historyBooks = [];
   List<Book> _uploadedBooks = [];
-  List<Category> _categories = []; // State for recursive filtering
   bool _isLoading = true;
   bool _isAdmin = false;
   bool _isSubscribed = false;
@@ -47,9 +45,7 @@ class _ContentAreaState extends State<ContentArea> {
   void initState() {
     super.initState();
     _checkAdminStatus();
-    _checkSubscriptionStatus();
-    _loadBooks();
-    _loadCategories(); // Load categories for filtering
+    _loadBooks(); // Also sets _isSubscribed from library response
 
     // Listen for refresh triggers
     globalLayoutState.addListener(_handleLayoutChange);
@@ -61,13 +57,6 @@ class _ContentAreaState extends State<ContentArea> {
     final isAdmin = await AuthService().isAdmin();
     if (mounted) {
       setState(() => _isAdmin = isAdmin);
-    }
-  }
-
-  Future<void> _checkSubscriptionStatus() async {
-    final isSubscribed = await AuthService().isSubscribed();
-    if (mounted) {
-      setState(() => _isSubscribed = isSubscribed);
     }
   }
 
@@ -95,18 +84,9 @@ class _ContentAreaState extends State<ContentArea> {
     if (shouldReload) {
       if (mounted) setState(() => _isLoading = true);
       _loadBooks(); // Reload data
-      _loadCategories(); // Reload categories
     }
   }
 
-  Future<void> _loadCategories() async {
-    try {
-      final cats = await CategoryRepository().getCategories();
-      if (mounted) setState(() => _categories = cats);
-    } catch (e) {
-      print("Error loading categories in ContentArea: $e");
-    }
-  }
 
   Future<void> _loadBooks() async {
     try {
@@ -143,6 +123,7 @@ class _ContentAreaState extends State<ContentArea> {
           _purchasedIds = purchasedIds;
           _historyBooks = history;
           _uploadedBooks = uploaded;
+          _isSubscribed = libraryData['isSubscribed'] as bool? ?? false;
           _isLoading = false;
         });
       }
@@ -191,7 +172,7 @@ class _ContentAreaState extends State<ContentArea> {
         var filteredBooks = BookRepository().filterBooks(
           categoryId,
           _allBooks,
-          allCategories: _categories,
+          allCategories: globalLayoutState.categories,
         );
 
         return CategoryDetailsView(
@@ -227,7 +208,7 @@ class _ContentAreaState extends State<ContentArea> {
       return null;
     }
 
-    final category = findCategory(_categories, categoryId);
+    final category = findCategory(globalLayoutState.categories, categoryId);
     if (category != null) {
       return translateCategoryTitle(
         category.title,

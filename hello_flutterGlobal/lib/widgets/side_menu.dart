@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../states/layout_state.dart';
 import '../models/category.dart';
-import '../repositories/category_repository.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../utils/category_translations.dart';
 
@@ -14,35 +13,7 @@ class SideMenu extends StatefulWidget {
 }
 
 class _SideMenuState extends State<SideMenu> {
-  List<Category> _categories = [];
-  bool _isLoading = true;
-
   final Set<String> _expandedIds = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _loadCategories();
-  }
-
-  Future<void> _loadCategories() async {
-    try {
-      final categories = await CategoryRepository().getCategories();
-      if (mounted) {
-        setState(() {
-          _categories = categories;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error loading categories: $e');
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
 
   void _toggleExpansion(String id) {
     setState(() {
@@ -83,7 +54,7 @@ class _SideMenuState extends State<SideMenu> {
                 const SizedBox(height: 10),
                 // Dynamic Categories - Takes up available space
                 Expanded(
-                  child: _isLoading
+                  child: globalLayoutState.categories.isEmpty
                       ? Center(
                           child: CircularProgressIndicator(
                             color: Theme.of(context).colorScheme.onSurface,
@@ -91,7 +62,7 @@ class _SideMenuState extends State<SideMenu> {
                         )
                       : ListView(
                           padding: EdgeInsets.zero,
-                          children: _categories
+                          children: globalLayoutState.categories
                               .map((c) => _buildCategoryItem(c, 0, isCollapsed))
                               .toList(),
                         ),

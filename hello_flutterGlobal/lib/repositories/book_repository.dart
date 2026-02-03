@@ -128,8 +128,10 @@ class BookRepository {
             .toList();
         final isSubscribed = data['isSubscribed'] as bool? ?? false;
 
-        // Parse categories (tree structure)
-        final categories = data['categories'] as List? ?? [];
+        // Parse categories (tree structure) into Category objects
+        final categories = (data['categories'] as List? ?? [])
+            .map((json) => Category.fromJson(json as Map<String, dynamic>))
+            .toList();
 
         // Cache for offline
         final prefs = await SharedPreferences.getInstance();
@@ -170,7 +172,9 @@ class BookRepository {
               .map((e) => e as int)
               .toList(),
           'isSubscribed': data['isSubscribed'] as bool? ?? false,
-          'categories': data['categories'] as List? ?? [],
+          'categories': (data['categories'] as List? ?? [])
+              .map((json) => Category.fromJson(json as Map<String, dynamic>))
+              .toList(),
         };
       }
       return {
@@ -180,7 +184,7 @@ class BookRepository {
         'listenHistory': <Book>[],
         'favorites': <int>[],
         'isSubscribed': false,
-        'categories': <dynamic>[],
+        'categories': <Category>[],
       };
     }
   }
@@ -942,6 +946,79 @@ class BookRepository {
       await _apiClient.post(url, headers: headers, body: body);
     } catch (e) {
       print('Error updating user background music preference: $e');
+    }
+  }
+
+  /// Combined profile screen data in ONE API call.
+  /// Returns: user, listenHistory, stats, badges, subscription
+  Future<Map<String, dynamic>> getProfileInit(int userId) async {
+    try {
+      if (ConnectivityService().isOffline) {
+        throw Exception('Offline mode');
+      }
+
+      final headers = await _getHeaders();
+      final response = await _apiClient.get(
+        Uri.parse('${ApiConstants.baseUrl}/profile-init/$userId'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        // Parse listen history
+        final List<Book> history = [];
+        if (data['listenHistory'] != null) {
+          for (var item in data['listenHistory']) {
+            history.add(Book.fromJson(item));
+          }
+        }
+
+        // Parse badges
+        final List<Badge> badges = [];
+        if (data['badges'] != null) {
+          for (var item in data['badges']) {
+            badges.add(Badge.fromJson(item));
+          }
+        }
+
+        return {
+          'user': data['user'],
+          'listenHistory': history,
+          'stats': data['stats'] ?? {'total_listening_time_seconds': 0, 'books_completed': 0},
+          'badges': badges,
+          'subscription': data['subscription'],
+        };
+      }
+      throw Exception('Failed to load profile data');
+    } catch (e) {
+      print('Error fetching profile init: $e');
+      rethrow;
+    }
+  }
+
+  /// Combined app init data in ONE API call.
+  /// Returns: categories, backgroundMusic
+  Future<Map<String, dynamic>> getAppInit() async {
+    try {
+      if (ConnectivityService().isOffline) {
+        throw Exception('Offline mode');
+      }
+
+      final headers = await _getHeaders();
+      final response = await _apiClient.get(
+        Uri.parse('${ApiConstants.baseUrl}/app-init'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data;
+      }
+      throw Exception('Failed to load app init data');
+    } catch (e) {
+      print('Error fetching app init: $e');
+      rethrow;
     }
   }
 }

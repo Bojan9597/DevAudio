@@ -3,14 +3,13 @@ import 'package:flutter/material.dart';
 import '../models/book.dart';
 import '../models/category.dart';
 import '../repositories/book_repository.dart';
-import '../repositories/category_repository.dart';
 import '../states/layout_state.dart';
 import '../services/auth_service.dart';
 
 import 'playlist_screen.dart';
 import 'login_screen.dart';
 import '../widgets/subscription_bottom_sheet.dart';
-import '../services/subscription_service.dart';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import '../l10n/generated/app_localizations.dart';
 
@@ -23,9 +22,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final BookRepository _bookRepository = BookRepository();
-  final CategoryRepository _categoryRepository = CategoryRepository();
   final AuthService _authService = AuthService();
-  final SubscriptionService _subscriptionService = SubscriptionService();
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   Timer? _debounce;
@@ -59,8 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _checkLoginStatus();
-    _loadCategories();
-    _loadBooks();
+    _loadBooks(); // Also loads categories from combined endpoint
     _loadHeroImages();
     _scrollController.addListener(_onScroll);
     _searchController.addListener(_onSearchChanged);
@@ -80,14 +76,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _checkLoginStatus() async {
     final loggedIn = await _authService.isLoggedIn();
-    bool subscribed = false;
-    if (loggedIn) {
-      subscribed = await _subscriptionService.isSubscribed();
-    }
     if (mounted) {
       setState(() {
         _isLoggedIn = loggedIn;
-        _isSubscribed = subscribed;
+        // _isSubscribed will be set by _loadBooks() from discover response
       });
     }
   }
@@ -112,21 +104,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _debounce = Timer(const Duration(milliseconds: 500), () {
       _resetAndLoad();
     });
-  }
-
-  Future<void> _loadCategories() async {
-    try {
-      final cats = await _categoryRepository.getCategories();
-      if (mounted) {
-        setState(() {
-          _categories = cats;
-          _isLoadingCategories = false;
-        });
-      }
-    } catch (e) {
-      print("Error loading categories: $e");
-      if (mounted) setState(() => _isLoadingCategories = false);
-    }
   }
 
   Future<void> _resetAndLoad() async {
@@ -192,6 +169,11 @@ class _HomeScreenState extends State<HomeScreen> {
             _books.addAll(newBooks);
           }
           _hasMore = newBooks.length == _limit;
+          _isSubscribed = isSubscribed;
+          _categories = discoverData['categories'] as List<Category>;
+          _isLoadingCategories = false;
+          // Share categories with SideMenu and ContentArea via global state
+          globalLayoutState.setCategories(_categories);
           _isLoading = false;
         });
       }
