@@ -225,11 +225,33 @@ class AuthService {
   static DateTime? _subscriptionCacheTime;
   static const Duration _subscriptionCacheTTL = Duration(minutes: 5);
 
+  static const String _subscriptionStatusKey =
+      'subscription_status_persistence';
+
   /// Set subscription status from external source (e.g., /discover endpoint)
   /// This avoids needing a separate API call
-  void setSubscriptionStatus(bool isSubscribed) {
+  Future<void> setSubscriptionStatus(bool isSubscribed) async {
     _cachedSubscriptionStatus = isSubscribed;
     _subscriptionCacheTime = DateTime.now();
+
+    // Persist to SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_subscriptionStatusKey, isSubscribed);
+  }
+
+  /// Get persisted subscription status immediately
+  Future<bool> getPersistentSubscriptionStatus() async {
+    // Check memory cache first
+    if (_isSubscriptionCacheValid()) {
+      return _cachedSubscriptionStatus!;
+    }
+
+    // Check SharedPreferences persistence
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.containsKey(_subscriptionStatusKey)) {
+      return prefs.getBool(_subscriptionStatusKey) ?? false;
+    }
+    return false;
   }
 
   /// Check if subscription cache is still valid
@@ -248,7 +270,8 @@ class AuthService {
     }
 
     try {
-      if (ConnectivityService().isOffline) return false;
+      if (ConnectivityService().isOffline)
+        return await getPersistentSubscriptionStatus();
 
       final userId = await getCurrentUserId();
       if (userId == null) return false;
@@ -269,22 +292,24 @@ class AuthService {
         final isActive = data['is_active'] == true;
 
         // Cache the result
-        _cachedSubscriptionStatus = isActive;
-        _subscriptionCacheTime = DateTime.now();
+        await setSubscriptionStatus(isActive);
 
         return isActive;
       }
       return false;
     } catch (e) {
       print('Error checking subscription: $e');
-      return false;
+      // If error (e.g. network issue), return persisted status if available
+      return await getPersistentSubscriptionStatus();
     }
   }
 
   /// Clear subscription cache (call on logout)
-  void clearSubscriptionCache() {
+  Future<void> clearSubscriptionCache() async {
     _cachedSubscriptionStatus = null;
     _subscriptionCacheTime = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_subscriptionStatusKey);
   }
 
   Future<void> _saveTokens(String accessToken, String refreshToken) async {

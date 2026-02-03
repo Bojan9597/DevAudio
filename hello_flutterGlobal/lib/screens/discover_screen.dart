@@ -45,6 +45,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   @override
   void initState() {
     super.initState();
+    // Load persisted subscription state immediately to prevent UI flash
+    _loadInitialSubscriptionState();
+
     // Restore from cache if valid, otherwise load fresh
     if (_isCacheValid()) {
       _restoreFromCache();
@@ -53,6 +56,15 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     }
     _scrollController.addListener(_onScroll);
     globalLayoutState.addListener(_onSearchChanged);
+  }
+
+  Future<void> _loadInitialSubscriptionState() async {
+    final isSubscribed = await AuthService().getPersistentSubscriptionStatus();
+    if (mounted && isSubscribed) {
+      setState(() {
+        _isSubscribed = true;
+      });
+    }
   }
 
   /// Check if cache is valid (within 30 seconds and same search query)
