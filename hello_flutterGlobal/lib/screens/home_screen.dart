@@ -40,6 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   bool _isLoggedIn = false;
   bool _isSubscribed = false;
+  bool _isLoginCheckComplete = false;
   int _playerFeatureIndex = 0;
 
   // Hardcoded image names - elemental thumbnails
@@ -89,6 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) {
       setState(() {
         _isLoggedIn = loggedIn;
+        _isLoginCheckComplete = true;
         // _isSubscribed will be set by _loadBooks() from discover response
       });
     }
@@ -1240,6 +1242,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildSubscriptionCTA(Color textColor) {
+    // Don't show anything until we've verified login status
+    if (!_isLoginCheckComplete) return const SizedBox.shrink();
+
     if (!_isLoggedIn) {
       return Column(
         children: [
