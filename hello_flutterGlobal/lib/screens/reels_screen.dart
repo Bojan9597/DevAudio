@@ -4,6 +4,7 @@ import 'package:audio_session/audio_session.dart';
 import '../models/book.dart';
 import '../repositories/book_repository.dart';
 import '../services/auth_service.dart';
+import '../services/subscription_service.dart';
 // We need access to the global audio player state if we want to sync with MiniPlayer
 // But user said "It should look like that audio player with profile picture and everything"
 // This implies a FULL SCREEN EXPERIENCE.
@@ -89,21 +90,10 @@ class _ReelsScreenState extends State<ReelsScreen> {
   Future<void> _loadInitialData() async {
     setState(() => _isLoading = true);
 
-    try {
-      final userId = await _authService.getCurrentUserId();
-      if (userId != null) {
-        _offset = await _bookRepository.getReelsOffset(userId);
-      } else {
-        _offset = 0;
-      }
-    } catch (e) {
-      print("Error loading offset: $e");
-      _offset = 0;
-    }
-
     _books.clear();
 
-    await _fetchReels();
+    // Single API call now includes savedOffset + books + subscription status
+    await _fetchReels(useInitialOffset: true);
 
     if (mounted) {
       setState(() => _isLoading = false);
@@ -124,9 +114,12 @@ class _ReelsScreenState extends State<ReelsScreen> {
     }
   }
 
-  Future<void> _fetchReels() async {
+  Future<void> _fetchReels({bool useInitialOffset = false}) async {
+    // On initial load, fetch with offset 0 and then use savedOffset from response
+    final fetchOffset = useInitialOffset ? 0 : _offset;
+
     final data = await _bookRepository.getReelsData(
-      offset: _offset,
+      offset: fetchOffset,
       limit: _limit,
     );
     if (!mounted) return;
@@ -134,12 +127,18 @@ class _ReelsScreenState extends State<ReelsScreen> {
     final newBooks = data['books'] as List<Book>;
     final hasMore = data['hasMore'] as bool;
     final isSubscribed = data['isSubscribed'] as bool;
+    final savedOffset = data['savedOffset'] as int? ?? 0;
 
     setState(() {
       _isSubscribed = isSubscribed;
       _books.addAll(newBooks);
       _backendHasMore = hasMore;
-      _offset += newBooks.length;
+      // On initial load, use server's savedOffset; otherwise increment from current
+      if (useInitialOffset) {
+        _offset = savedOffset + newBooks.length;
+      } else {
+        _offset += newBooks.length;
+      }
     });
 
     _saveOffset();
@@ -277,8 +276,28 @@ class _ReelsScreenState extends State<ReelsScreen> {
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () {
-                  // Subscribe action
+                onPressed: () async {
+                  // Navigate to subscription screen or show subscription dialog
+                  // For now, subscribe with test plan for development
+                  final result = await SubscriptionService().subscribe(
+                    'monthly',
+                  );
+                  if (result['success'] == true) {
+                    // Reload to check subscription status
+                    if (mounted) {
+                      _loadInitialData();
+                    }
+                  } else {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            result['error'] ?? 'Subscription failed',
+                          ),
+                        ),
+                      );
+                    }
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.indigoAccent,

@@ -1668,6 +1668,7 @@ def get_reels():
     """
     Returns all books with their playlist items for the Reels feature.
     Restricted to subscribers.
+    Also returns the user's saved offset so client doesn't need separate call.
     """
     user_id = request.args.get('user_id')
     
@@ -1683,12 +1684,27 @@ def get_reels():
     limit = int(request.args.get('limit', 5))
 
     try:
-        # Check subscription
-        if not is_subscriber(user_id, db):
+        # Get user's saved offset (for initial load)
+        saved_offset = 0
+        try:
+            offset_result = db.execute_query("SELECT reels_offset FROM users WHERE id = %s", (user_id,))
+            if offset_result and offset_result[0].get('reels_offset') is not None:
+                saved_offset = offset_result[0]['reels_offset']
+        except Exception as e:
+            print(f"Could not fetch reels_offset (column may not exist): {e}")
+            saved_offset = 0
+        
+        # Check subscription (ensure user_id is int for consistent comparison)
+        user_id_int = int(user_id)
+        subscribed = is_subscriber(user_id_int, db)
+        print(f"[REELS] user_id={user_id_int}, is_subscribed={subscribed}")
+        
+        if not subscribed:
              return jsonify({
                  "isSubscribed": False,
                  "books": [],
-                 "hasMore": False
+                 "hasMore": False,
+                 "savedOffset": saved_offset
              }), 200
 
         # Fetch books with pagination
@@ -1784,7 +1800,8 @@ def get_reels():
         return jsonify({
             "isSubscribed": True,
             "books": books_data,
-            "hasMore": len(books_result) > limit
+            "hasMore": len(books_result) > limit,
+            "savedOffset": saved_offset
         }), 200
         
     except Exception as e:

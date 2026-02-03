@@ -19,8 +19,8 @@ def get_connection_pool():
             host = "localhost"
 
         _connection_pool = pool.ThreadedConnectionPool(
-            minconn=1,      # Minimum connections to keep open
-            maxconn=5,      # Keep low - hosting limit is 20, shared across workers
+            minconn=2,      # Minimum connections to keep open
+            maxconn=10,     # Increased - hosting limit is 20, we use half
             host=host,
             database="velorusb_echoHistory",
             user="velorusb_echoHistoryAdmin",

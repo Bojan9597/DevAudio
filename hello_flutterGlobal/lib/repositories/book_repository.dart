@@ -301,6 +301,7 @@ class BookRepository {
 
         final isSubscribed = data['isSubscribed'] as bool? ?? false;
         final hasMore = data['hasMore'] as bool? ?? false;
+        final savedOffset = data['savedOffset'] as int? ?? 0;
         final booksList = (data['books'] as List? ?? [])
             .map((json) => Book.fromJson(json))
             .toList();
@@ -309,13 +310,19 @@ class BookRepository {
           'isSubscribed': isSubscribed,
           'books': booksList,
           'hasMore': hasMore,
+          'savedOffset': savedOffset,
         };
       } else {
         throw Exception('Failed to load reels data');
       }
     } catch (e) {
       print('Error fetching reels data: $e');
-      return {'isSubscribed': false, 'books': <Book>[], 'hasMore': false};
+      return {
+        'isSubscribed': false,
+        'books': <Book>[],
+        'hasMore': false,
+        'savedOffset': 0,
+      };
     }
   }
 
@@ -985,7 +992,9 @@ class BookRepository {
         return {
           'user': data['user'],
           'listenHistory': history,
-          'stats': data['stats'] ?? {'total_listening_time_seconds': 0, 'books_completed': 0},
+          'stats':
+              data['stats'] ??
+              {'total_listening_time_seconds': 0, 'books_completed': 0},
           'badges': badges,
           'subscription': data['subscription'],
         };

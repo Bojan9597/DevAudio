@@ -22,6 +22,16 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   final ScrollController _scrollController = ScrollController();
   Timer? _debounce;
 
+  // Static cache to persist data across tab switches (30 second cache)
+  static const Duration _cacheDuration = Duration(seconds: 30);
+  static DateTime? _lastFetchTime;
+  static String _lastSearchQuery = '';
+  static List<Book> _cachedBooks = [];
+  static List<Book> _cachedNewReleases = [];
+  static List<Book> _cachedTopPicks = [];
+  static List<Book> _cachedListenHistory = [];
+  static bool _cachedIsSubscribed = false;
+
   List<Book> _books = [];
   List<Book> _newReleases = [];
   List<Book> _topPicks = [];
@@ -35,10 +45,36 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   @override
   void initState() {
     super.initState();
-    // Subscription status now comes from the combined /discover endpoint
-    _loadBooks();
+    // Restore from cache if valid, otherwise load fresh
+    if (_isCacheValid()) {
+      _restoreFromCache();
+    } else {
+      _loadBooks();
+    }
     _scrollController.addListener(_onScroll);
     globalLayoutState.addListener(_onSearchChanged);
+  }
+
+  /// Check if cache is valid (within 30 seconds and same search query)
+  bool _isCacheValid() {
+    if (_lastFetchTime == null) return false;
+    final currentQuery = globalLayoutState.searchQuery;
+    final cacheAge = DateTime.now().difference(_lastFetchTime!);
+    return cacheAge < _cacheDuration &&
+        _lastSearchQuery == currentQuery &&
+        _cachedBooks.isNotEmpty;
+  }
+
+  /// Restore data from static cache
+  void _restoreFromCache() {
+    setState(() {
+      _books = List.from(_cachedBooks);
+      _newReleases = List.from(_cachedNewReleases);
+      _topPicks = List.from(_cachedTopPicks);
+      _listenHistory = List.from(_cachedListenHistory);
+      _isSubscribed = _cachedIsSubscribed;
+      _hasMore = _cachedBooks.length == _limit;
+    });
   }
 
   @override
@@ -65,6 +101,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   }
 
   Future<void> _resetAndLoad() async {
+    // Invalidate cache to force fresh fetch
+    _lastFetchTime = null;
     setState(() {
       _books.clear();
       _currentPage = 1;
@@ -128,6 +166,15 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
               return progress <
                   0.95; // Only show books that are less than 95% complete
             }).toList();
+
+            // Update static cache for tab switching
+            _cachedBooks = List.from(_books);
+            _cachedNewReleases = List.from(_newReleases);
+            _cachedTopPicks = List.from(_topPicks);
+            _cachedListenHistory = List.from(_listenHistory);
+            _cachedIsSubscribed = isSubscribed;
+            _lastFetchTime = DateTime.now();
+            _lastSearchQuery = globalLayoutState.searchQuery;
           } else {
             _books.addAll(newBooks);
           }
@@ -799,7 +846,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            (result['error'] as String?) ?? AppLocalizations.of(context)!.failedToSubmitRating,
+            (result['error'] as String?) ??
+                AppLocalizations.of(context)!.failedToSubmitRating,
           ),
         ),
       );
