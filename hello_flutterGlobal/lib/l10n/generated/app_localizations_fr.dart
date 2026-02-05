@@ -9,7 +9,7 @@ class AppLocalizationsFr extends AppLocalizations {
   AppLocalizationsFr([String locale = 'fr']) : super(locale);
 
   @override
-  String get appTitle => 'LivresAudio';
+  String get appTitle => 'Echoes Of History';
 
   @override
   String get library => 'Bibliothèque';

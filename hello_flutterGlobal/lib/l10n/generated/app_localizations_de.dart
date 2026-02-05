@@ -9,7 +9,7 @@ class AppLocalizationsDe extends AppLocalizations {
   AppLocalizationsDe([String locale = 'de']) : super(locale);
 
   @override
-  String get appTitle => 'Hörbücher';
+  String get appTitle => 'Echoes Of History';
 
   @override
   String get library => 'Bibliothek';

@@ -112,7 +112,7 @@ class _AppLayoutState extends State<AppLayout> {
                   ),
                 if (!isOnDiscover) ...[
                   Text(
-                    'DevAudio',
+                    'Echoes Of History',
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
