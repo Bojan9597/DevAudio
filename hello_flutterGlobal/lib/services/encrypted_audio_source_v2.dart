@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'content_key_manager.dart';
 import 'key_derivation_service.dart';
 import 'auth_service.dart';
+import '../utils/api_constants.dart';
 
 /// V2 Encrypted Audio Source using Content Key Architecture
 ///
@@ -22,10 +23,7 @@ class EncryptedAudioSourceV2 extends StreamAudioSource {
   // Cache decrypted data to avoid re-decryption
   Uint8List? _cachedDecryptedData;
 
-  EncryptedAudioSourceV2({
-    required this.mediaId,
-    required this.uniqueId,
-  });
+  EncryptedAudioSourceV2({required this.mediaId, required this.uniqueId});
 
   @override
   Future<StreamAudioResponse> request([int? start, int? end]) async {
@@ -92,11 +90,14 @@ class EncryptedAudioSourceV2 extends StreamAudioSource {
       Uri.parse(url),
       headers: {
         if (token != null) 'Authorization': 'Bearer $token',
+        ApiConstants.appSourceHeader: ApiConstants.appSourceValue,
       },
     );
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to download encrypted file: ${response.statusCode}');
+      throw Exception(
+        'Failed to download encrypted file: ${response.statusCode}',
+      );
     }
 
     return response.bodyBytes;
@@ -119,10 +120,7 @@ class EncryptedHttpSourceV2 extends StreamAudioSource {
   // Full decrypted cache (GCM requires full file for authentication)
   Uint8List? _cachedDecryptedData;
 
-  EncryptedHttpSourceV2({
-    required this.mediaId,
-    required this.uniqueId,
-  });
+  EncryptedHttpSourceV2({required this.mediaId, required this.uniqueId});
 
   @override
   Future<StreamAudioResponse> request([int? start, int? end]) async {
@@ -165,6 +163,7 @@ class EncryptedHttpSourceV2 extends StreamAudioSource {
       Uri.parse(metadata.fileUrl),
       headers: {
         if (token != null) 'Authorization': 'Bearer $token',
+        ApiConstants.appSourceHeader: ApiConstants.appSourceValue,
       },
     );
 

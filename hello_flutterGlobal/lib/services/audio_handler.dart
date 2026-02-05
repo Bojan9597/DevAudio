@@ -176,8 +176,15 @@ class MyAudioHandler extends BaseAudioHandler {
       if (await file.exists()) {
         await _bgPlayer.setFilePath(filePath);
       } else {
-        // Fallback to URL
-        await _bgPlayer.setUrl(url);
+        // Fallback to URL with headers
+        await _bgPlayer.setAudioSource(
+          AudioSource.uri(
+            Uri.parse(url),
+            headers: {
+              ApiConstants.appSourceHeader: ApiConstants.appSourceValue,
+            },
+          ),
+        );
       }
 
       _bgMusicLoaded = true;
@@ -325,8 +332,13 @@ class MyAudioHandler extends BaseAudioHandler {
     // Update the media item in the audio service
     this.mediaItem.add(mediaItem);
 
-    // Load the audio
-    await _player.setUrl(url);
+    // Load the audio with custom headers for WAF
+    await _player.setAudioSource(
+      AudioSource.uri(
+        Uri.parse(url),
+        headers: {ApiConstants.appSourceHeader: ApiConstants.appSourceValue},
+      ),
+    );
   }
 
   // Custom method to load local file

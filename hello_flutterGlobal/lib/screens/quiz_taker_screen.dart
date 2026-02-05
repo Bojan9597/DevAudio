@@ -65,7 +65,10 @@ class _QuizTakerScreenState extends State<QuizTakerScreen> {
         urlString += '?playlist_item_id=${widget.playlistItemId}';
       }
       final url = Uri.parse(urlString);
-      final response = await http.get(url);
+      final response = await http.get(
+        url,
+        headers: {ApiConstants.appSourceHeader: ApiConstants.appSourceValue},
+      );
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -130,7 +133,10 @@ class _QuizTakerScreenState extends State<QuizTakerScreen> {
       final url = Uri.parse('${ApiConstants.baseUrl}/quiz/result');
       await http.post(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          ApiConstants.appSourceHeader: ApiConstants.appSourceValue,
+        },
         body: json.encode({
           'user_id': userId,
           'book_id': widget.bookId,
