@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/subscription_service.dart';
+import '../services/content_key_manager.dart';
+import '../repositories/book_repository.dart';
 import 'login_screen.dart';
+import 'profile_screen.dart';
 import 'upload_book_screen.dart';
 import '../states/layout_state.dart';
 import '../l10n/generated/app_localizations.dart';
@@ -35,11 +39,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _logout() async {
     setState(() => _isLoading = true);
     try {
+      // Get user ID before clearing auth (needed for key cleanup)
+      final userId = await _authService.getCurrentUserId();
+
       // Stop audio playback and clear mini player state
       await audioHandler.clearState();
 
+      // Clear subscription cache
+      await SubscriptionService().clearCache();
+
+      // Clear content encryption keys for this user
+      if (userId != null) {
+        await ContentKeyManager().clearUserKey(userId);
+      }
+
+      // Clear favorites cache
+      BookRepository().clearFavoritesCache();
+
+      // Clear profile screen static cache
+      ProfileScreenCache.clear();
+
+      // Logout (clears tokens and user data)
       await _authService.logout();
+
+      // Clear layout state
       await globalLayoutState.updateUser(null);
+
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -84,35 +109,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 globalLayoutState.setLocale(const Locale('en'));
                                 Navigator.pop(context);
                               },
-                              child: Text(AppLocalizations.of(context)!.languageEnglish),
+                              child: Text(
+                                AppLocalizations.of(context)!.languageEnglish,
+                              ),
                             ),
                             SimpleDialogOption(
                               onPressed: () {
                                 globalLayoutState.setLocale(const Locale('es'));
                                 Navigator.pop(context);
                               },
-                              child: Text(AppLocalizations.of(context)!.languageSpanish),
+                              child: Text(
+                                AppLocalizations.of(context)!.languageSpanish,
+                              ),
                             ),
                             SimpleDialogOption(
                               onPressed: () {
                                 globalLayoutState.setLocale(const Locale('sr'));
                                 Navigator.pop(context);
                               },
-                              child: Text(AppLocalizations.of(context)!.languageSerbian),
+                              child: Text(
+                                AppLocalizations.of(context)!.languageSerbian,
+                              ),
                             ),
                             SimpleDialogOption(
                               onPressed: () {
                                 globalLayoutState.setLocale(const Locale('fr'));
                                 Navigator.pop(context);
                               },
-                              child: Text(AppLocalizations.of(context)!.languageFrench),
+                              child: Text(
+                                AppLocalizations.of(context)!.languageFrench,
+                              ),
                             ),
                             SimpleDialogOption(
                               onPressed: () {
                                 globalLayoutState.setLocale(const Locale('de'));
                                 Navigator.pop(context);
                               },
-                              child: Text(AppLocalizations.of(context)!.languageGerman),
+                              child: Text(
+                                AppLocalizations.of(context)!.languageGerman,
+                              ),
                             ),
                           ],
                         );
@@ -138,21 +173,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 );
                                 Navigator.pop(context);
                               },
-                              child: Text(AppLocalizations.of(context)!.themeSystem),
+                              child: Text(
+                                AppLocalizations.of(context)!.themeSystem,
+                              ),
                             ),
                             SimpleDialogOption(
                               onPressed: () {
                                 globalLayoutState.setThemeMode(ThemeMode.light);
                                 Navigator.pop(context);
                               },
-                              child: Text(AppLocalizations.of(context)!.themeLight),
+                              child: Text(
+                                AppLocalizations.of(context)!.themeLight,
+                              ),
                             ),
                             SimpleDialogOption(
                               onPressed: () {
                                 globalLayoutState.setThemeMode(ThemeMode.dark);
                                 Navigator.pop(context);
                               },
-                              child: Text(AppLocalizations.of(context)!.themeDark),
+                              child: Text(
+                                AppLocalizations.of(context)!.themeDark,
+                              ),
                             ),
                           ],
                         );

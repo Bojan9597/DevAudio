@@ -12,6 +12,21 @@ import '../screens/playlist_screen.dart';
 import '../widgets/subscription_bottom_sheet.dart';
 import '../l10n/generated/app_localizations.dart';
 
+/// Public class for managing ProfileScreen cache from outside (e.g., logout)
+class ProfileScreenCache {
+  static void clear() {
+    _ProfileScreenState._lastFetchTime = null;
+    _ProfileScreenState._cachedUser = null;
+    _ProfileScreenState._cachedHistory = [];
+    _ProfileScreenState._cachedBadges = [];
+    _ProfileScreenState._cachedSubscription = null;
+    _ProfileScreenState._cachedStats = {
+      'total_listening_time_seconds': 0,
+      'books_completed': 0,
+    };
+  }
+}
+
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 

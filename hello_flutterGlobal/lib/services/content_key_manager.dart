@@ -142,7 +142,7 @@ class ContentKeyManager {
         throw Exception('Not authenticated');
       }
 
-      final baseUrl = await _authService.getBaseUrl();
+      final baseUrl = ApiConstants.baseUrl;
 
       final response = await _dio.get(
         '$baseUrl/v2/encryption-info/$mediaId',
