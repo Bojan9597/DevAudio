@@ -12,6 +12,7 @@ import '../widgets/subscription_bottom_sheet.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import '../l10n/generated/app_localizations.dart';
+import '../utils/api_constants.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -576,6 +577,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: book.absoluteCoverUrlThumbnail.isNotEmpty
                       ? CachedNetworkImage(
                           imageUrl: book.absoluteCoverUrlThumbnail,
+                          httpHeaders: ApiConstants.imageHeaders,
                           fit: BoxFit.cover,
                           width: double.infinity,
                           errorWidget: (context, url, error) => Container(
@@ -669,6 +671,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: book.absoluteCoverUrlThumbnail.isNotEmpty
                   ? CachedNetworkImage(
                       imageUrl: book.absoluteCoverUrlThumbnail!,
+                      httpHeaders: ApiConstants.imageHeaders,
                       fit: BoxFit.cover,
                       width: double.infinity,
                       errorWidget: (context, url, error) => Container(
@@ -1195,6 +1198,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   book.absoluteCoverUrlThumbnail!.isNotEmpty)
               ? CachedNetworkImage(
                   imageUrl: book.absoluteCoverUrlThumbnail!,
+                  httpHeaders: ApiConstants.imageHeaders,
                   fit: BoxFit.cover,
                   errorWidget: (context, url, error) => Icon(
                     Icons.play_circle_fill,

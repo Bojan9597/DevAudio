@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../utils/api_constants.dart';
 import '../models/book.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../screens/playlist_screen.dart';
@@ -261,6 +262,7 @@ class _CategoryDetailsViewState extends State<CategoryDetailsView> {
               child: book.absoluteCoverUrlThumbnail.isNotEmpty
                   ? CachedNetworkImage(
                       imageUrl: book.absoluteCoverUrlThumbnail,
+                      httpHeaders: ApiConstants.imageHeaders,
                       fit: BoxFit.cover,
                       width: double.infinity,
                       errorWidget: (context, url, error) => Container(
@@ -384,6 +386,7 @@ class _CategoryDetailsViewState extends State<CategoryDetailsView> {
             child: book.absoluteCoverUrlThumbnail.isNotEmpty
                 ? CachedNetworkImage(
                     imageUrl: book.absoluteCoverUrlThumbnail,
+                    httpHeaders: ApiConstants.imageHeaders,
                     fit: BoxFit.cover,
                     errorWidget: (context, url, error) => Icon(Icons.book),
                   )

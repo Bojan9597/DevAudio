@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import '../main.dart'; // For navigatorKey
 import '../screens/login_screen.dart';
 import '../utils/api_constants.dart';
+import '../l10n/generated/app_localizations.dart';
 
 class ApiClient {
   // Singleton pattern
@@ -29,10 +30,8 @@ class ApiClient {
           context: context,
           barrierDismissible: false,
           builder: (context) => AlertDialog(
-            title: const Text('Session Expired'),
-            content: const Text(
-              'Your session has expired. Please log in again.',
-            ),
+            title: Text(AppLocalizations.of(context)!.sessionExpired),
+            content: Text(AppLocalizations.of(context)!.sessionExpiredMessage),
             actions: [
               TextButton(
                 onPressed: () {
@@ -47,7 +46,7 @@ class ApiClient {
                     (route) => false,
                   );
                 },
-                child: const Text('OK'),
+                child: Text(AppLocalizations.of(context)!.ok),
               ),
             ],
           ),

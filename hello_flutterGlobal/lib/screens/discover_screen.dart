@@ -7,6 +7,7 @@ import 'playlist_screen.dart';
 import 'login_screen.dart';
 import '../l10n/generated/app_localizations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../utils/api_constants.dart';
 import '../states/layout_state.dart';
 
 class DiscoverScreen extends StatefulWidget {
@@ -399,6 +400,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                   child: book.absoluteCoverUrlThumbnail.isNotEmpty
                       ? CachedNetworkImage(
                           imageUrl: book.absoluteCoverUrlThumbnail,
+                          httpHeaders: ApiConstants.imageHeaders,
                           fit: BoxFit.cover,
                           width: double.infinity,
                           errorWidget: (context, url, error) => Container(
@@ -540,6 +542,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
               child: book.absoluteCoverUrlThumbnail.isNotEmpty
                   ? CachedNetworkImage(
                       imageUrl: book.absoluteCoverUrlThumbnail,
+                      httpHeaders: ApiConstants.imageHeaders,
                       fit: BoxFit.cover,
                       width: double.infinity,
                       errorWidget: (context, url, error) => Container(

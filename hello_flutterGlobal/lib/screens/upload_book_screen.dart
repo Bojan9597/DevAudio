@@ -299,10 +299,10 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: Text(AppLocalizations.of(context)!.uploadAudioBook),
-          bottom: const TabBar(
+          bottom: TabBar(
             tabs: [
-              Tab(text: 'Audio Upload'),
-              Tab(text: 'Background Music Upload'),
+              Tab(text: AppLocalizations.of(context)!.audioUpload),
+              Tab(text: AppLocalizations.of(context)!.backgroundMusicUpload),
             ],
           ),
         ),
@@ -323,14 +323,22 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
           children: [
             TextFormField(
               controller: _titleController,
-              decoration: const InputDecoration(labelText: 'Title *'),
-              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.titleRequired,
+              ),
+              validator: (v) => v == null || v.isEmpty
+                  ? AppLocalizations.of(context)!.required
+                  : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _authorController,
-              decoration: const InputDecoration(labelText: 'Author *'),
-              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.authorRequired,
+              ),
+              validator: (v) => v == null || v.isEmpty
+                  ? AppLocalizations.of(context)!.required
+                  : null,
             ),
             const SizedBox(height: 16),
             _isLoadingCategories
@@ -338,7 +346,9 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
                 : DropdownButtonFormField<String>(
                     isExpanded: true,
                     value: _selectedCategoryId,
-                    decoration: const InputDecoration(labelText: 'Category *'),
+                    decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.categoryRequired,
+                    ),
                     items: _categories.map((c) {
                       return DropdownMenuItem(
                         value: c.id,
@@ -358,15 +368,22 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
             DropdownButtonFormField<int>(
               isExpanded: true,
               value: _selectedBgMusicId,
-              decoration: const InputDecoration(
-                labelText: 'Default Background Music (Optional)',
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(
+                  context,
+                )!.defaultBackgroundMusicOptional,
               ),
               items: [
-                const DropdownMenuItem<int>(value: null, child: Text('None')),
+                DropdownMenuItem<int>(
+                  value: null,
+                  child: Text(AppLocalizations.of(context)!.none),
+                ),
                 ..._bgMusicList.map((bg) {
                   return DropdownMenuItem<int>(
                     value: bg['id'] as int,
-                    child: Text(bg['title'] ?? 'Unknown'),
+                    child: Text(
+                      bg['title'] ?? AppLocalizations.of(context)!.unknown,
+                    ),
                   );
                 }).toList(),
               ],
@@ -376,21 +393,27 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
 
             TextFormField(
               controller: _descriptionController,
-              decoration: const InputDecoration(labelText: 'Description'),
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.description,
+              ),
               maxLines: 3,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _priceController,
-              decoration: const InputDecoration(labelText: 'Price'),
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.price,
+              ),
               keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 16),
 
             // Premium Checkbox
             CheckboxListTile(
-              title: const Text('Premium Content'),
-              subtitle: const Text('Only subscribers can access this book'),
+              title: Text(AppLocalizations.of(context)!.premiumContent),
+              subtitle: Text(
+                AppLocalizations.of(context)!.onlySubscribersCanAccess,
+              ),
               value: _isPremium,
               onChanged: (bool? value) {
                 setState(() {
@@ -408,10 +431,14 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
             ListTile(
               title: Text(
                 _selectedAudioPaths.isEmpty
-                    ? 'Select Audio File(s) *'
+                    ? AppLocalizations.of(context)!.selectAudioFiles
                     : _selectedAudioPaths.length == 1
-                    ? 'Audio Selected: ...${_selectedAudioPaths.first.split(r'\').last}'
-                    : '${_selectedAudioPaths.length} Audio Files Selected',
+                    ? AppLocalizations.of(context)!.audioSelected(
+                        _selectedAudioPaths.first.split(r'\').last,
+                      )
+                    : AppLocalizations.of(
+                        context,
+                      )!.audioFilesSelected(_selectedAudioPaths.length),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -490,7 +517,9 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
         children: [
           TextFormField(
             controller: _bgTitleController,
-            decoration: const InputDecoration(labelText: 'Music Title *'),
+            decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)!.musicTitleRequired,
+            ),
           ),
           const SizedBox(height: 16),
 
@@ -498,8 +527,10 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
           ListTile(
             title: Text(
               _selectedBgMusicPath == null
-                  ? 'Select Background Music File *'
-                  : 'File: ...${_selectedBgMusicPath!.split(r'\').last}',
+                  ? AppLocalizations.of(context)!.selectBackgroundMusicFile
+                  : AppLocalizations.of(
+                      context,
+                    )!.fileSelected(_selectedBgMusicPath!.split(r'\').last),
             ),
             leading: const Icon(Icons.music_note),
             onTap: _pickBgMusic,
@@ -521,7 +552,7 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
                     width: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text("Upload Background Music"),
+                : Text(AppLocalizations.of(context)!.uploadBackgroundMusic),
           ),
         ],
       ),

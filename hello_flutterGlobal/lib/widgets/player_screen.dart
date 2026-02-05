@@ -310,9 +310,9 @@ class _PlayerScreenState extends State<PlayerScreen>
       // User can manually go back or close the player
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Playlist completed!'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.playlistCompleted),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -515,8 +515,10 @@ class _PlayerScreenState extends State<PlayerScreen>
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Subscription activated! Enjoy unlimited access.'),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.subscriptionActivatedSuccess,
+          ),
           backgroundColor: Colors.green,
         ),
       );
@@ -529,8 +531,8 @@ class _PlayerScreenState extends State<PlayerScreen>
       SnackBar(
         content: Text(
           isPlaylist
-              ? 'Downloading full playlist...'
-              : 'Downloading for offline playback...',
+              ? AppLocalizations.of(context)!.downloadingFullPlaylist
+              : AppLocalizations.of(context)!.downloadingForOfflinePlayback,
         ),
         duration: const Duration(seconds: 2),
       ),
@@ -561,8 +563,10 @@ class _PlayerScreenState extends State<PlayerScreen>
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Download Complete! Available offline.'),
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.downloadCompleteAvailableOffline,
+            ),
           ),
         );
         // Re-init player to pickup local file if currently playing
@@ -888,23 +892,23 @@ class _PlayerScreenState extends State<PlayerScreen>
       position: position,
       items: [
         if (_isPurchased) // Only show Rate for subscribed users
-          const PopupMenuItem(
+          PopupMenuItem(
             value: 'rate',
             child: Row(
               children: [
-                Icon(Icons.star, color: Colors.amber),
-                SizedBox(width: 8),
-                Text('Rate'),
+                const Icon(Icons.star, color: Colors.amber),
+                const SizedBox(width: 8),
+                Text(AppLocalizations.of(context)!.rate),
               ],
             ),
           ),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'details',
           child: Row(
             children: [
-              Icon(Icons.info_outline, color: Colors.black54),
-              SizedBox(width: 8),
-              Text('Details'),
+              const Icon(Icons.info_outline, color: Colors.black54),
+              const SizedBox(width: 8),
+              Text(AppLocalizations.of(context)!.details),
             ],
           ),
         ),
@@ -1098,7 +1102,7 @@ class _PlayerScreenState extends State<PlayerScreen>
               children: [
                 Center(
                   child: Text(
-                    'Book Information',
+                    AppLocalizations.of(context)!.bookInformation,
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.9),
                       fontSize: 18,
@@ -1310,9 +1314,9 @@ class _PlayerScreenState extends State<PlayerScreen>
                                 size: 20, // Bigger icon
                               ),
                               const SizedBox(width: 8),
-                              const Text(
-                                "Background Music",
-                                style: TextStyle(
+                              Text(
+                                AppLocalizations.of(context)!.backgroundMusic,
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14, // Bigger text
@@ -1345,6 +1349,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                                 _currentBook.coverUrl!.isNotEmpty)
                             ? Image.network(
                                 _currentBook.absoluteCoverUrl,
+                                headers: ApiConstants.imageHeaders,
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) =>
                                     Icon(
@@ -1653,18 +1658,23 @@ class _PlayerScreenState extends State<PlayerScreen>
                           color: Colors.white70,
                         ),
                         const SizedBox(height: 16),
-                        const Text(
-                          'Subscribe to Listen',
-                          style: TextStyle(
+                        Text(
+                          AppLocalizations.of(context)!.subscribeToListen,
+                          style: const TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Text(
-                          'Get unlimited access to all audiobooks',
-                          style: TextStyle(fontSize: 14, color: Colors.white70),
+                        Text(
+                          AppLocalizations.of(
+                            context,
+                          )!.getUnlimitedAccessToAllAudiobooks,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.white70,
+                          ),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 24),
@@ -1681,14 +1691,14 @@ class _PlayerScreenState extends State<PlayerScreen>
                               borderRadius: BorderRadius.circular(30),
                             ),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.star_rounded, size: 20),
-                              SizedBox(width: 8),
+                              const Icon(Icons.star_rounded, size: 20),
+                              const SizedBox(width: 8),
                               Text(
-                                'Subscribe Now',
-                                style: TextStyle(
+                                AppLocalizations.of(context)!.subscribeNow,
+                                style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -1801,9 +1811,9 @@ class _PlayerScreenState extends State<PlayerScreen>
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    'Background Music',
-                    style: TextStyle(
+                  Text(
+                    AppLocalizations.of(context)!.backgroundMusic,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -1837,14 +1847,17 @@ class _PlayerScreenState extends State<PlayerScreen>
                     dropdownColor: Colors.grey[800],
                     style: const TextStyle(color: Colors.white),
                     items: [
-                      const DropdownMenuItem<int?>(
+                      DropdownMenuItem<int?>(
                         value: null,
-                        child: Text('None'),
+                        child: Text(AppLocalizations.of(context)!.none),
                       ),
                       ..._bgMusicList.map(
                         (bg) => DropdownMenuItem<int>(
                           value: bg['id'] as int,
-                          child: Text(bg['title'] ?? 'Unknown'),
+                          child: Text(
+                            bg['title'] ??
+                                AppLocalizations.of(context)!.unknown,
+                          ),
                         ),
                       ),
                     ],

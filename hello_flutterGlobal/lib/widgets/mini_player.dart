@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:audio_service/audio_service.dart';
 import '../main.dart';
+import '../utils/api_constants.dart';
 import 'player_screen.dart';
 
 class MiniPlayer extends StatefulWidget {
@@ -92,7 +93,10 @@ class _MiniPlayerState extends State<MiniPlayer> {
                           height: miniPlayerHeight,
                           decoration: BoxDecoration(
                             image: DecorationImage(
-                              image: NetworkImage(mediaItem.artUri.toString()),
+                              image: NetworkImage(
+                                mediaItem.artUri.toString(),
+                                headers: ApiConstants.imageHeaders,
+                              ),
                               fit: BoxFit.cover,
                               onError: (exception, stackTrace) {},
                             ),
@@ -132,6 +136,7 @@ class _MiniPlayerState extends State<MiniPlayer> {
                                     borderRadius: BorderRadius.circular(4),
                                     child: Image.network(
                                       mediaItem.artUri.toString(),
+                                      headers: ApiConstants.imageHeaders,
                                       width: 40,
                                       height: 40,
                                       fit: BoxFit.cover,

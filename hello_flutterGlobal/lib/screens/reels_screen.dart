@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/generated/app_localizations.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import '../models/book.dart';
@@ -7,6 +8,7 @@ import '../services/auth_service.dart';
 import '../widgets/subscription_bottom_sheet.dart';
 import '../services/audio_connector.dart';
 import '../main.dart'; // Access to routeObserver
+import '../utils/api_constants.dart';
 // We need access to the global audio player state if we want to sync with MiniPlayer
 // But user said "It should look like that audio player with profile picture and everything"
 // This implies a FULL SCREEN EXPERIENCE.
@@ -394,9 +396,14 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                           size: 64,
                         ),
                         const SizedBox(height: 16),
-                        const Text(
-                          "Subscribe to listen to Reels",
-                          style: TextStyle(fontSize: 18, color: Colors.white),
+                        Text(
+                          AppLocalizations.of(
+                            context,
+                          )!.subscribeToListenToReels,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            color: Colors.white,
+                          ),
                         ),
                         const SizedBox(height: 24),
                         ElevatedButton(
@@ -426,9 +433,9 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                               borderRadius: BorderRadius.circular(25),
                             ),
                           ),
-                          child: const Text(
-                            "Subscribe",
-                            style: TextStyle(
+                          child: Text(
+                            AppLocalizations.of(context)!.subscribe,
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
@@ -458,10 +465,10 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: const Center(
+                  child: Center(
                     child: Text(
-                      "No reels available",
-                      style: TextStyle(color: Colors.white),
+                      AppLocalizations.of(context)!.noReelsAvailable,
+                      style: const TextStyle(color: Colors.white),
                     ),
                   ),
                 ),
@@ -533,6 +540,7 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
         if (coverUrl.isNotEmpty)
           Image.network(
             coverUrl,
+            headers: ApiConstants.imageHeaders,
             fit: BoxFit.cover,
             errorBuilder: (_, __, ___) => Container(color: Colors.grey[900]),
           ),
@@ -569,7 +577,10 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                         ],
                         image: coverUrl.isNotEmpty
                             ? DecorationImage(
-                                image: NetworkImage(coverUrl),
+                                image: NetworkImage(
+                                  coverUrl,
+                                  headers: ApiConstants.imageHeaders,
+                                ),
                                 fit: BoxFit.cover,
                               )
                             : null,
@@ -745,9 +756,9 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                                   size: 20,
                                 ),
                                 const SizedBox(width: 8),
-                                const Text(
-                                  "Background Music",
-                                  style: TextStyle(
+                                Text(
+                                  AppLocalizations.of(context)!.backgroundMusic,
+                                  style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -849,9 +860,9 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    'Background Music',
-                    style: TextStyle(
+                  Text(
+                    AppLocalizations.of(context)!.backgroundMusic,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 20,
                       fontWeight: FontWeight.bold,

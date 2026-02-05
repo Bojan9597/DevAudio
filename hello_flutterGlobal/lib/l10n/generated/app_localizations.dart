@@ -1447,6 +1447,336 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{current} of {total}'**
   String matchCount(int current, int total);
+
+  /// No description provided for @noListeningHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No listening history'**
+  String get noListeningHistoryTitle;
+
+  /// No description provided for @booksYouStartListeningAppearHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Books you start listening to will appear here'**
+  String get booksYouStartListeningAppearHere;
+
+  /// No description provided for @playlistCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlist completed!'**
+  String get playlistCompleted;
+
+  /// No description provided for @downloadingFullPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading full playlist...'**
+  String get downloadingFullPlaylist;
+
+  /// No description provided for @downloadingForOfflinePlayback.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading for offline playback...'**
+  String get downloadingForOfflinePlayback;
+
+  /// No description provided for @downloadCompleteAvailableOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Download Complete! Available offline.'**
+  String get downloadCompleteAvailableOffline;
+
+  /// No description provided for @bookInformation.
+  ///
+  /// In en, this message translates to:
+  /// **'Book Information'**
+  String get bookInformation;
+
+  /// No description provided for @noDescriptionAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No description available.'**
+  String get noDescriptionAvailable;
+
+  /// No description provided for @priceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Price: \${price}'**
+  String priceLabel(String price);
+
+  /// No description provided for @categoryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Category: {category}'**
+  String categoryLabel(String category);
+
+  /// No description provided for @subscribeToListen.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscribe to Listen'**
+  String get subscribeToListen;
+
+  /// No description provided for @getUnlimitedAccessToAllAudiobooks.
+  ///
+  /// In en, this message translates to:
+  /// **'Get unlimited access to all audiobooks'**
+  String get getUnlimitedAccessToAllAudiobooks;
+
+  /// No description provided for @backgroundMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'Background Music'**
+  String get backgroundMusic;
+
+  /// No description provided for @none.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get none;
+
+  /// No description provided for @subscribeToListenToReels.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscribe to listen to Reels'**
+  String get subscribeToListenToReels;
+
+  /// No description provided for @noReelsAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No reels available'**
+  String get noReelsAvailable;
+
+  /// No description provided for @audioUpload.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio Upload'**
+  String get audioUpload;
+
+  /// No description provided for @backgroundMusicUpload.
+  ///
+  /// In en, this message translates to:
+  /// **'Background Music Upload'**
+  String get backgroundMusicUpload;
+
+  /// No description provided for @titleRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Title *'**
+  String get titleRequired;
+
+  /// No description provided for @authorRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Author *'**
+  String get authorRequired;
+
+  /// No description provided for @categoryRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Category *'**
+  String get categoryRequired;
+
+  /// No description provided for @description.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get description;
+
+  /// No description provided for @price.
+  ///
+  /// In en, this message translates to:
+  /// **'Price'**
+  String get price;
+
+  /// No description provided for @defaultBackgroundMusicOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Default Background Music (Optional)'**
+  String get defaultBackgroundMusicOptional;
+
+  /// No description provided for @premiumContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium Content'**
+  String get premiumContent;
+
+  /// No description provided for @onlySubscribersCanAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Only subscribers can access this book'**
+  String get onlySubscribersCanAccess;
+
+  /// No description provided for @selectAudioFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Audio File(s) *'**
+  String get selectAudioFiles;
+
+  /// No description provided for @audioSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio Selected: ...{filename}'**
+  String audioSelected(String filename);
+
+  /// No description provided for @audioFilesSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} Audio Files Selected'**
+  String audioFilesSelected(int count);
+
+  /// No description provided for @selectCoverImageOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Cover Image (Optional)'**
+  String get selectCoverImageOptional;
+
+  /// No description provided for @coverSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover Selected: ...{filename}'**
+  String coverSelected(String filename);
+
+  /// No description provided for @selectPdfOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Select PDF (Optional)'**
+  String get selectPdfOptional;
+
+  /// No description provided for @pdfSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'PDF Selected: ...{filename}'**
+  String pdfSelected(String filename);
+
+  /// No description provided for @musicTitleRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Music Title *'**
+  String get musicTitleRequired;
+
+  /// No description provided for @selectBackgroundMusicFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Background Music File *'**
+  String get selectBackgroundMusicFile;
+
+  /// No description provided for @fileSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'File: ...{filename}'**
+  String fileSelected(String filename);
+
+  /// No description provided for @uploadBackgroundMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload Background Music'**
+  String get uploadBackgroundMusic;
+
+  /// No description provided for @backgroundMusicUploaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Background music uploaded!'**
+  String get backgroundMusicUploaded;
+
+  /// No description provided for @pleaseSelectFileAndEnterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select file and enter title'**
+  String get pleaseSelectFileAndEnterTitle;
+
+  /// No description provided for @createLessonQuiz.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Lesson Quiz'**
+  String get createLessonQuiz;
+
+  /// No description provided for @createBookQuiz.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Book Quiz'**
+  String get createBookQuiz;
+
+  /// No description provided for @addNewQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Add New Question'**
+  String get addNewQuestion;
+
+  /// No description provided for @questionText.
+  ///
+  /// In en, this message translates to:
+  /// **'Question Text'**
+  String get questionText;
+
+  /// No description provided for @correctAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'Correct Answer'**
+  String get correctAnswer;
+
+  /// No description provided for @optionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Option {letter}'**
+  String optionLabel(String letter);
+
+  /// No description provided for @required.
+  ///
+  /// In en, this message translates to:
+  /// **'Required'**
+  String get required;
+
+  /// No description provided for @miniQuiz.
+  ///
+  /// In en, this message translates to:
+  /// **'Mini Quiz'**
+  String get miniQuiz;
+
+  /// No description provided for @startQuiz.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Quiz'**
+  String get startQuiz;
+
+  /// No description provided for @bookQuiz.
+  ///
+  /// In en, this message translates to:
+  /// **'Book Quiz'**
+  String get bookQuiz;
+
+  /// No description provided for @errorSavingResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Error saving result: {error}'**
+  String errorSavingResult(String error);
+
+  /// No description provided for @sessionExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Session Expired'**
+  String get sessionExpired;
+
+  /// No description provided for @sessionExpiredMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session has expired. Please log in again.'**
+  String get sessionExpiredMessage;
+
+  /// No description provided for @ok.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get ok;
+
+  /// No description provided for @unknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get unknown;
+
+  /// No description provided for @speedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{speed}x'**
+  String speedLabel(String speed);
 }
 
 class _AppLocalizationsDelegate

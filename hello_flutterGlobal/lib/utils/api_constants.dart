@@ -12,4 +12,11 @@ class ApiConstants {
   static const String appSourceHeader = 'X-App-Source';
   static const String appSourceValue =
       'Echo_Secured_9xQ2zP5mL8kR4wN1vJ7'; // Stronger secret
+
+  // Headers for image/media requests (WAF requires mobile User-Agent)
+  static const Map<String, String> imageHeaders = {
+    appSourceHeader: appSourceValue,
+    'User-Agent':
+        'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+  };
 }

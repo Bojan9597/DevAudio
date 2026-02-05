@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../utils/api_constants.dart';
 import '../models/book.dart';
 import '../repositories/book_repository.dart';
 import '../screens/playlist_screen.dart';
@@ -258,6 +259,7 @@ class _SearchOverlayState extends State<SearchOverlay> {
                 child: book.absoluteCoverUrlThumbnail.isNotEmpty
                     ? CachedNetworkImage(
                         imageUrl: book.absoluteCoverUrlThumbnail,
+                        httpHeaders: ApiConstants.imageHeaders,
                         fit: BoxFit.cover,
                         errorWidget: (context, url, error) => Container(
                           color: Colors.grey[800],
@@ -345,6 +347,7 @@ class _SearchOverlayState extends State<SearchOverlay> {
               child: book.absoluteCoverUrlThumbnail.isNotEmpty
                   ? CachedNetworkImage(
                       imageUrl: book.absoluteCoverUrlThumbnail,
+                      httpHeaders: ApiConstants.imageHeaders,
                       fit: BoxFit.cover,
                       errorWidget: (context, url, error) => Icon(
                         Icons.book,

@@ -423,5 +423,131 @@
         "type": "int"
       }
     }
+  },
+
+  "noListeningHistoryTitle": "No listening history",
+  "booksYouStartListeningAppearHere": "Books you start listening to will appear here",
+  "playlistCompleted": "Playlist completed!",
+  "downloadingFullPlaylist": "Downloading full playlist...",
+  "downloadingForOfflinePlayback": "Downloading for offline playback...",
+  "downloadCompleteAvailableOffline": "Download Complete! Available offline.",
+  "bookInformation": "Book Information",
+  "noDescriptionAvailable": "No description available.",
+  "priceLabel": "Price: ${price}",
+  "@priceLabel": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "categoryLabel": "Category: {category}",
+  "@categoryLabel": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "subscribeToListen": "Subscribe to Listen",
+  "getUnlimitedAccessToAllAudiobooks": "Get unlimited access to all audiobooks",
+  "backgroundMusic": "Background Music",
+  "none": "None",
+  "subscribeToListenToReels": "Subscribe to listen to Reels",
+  "noReelsAvailable": "No reels available",
+  "audioUpload": "Audio Upload",
+  "backgroundMusicUpload": "Background Music Upload",
+  "titleRequired": "Title *",
+  "authorRequired": "Author *",
+  "categoryRequired": "Category *",
+  "description": "Description",
+  "price": "Price",
+  "defaultBackgroundMusicOptional": "Default Background Music (Optional)",
+  "premiumContent": "Premium Content",
+  "onlySubscribersCanAccess": "Only subscribers can access this book",
+  "selectAudioFiles": "Select Audio File(s) *",
+  "audioSelected": "Audio Selected: ...{filename}",
+  "@audioSelected": {
+    "placeholders": {
+      "filename": {
+        "type": "String"
+      }
+    }
+  },
+  "audioFilesSelected": "{count} Audio Files Selected",
+  "@audioFilesSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectCoverImageOptional": "Select Cover Image (Optional)",
+  "coverSelected": "Cover Selected: ...{filename}",
+  "@coverSelected": {
+    "placeholders": {
+      "filename": {
+        "type": "String"
+      }
+    }
+  },
+  "selectPdfOptional": "Select PDF (Optional)",
+  "pdfSelected": "PDF Selected: ...{filename}",
+  "@pdfSelected": {
+    "placeholders": {
+      "filename": {
+        "type": "String"
+      }
+    }
+  },
+  "musicTitleRequired": "Music Title *",
+  "selectBackgroundMusicFile": "Select Background Music File *",
+  "fileSelected": "File: ...{filename}",
+  "@fileSelected": {
+    "placeholders": {
+      "filename": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadBackgroundMusic": "Upload Background Music",
+  "backgroundMusicUploaded": "Background music uploaded!",
+  "pleaseSelectFileAndEnterTitle": "Please select file and enter title",
+  "createLessonQuiz": "Create Lesson Quiz",
+  "createBookQuiz": "Create Book Quiz",
+  "addNewQuestion": "Add New Question",
+  "questionText": "Question Text",
+  "correctAnswer": "Correct Answer",
+  "optionLabel": "Option {letter}",
+  "@optionLabel": {
+    "placeholders": {
+      "letter": {
+        "type": "String"
+      }
+    }
+  },
+  "required": "Required",
+  "miniQuiz": "Mini Quiz",
+  "startQuiz": "Start Quiz",
+  "bookQuiz": "Book Quiz",
+  "errorSavingResult": "Error saving result: {error}",
+  "@errorSavingResult": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionExpired": "Session Expired",
+  "sessionExpiredMessage": "Your session has expired. Please log in again.",
+  "ok": "OK",
+  "unknown": "Unknown",
+  "speedLabel": "{speed}x",
+  "@speedLabel": {
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
   }
 }

@@ -8,6 +8,7 @@ import '../services/download_service.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../utils/category_translations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../utils/api_constants.dart';
 
 import '../screens/profile_screen.dart';
 import '../screens/discover_screen.dart';
@@ -292,7 +293,7 @@ class _ContentAreaState extends State<ContentArea> {
       ),
       Tab(
         icon: const Icon(Icons.play_circle_outline),
-        text: 'Continue Listening',
+        text: AppLocalizations.of(context)!.continueListening,
       ),
       Tab(
         icon: const Icon(Icons.menu_book),
@@ -558,11 +559,13 @@ class _ContentAreaState extends State<ContentArea> {
                     color: Colors.grey,
                   ),
                   const SizedBox(height: 16),
-                  const Text('No listening history'),
+                  Text(AppLocalizations.of(context)!.noListeningHistoryTitle),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Books you start listening to will appear here',
-                    style: TextStyle(color: Colors.grey),
+                  Text(
+                    AppLocalizations.of(
+                      context,
+                    )!.booksYouStartListeningAppearHere,
+                    style: const TextStyle(color: Colors.grey),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -728,6 +731,7 @@ class _ContentAreaState extends State<ContentArea> {
                   book.absoluteCoverUrlThumbnail!.isNotEmpty)
               ? Image.network(
                   book.absoluteCoverUrlThumbnail!,
+                  headers: ApiConstants.imageHeaders,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Icon(
                     Icons.play_circle_fill,
@@ -795,6 +799,7 @@ class _ContentAreaState extends State<ContentArea> {
               child: book.absoluteCoverUrlThumbnail.isNotEmpty
                   ? CachedNetworkImage(
                       imageUrl: book.absoluteCoverUrlThumbnail!,
+                      httpHeaders: ApiConstants.imageHeaders,
                       fit: BoxFit.cover,
                       width: double.infinity,
                       errorWidget: (context, url, error) => Container(
@@ -1111,6 +1116,7 @@ class _ContentAreaState extends State<ContentArea> {
                   book.absoluteCoverUrlThumbnail!.isNotEmpty)
               ? Image.network(
                   book.absoluteCoverUrlThumbnail!,
+                  headers: ApiConstants.imageHeaders,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Icon(
                     Icons.menu_book,

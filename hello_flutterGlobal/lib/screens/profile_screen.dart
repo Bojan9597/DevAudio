@@ -11,6 +11,7 @@ import '../models/subscription.dart';
 import '../screens/playlist_screen.dart';
 import '../widgets/subscription_bottom_sheet.dart';
 import '../l10n/generated/app_localizations.dart';
+import '../utils/api_constants.dart';
 
 /// Public class for managing ProfileScreen cache from outside (e.g., logout)
 class ProfileScreenCache {
@@ -591,6 +592,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         _getProfilePictureUrl(
                                           _user!['profile_picture_url'],
                                         ),
+                                        headers: ApiConstants.imageHeaders,
                                         width: 100,
                                         height: 100,
                                         fit: BoxFit.cover,
@@ -888,6 +890,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: (book.coverUrl != null && book.coverUrl!.isNotEmpty)
                     ? Image.network(
                         book.absoluteCoverUrlThumbnail,
+                        headers: ApiConstants.imageHeaders,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) => Icon(
                           Icons.play_circle_fill,
