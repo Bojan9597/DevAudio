@@ -710,30 +710,31 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get download => 'Download';
+  String get download => 'Télécharger';
 
   @override
-  String get downloading => 'Downloading...';
+  String get downloading => 'Téléchargement...';
 
   @override
   String get supportMessageDescription =>
-      'Send a message to our support team. We\'ll get back to you as soon as possible.';
+      'Envoyez un message à notre équipe de support. Nous vous répondrons dès que possible.';
 
   @override
-  String get yourMessage => 'Your Message';
+  String get yourMessage => 'Votre message';
 
   @override
-  String get describeIssue => 'Describe your issue or question...';
+  String get describeIssue => 'Décrivez votre problème ou question...';
 
   @override
-  String get enterMessage => 'Please enter a message';
+  String get enterMessage => 'Veuillez entrer un message';
 
   @override
-  String get messageTooShort => 'Message must be at least 10 characters';
+  String get messageTooShort =>
+      'Le message doit contenir au moins 10 caractères';
 
   @override
   String get accountInfoIncluded =>
-      'Your account information will be automatically included.';
+      'Les informations de votre compte seront automatiquement incluses.';
 
   @override
   String get searchInPdf => 'Rechercher dans le PDF...';
@@ -747,157 +748,160 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get noListeningHistoryTitle => 'No listening history';
+  String get noListeningHistoryTitle => 'Pas d\'historique d\'écoute';
 
   @override
   String get booksYouStartListeningAppearHere =>
-      'Books you start listening to will appear here';
+      'Les livres que vous commencez à écouter apparaîtront ici';
 
   @override
-  String get playlistCompleted => 'Playlist completed!';
+  String get playlistCompleted => 'Playlist terminée !';
 
   @override
-  String get downloadingFullPlaylist => 'Downloading full playlist...';
+  String get downloadingFullPlaylist =>
+      'Téléchargement de la playlist complète...';
 
   @override
   String get downloadingForOfflinePlayback =>
-      'Downloading for offline playback...';
+      'Téléchargement pour lecture hors ligne...';
 
   @override
   String get downloadCompleteAvailableOffline =>
-      'Download Complete! Available offline.';
+      'Téléchargement terminé ! Disponible hors ligne.';
 
   @override
-  String get bookInformation => 'Book Information';
+  String get bookInformation => 'Informations sur le livre';
 
   @override
-  String get noDescriptionAvailable => 'No description available.';
+  String get noDescriptionAvailable => 'Aucune description disponible.';
 
   @override
   String priceLabel(String price) {
-    return 'Price: \$$price';
+    return 'Prix : \$$price';
   }
 
   @override
   String categoryLabel(String category) {
-    return 'Category: $category';
+    return 'Catégorie : $category';
   }
 
   @override
-  String get subscribeToListen => 'Subscribe to Listen';
+  String get subscribeToListen => 'Abonnez-vous pour écouter';
 
   @override
   String get getUnlimitedAccessToAllAudiobooks =>
-      'Get unlimited access to all audiobooks';
+      'Obtenez un accès illimité à tous les livres audio';
 
   @override
-  String get backgroundMusic => 'Background Music';
+  String get backgroundMusic => 'Musique de fond';
 
   @override
-  String get none => 'None';
+  String get none => 'Aucune';
 
   @override
-  String get subscribeToListenToReels => 'Subscribe to listen to Reels';
+  String get subscribeToListenToReels => 'Abonnez-vous pour écouter les Reels';
 
   @override
-  String get noReelsAvailable => 'No reels available';
+  String get noReelsAvailable => 'Aucun reel disponible';
 
   @override
-  String get audioUpload => 'Audio Upload';
+  String get audioUpload => 'Téléverser l\'audio';
 
   @override
-  String get backgroundMusicUpload => 'Background Music Upload';
+  String get backgroundMusicUpload => 'Téléverser la musique de fond';
 
   @override
-  String get titleRequired => 'Title *';
+  String get titleRequired => 'Titre *';
 
   @override
-  String get authorRequired => 'Author *';
+  String get authorRequired => 'Auteur *';
 
   @override
-  String get categoryRequired => 'Category *';
+  String get categoryRequired => 'Catégorie *';
 
   @override
   String get description => 'Description';
 
   @override
-  String get price => 'Price';
+  String get price => 'Prix';
 
   @override
   String get defaultBackgroundMusicOptional =>
-      'Default Background Music (Optional)';
+      'Musique de fond par défaut (optionnel)';
 
   @override
-  String get premiumContent => 'Premium Content';
+  String get premiumContent => 'Contenu Premium';
 
   @override
   String get onlySubscribersCanAccess =>
-      'Only subscribers can access this book';
+      'Seuls les abonnés peuvent accéder à ce livre';
 
   @override
-  String get selectAudioFiles => 'Select Audio File(s) *';
+  String get selectAudioFiles => 'Sélectionner fichier(s) audio *';
 
   @override
   String audioSelected(String filename) {
-    return 'Audio Selected: ...$filename';
+    return 'Audio sélectionné : ...$filename';
   }
 
   @override
   String audioFilesSelected(int count) {
-    return '$count Audio Files Selected';
+    return '$count fichiers audio sélectionnés';
   }
 
   @override
-  String get selectCoverImageOptional => 'Select Cover Image (Optional)';
+  String get selectCoverImageOptional =>
+      'Sélectionner l\'image de couverture (optionnel)';
 
   @override
   String coverSelected(String filename) {
-    return 'Cover Selected: ...$filename';
+    return 'Couverture sélectionnée : ...$filename';
   }
 
   @override
-  String get selectPdfOptional => 'Select PDF (Optional)';
+  String get selectPdfOptional => 'Sélectionner un PDF (optionnel)';
 
   @override
   String pdfSelected(String filename) {
-    return 'PDF Selected: ...$filename';
+    return 'PDF sélectionné : ...$filename';
   }
 
   @override
-  String get musicTitleRequired => 'Music Title *';
+  String get musicTitleRequired => 'Titre de la musique *';
 
   @override
-  String get selectBackgroundMusicFile => 'Select Background Music File *';
+  String get selectBackgroundMusicFile =>
+      'Sélectionner le fichier de musique de fond *';
 
   @override
   String fileSelected(String filename) {
-    return 'File: ...$filename';
+    return 'Fichier : ...$filename';
   }
 
   @override
-  String get uploadBackgroundMusic => 'Upload Background Music';
+  String get uploadBackgroundMusic => 'Téléverser la musique de fond';
 
   @override
-  String get backgroundMusicUploaded => 'Background music uploaded!';
+  String get backgroundMusicUploaded => 'Musique de fond téléversée !';
 
   @override
   String get pleaseSelectFileAndEnterTitle =>
-      'Please select file and enter title';
+      'Veuillez sélectionner un fichier et entrer le titre';
 
   @override
-  String get createLessonQuiz => 'Create Lesson Quiz';
+  String get createLessonQuiz => 'Créer un quiz de leçon';
 
   @override
-  String get createBookQuiz => 'Create Book Quiz';
+  String get createBookQuiz => 'Créer un quiz de livre';
 
   @override
-  String get addNewQuestion => 'Add New Question';
+  String get addNewQuestion => 'Ajouter une nouvelle question';
 
   @override
-  String get questionText => 'Question Text';
+  String get questionText => 'Texte de la question';
 
   @override
-  String get correctAnswer => 'Correct Answer';
+  String get correctAnswer => 'Bonne réponse';
 
   @override
   String optionLabel(String letter) {
@@ -905,34 +909,34 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get required => 'Required';
+  String get required => 'Obligatoire';
 
   @override
-  String get miniQuiz => 'Mini Quiz';
+  String get miniQuiz => 'Mini quiz';
 
   @override
-  String get startQuiz => 'Start Quiz';
+  String get startQuiz => 'Commencer le quiz';
 
   @override
-  String get bookQuiz => 'Book Quiz';
+  String get bookQuiz => 'Quiz du livre';
 
   @override
   String errorSavingResult(String error) {
-    return 'Error saving result: $error';
+    return 'Erreur lors de la sauvegarde du résultat : $error';
   }
 
   @override
-  String get sessionExpired => 'Session Expired';
+  String get sessionExpired => 'Session expirée';
 
   @override
   String get sessionExpiredMessage =>
-      'Your session has expired. Please log in again.';
+      'Votre session a expiré. Veuillez vous reconnecter.';
 
   @override
   String get ok => 'OK';
 
   @override
-  String get unknown => 'Unknown';
+  String get unknown => 'Inconnu';
 
   @override
   String speedLabel(String speed) {

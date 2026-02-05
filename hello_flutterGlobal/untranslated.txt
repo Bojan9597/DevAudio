@@ -1,0 +1,34 @@
+{
+  "de": [
+    "download",
+    "downloading",
+    "supportMessageDescription",
+    "yourMessage",
+    "describeIssue",
+    "enterMessage",
+    "messageTooShort",
+    "accountInfoIncluded"
+  ],
+
+  "es": [
+    "download",
+    "downloading",
+    "supportMessageDescription",
+    "yourMessage",
+    "describeIssue",
+    "enterMessage",
+    "messageTooShort",
+    "accountInfoIncluded"
+  ],
+
+  "fr": [
+    "download",
+    "downloading",
+    "supportMessageDescription",
+    "yourMessage",
+    "describeIssue",
+    "enterMessage",
+    "messageTooShort",
+    "accountInfoIncluded"
+  ]
+}

@@ -19,7 +19,10 @@
       "WebFetch(domain:pub.dev)",
       "Bash(pip show:*)",
       "Bash(python3:*)",
-      "Bash(flutter --version:*)"
+      "Bash(flutter --version:*)",
+      "Bash(cmd /c \"cd /d c:\\\\Users\\\\bojan\\\\Desktop\\\\TrainingFlutter\\\\hello_flutterGlobal && flutter gen-l10n\")",
+      "Bash(cmd /c \"cd /d c:\\\\Users\\\\bojan\\\\Desktop\\\\TrainingFlutter\\\\hello_flutterGlobal && flutter gen-l10n 2>&1\")",
+      "Bash(cmd /c:*)"
     ]
   }
 }

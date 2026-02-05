@@ -743,192 +743,193 @@ class AppLocalizationsSr extends AppLocalizations {
   }
 
   @override
-  String get noListeningHistoryTitle => 'No listening history';
+  String get noListeningHistoryTitle => 'Nema istorije slušanja';
 
   @override
   String get booksYouStartListeningAppearHere =>
-      'Books you start listening to will appear here';
+      'Knjige koje počnete da slušate pojaviće se ovde';
 
   @override
-  String get playlistCompleted => 'Playlist completed!';
+  String get playlistCompleted => 'Plejlista završena!';
 
   @override
-  String get downloadingFullPlaylist => 'Downloading full playlist...';
+  String get downloadingFullPlaylist => 'Preuzimanje cele plejliste...';
 
   @override
   String get downloadingForOfflinePlayback =>
-      'Downloading for offline playback...';
+      'Preuzimanje za offline reprodukciju...';
 
   @override
   String get downloadCompleteAvailableOffline =>
-      'Download Complete! Available offline.';
+      'Preuzimanje završeno! Dostupno offline.';
 
   @override
-  String get bookInformation => 'Book Information';
+  String get bookInformation => 'Informacije o knjizi';
 
   @override
-  String get noDescriptionAvailable => 'No description available.';
+  String get noDescriptionAvailable => 'Nema dostupnog opisa.';
 
   @override
   String priceLabel(String price) {
-    return 'Price: \$$price';
+    return 'Cena: \$$price';
   }
 
   @override
   String categoryLabel(String category) {
-    return 'Category: $category';
+    return 'Kategorija: $category';
   }
 
   @override
-  String get subscribeToListen => 'Subscribe to Listen';
+  String get subscribeToListen => 'Pretplatite se da slušate';
 
   @override
   String get getUnlimitedAccessToAllAudiobooks =>
-      'Get unlimited access to all audiobooks';
+      'Dobijte neograničen pristup svim audio knjigama';
 
   @override
-  String get backgroundMusic => 'Background Music';
+  String get backgroundMusic => 'Pozadinska muzika';
 
   @override
-  String get none => 'None';
+  String get none => 'Ništa';
 
   @override
-  String get subscribeToListenToReels => 'Subscribe to listen to Reels';
+  String get subscribeToListenToReels =>
+      'Pretplatite se da slušate kratke klipove';
 
   @override
-  String get noReelsAvailable => 'No reels available';
+  String get noReelsAvailable => 'Nema dostupnih kratkih klipova';
 
   @override
-  String get audioUpload => 'Audio Upload';
+  String get audioUpload => 'Otpremanje zvuka';
 
   @override
-  String get backgroundMusicUpload => 'Background Music Upload';
+  String get backgroundMusicUpload => 'Otpremanje pozadinske muzike';
 
   @override
-  String get titleRequired => 'Title *';
+  String get titleRequired => 'Naslov *';
 
   @override
-  String get authorRequired => 'Author *';
+  String get authorRequired => 'Autor *';
 
   @override
-  String get categoryRequired => 'Category *';
+  String get categoryRequired => 'Kategorija *';
 
   @override
-  String get description => 'Description';
+  String get description => 'Opis';
 
   @override
-  String get price => 'Price';
+  String get price => 'Cena';
 
   @override
   String get defaultBackgroundMusicOptional =>
-      'Default Background Music (Optional)';
+      'Podrazumevana pozadinska muzika (opciono)';
 
   @override
-  String get premiumContent => 'Premium Content';
+  String get premiumContent => 'Premium sadržaj';
 
   @override
   String get onlySubscribersCanAccess =>
-      'Only subscribers can access this book';
+      'Samo pretplatnici mogu pristupiti ovoj knjizi';
 
   @override
-  String get selectAudioFiles => 'Select Audio File(s) *';
+  String get selectAudioFiles => 'Izaberite audio fajl(ove) *';
 
   @override
   String audioSelected(String filename) {
-    return 'Audio Selected: ...$filename';
+    return 'Audio izabran: ...$filename';
   }
 
   @override
   String audioFilesSelected(int count) {
-    return '$count Audio Files Selected';
+    return '$count audio fajlova izabrano';
   }
 
   @override
-  String get selectCoverImageOptional => 'Select Cover Image (Optional)';
+  String get selectCoverImageOptional => 'Izaberite naslovnu sliku (opciono)';
 
   @override
   String coverSelected(String filename) {
-    return 'Cover Selected: ...$filename';
+    return 'Naslovna izabrana: ...$filename';
   }
 
   @override
-  String get selectPdfOptional => 'Select PDF (Optional)';
+  String get selectPdfOptional => 'Izaberite PDF (opciono)';
 
   @override
   String pdfSelected(String filename) {
-    return 'PDF Selected: ...$filename';
+    return 'PDF izabran: ...$filename';
   }
 
   @override
-  String get musicTitleRequired => 'Music Title *';
+  String get musicTitleRequired => 'Naslov muzike *';
 
   @override
-  String get selectBackgroundMusicFile => 'Select Background Music File *';
+  String get selectBackgroundMusicFile => 'Izaberite fajl pozadinske muzike *';
 
   @override
   String fileSelected(String filename) {
-    return 'File: ...$filename';
+    return 'Fajl: ...$filename';
   }
 
   @override
-  String get uploadBackgroundMusic => 'Upload Background Music';
+  String get uploadBackgroundMusic => 'Otpremi pozadinsku muziku';
 
   @override
-  String get backgroundMusicUploaded => 'Background music uploaded!';
+  String get backgroundMusicUploaded => 'Pozadinska muzika otpremljena!';
 
   @override
   String get pleaseSelectFileAndEnterTitle =>
-      'Please select file and enter title';
+      'Molimo izaberite fajl i unesite naslov';
 
   @override
-  String get createLessonQuiz => 'Create Lesson Quiz';
+  String get createLessonQuiz => 'Napravi kviz lekcije';
 
   @override
-  String get createBookQuiz => 'Create Book Quiz';
+  String get createBookQuiz => 'Napravi kviz knjige';
 
   @override
-  String get addNewQuestion => 'Add New Question';
+  String get addNewQuestion => 'Dodaj novo pitanje';
 
   @override
-  String get questionText => 'Question Text';
+  String get questionText => 'Tekst pitanja';
 
   @override
-  String get correctAnswer => 'Correct Answer';
+  String get correctAnswer => 'Tačan odgovor';
 
   @override
   String optionLabel(String letter) {
-    return 'Option $letter';
+    return 'Opcija $letter';
   }
 
   @override
-  String get required => 'Required';
+  String get required => 'Obavezno';
 
   @override
-  String get miniQuiz => 'Mini Quiz';
+  String get miniQuiz => 'Mini kviz';
 
   @override
-  String get startQuiz => 'Start Quiz';
+  String get startQuiz => 'Započni kviz';
 
   @override
-  String get bookQuiz => 'Book Quiz';
+  String get bookQuiz => 'Kviz knjige';
 
   @override
   String errorSavingResult(String error) {
-    return 'Error saving result: $error';
+    return 'Greška pri čuvanju rezultata: $error';
   }
 
   @override
-  String get sessionExpired => 'Session Expired';
+  String get sessionExpired => 'Sesija istekla';
 
   @override
   String get sessionExpiredMessage =>
-      'Your session has expired. Please log in again.';
+      'Vaša sesija je istekla. Molimo prijavite se ponovo.';
 
   @override
-  String get ok => 'OK';
+  String get ok => 'U redu';
 
   @override
-  String get unknown => 'Unknown';
+  String get unknown => 'Nepoznato';
 
   @override
   String speedLabel(String speed) {
