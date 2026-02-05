@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../services/auth_service.dart';
+import '../utils/api_constants.dart';
 import '../l10n/generated/app_localizations.dart';
 
 class SupportDialog extends StatefulWidget {
@@ -41,6 +42,7 @@ class _SupportDialogState extends State<SupportDialog> {
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
+          ApiConstants.appSourceHeader: ApiConstants.appSourceValue,
         },
         body: json.encode({'message': _messageController.text.trim()}),
       );
@@ -102,41 +104,41 @@ class _SupportDialogState extends State<SupportDialog> {
           key: _formKey,
           child: SingleChildScrollView(
             child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                AppLocalizations.of(context)!.supportMessageDescription,
-                style: const TextStyle(fontSize: 14, color: Colors.grey),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _messageController,
-                maxLines: 8,
-                maxLength: 5000,
-                decoration: InputDecoration(
-                  labelText: AppLocalizations.of(context)!.yourMessage,
-                  hintText: AppLocalizations.of(context)!.describeIssue,
-                  border: const OutlineInputBorder(),
-                  alignLabelWithHint: true,
-                  errorMaxLines: 2,
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  AppLocalizations.of(context)!.supportMessageDescription,
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
                 ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return AppLocalizations.of(context)!.enterMessage;
-                  }
-                  if (value.trim().length < 10) {
-                    return AppLocalizations.of(context)!.messageTooShort;
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 8),
-              Text(
-                AppLocalizations.of(context)!.accountInfoIncluded,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ],
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _messageController,
+                  maxLines: 8,
+                  maxLength: 5000,
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context)!.yourMessage,
+                    hintText: AppLocalizations.of(context)!.describeIssue,
+                    border: const OutlineInputBorder(),
+                    alignLabelWithHint: true,
+                    errorMaxLines: 2,
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return AppLocalizations.of(context)!.enterMessage;
+                    }
+                    if (value.trim().length < 10) {
+                      return AppLocalizations.of(context)!.messageTooShort;
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  AppLocalizations.of(context)!.accountInfoIncluded,
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
             ),
           ),
         ),

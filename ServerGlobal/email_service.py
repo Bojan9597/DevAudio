@@ -52,10 +52,16 @@ def send_support_email(user_name, user_email, user_id, message, is_admin=False):
         msg['To'] = RECIPIENT_EMAIL
         msg['Reply-To'] = user_email
 
-        # Prepare message formatting
-        message_html = message.replace('\n', '<br>')
+        # Prepare message formatting - escape HTML special characters first
+        import html
+        message_escaped = html.escape(message)
+        message_html = message_escaped.replace('\n', '<br>')
         admin_badge = '<span style="color: red;">[ADMIN]</span>' if is_admin else ''
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        # Escape user name and email too for safety
+        user_name_safe = html.escape(user_name)
+        user_email_safe = html.escape(user_email)
 
         # Create HTML body
         html_body = f"""
@@ -64,8 +70,8 @@ def send_support_email(user_name, user_email, user_id, message, is_admin=False):
           <body>
             <h2>Support Message from AudioBooks App</h2>
             <hr>
-            <p><strong>From:</strong> {user_name} {admin_badge}</p>
-            <p><strong>Email:</strong> {user_email}</p>
+            <p><strong>From:</strong> {user_name_safe} {admin_badge}</p>
+            <p><strong>Email:</strong> {user_email_safe}</p>
             <p><strong>User ID:</strong> {user_id}</p>
             <p><strong>Date:</strong> {timestamp}</p>
             <hr>
