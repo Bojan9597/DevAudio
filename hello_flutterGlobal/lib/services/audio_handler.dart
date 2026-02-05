@@ -190,20 +190,31 @@ class MyAudioHandler extends BaseAudioHandler {
       _bgMusicLoaded = true;
 
       // After loading, check current main player state and sync
-      // Use a small delay to allow main player state to settle after loadAudio
-      await Future.delayed(const Duration(milliseconds: 100));
+      // Use longer delay with retry to handle buffering scenarios
+      for (int attempt = 0; attempt < 3; attempt++) {
+        await Future.delayed(const Duration(milliseconds: 300));
 
-      final isMainPlayerPlaying =
-          _player.playing &&
-          _player.processingState != ProcessingState.completed &&
-          _player.processingState != ProcessingState.idle;
+        final isMainPlayerPlaying =
+            _player.playing &&
+            _player.processingState != ProcessingState.completed &&
+            _player.processingState != ProcessingState.idle;
 
-      if (isMainPlayerPlaying && _bgMusicEnabled) {
-        await _bgPlayer.seek(Duration.zero);
-        _bgPlayer.play();
-        print('[AudioHandler] BG music started (post-load sync)');
-      } else {
-        _bgPlayer.pause();
+        if (isMainPlayerPlaying && _bgMusicEnabled) {
+          if (!_bgPlayer.playing) {
+            await _bgPlayer.seek(Duration.zero);
+            _bgPlayer.play();
+            print(
+              '[AudioHandler] BG music started (post-load sync, attempt ${attempt + 1})',
+            );
+          }
+          break; // Successfully started, exit retry loop
+        } else if (attempt < 2) {
+          print(
+            '[AudioHandler] BG sync retry ${attempt + 1}: main player not ready yet',
+          );
+        } else {
+          _bgPlayer.pause();
+        }
       }
 
       print('[AudioHandler] Background music loaded: ${track['title']}');
@@ -281,10 +292,17 @@ class MyAudioHandler extends BaseAudioHandler {
 
   // Play the current audio source
   @override
-  Future<void> play() => _player.play();
+  Future<void> play() async {
+    await _player.play();
+    // Explicitly sync background music after main player starts
+    // This ensures BG music starts even if it loaded before main play() was called
+    if (_bgMusicLoaded && _bgMusicEnabled && !_bgPlayer.playing) {
+      _bgPlayer.play();
+      print('[AudioHandler] BG music explicitly synced on play()');
+    }
+  }
 
   // Pause playback
-  @override
   @override
   Future<void> pause() async {
     await _player.pause();
