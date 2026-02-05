@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../services/auth_service.dart';
 import '../main.dart'; // For navigatorKey
 import '../screens/login_screen.dart';
+import '../utils/api_constants.dart';
 
 class ApiClient {
   // Singleton pattern
@@ -56,8 +57,15 @@ class ApiClient {
     return response;
   }
 
+  // Helper to inject security headers
+  Map<String, String> _addSecurityHeaders(Map<String, String>? headers) {
+    final newHeaders = headers ?? {};
+    newHeaders[ApiConstants.appSourceHeader] = ApiConstants.appSourceValue;
+    return newHeaders;
+  }
+
   Future<http.Response> get(Uri url, {Map<String, String>? headers}) async {
-    final response = await http.get(url, headers: headers);
+    final response = await http.get(url, headers: _addSecurityHeaders(headers));
     return _handleResponse(response);
   }
 
@@ -66,7 +74,11 @@ class ApiClient {
     Map<String, String>? headers,
     Object? body,
   }) async {
-    final response = await http.post(url, headers: headers, body: body);
+    final response = await http.post(
+      url,
+      headers: _addSecurityHeaders(headers),
+      body: body,
+    );
     return _handleResponse(response);
   }
 
@@ -75,7 +87,11 @@ class ApiClient {
     Map<String, String>? headers,
     Object? body,
   }) async {
-    final response = await http.put(url, headers: headers, body: body);
+    final response = await http.put(
+      url,
+      headers: _addSecurityHeaders(headers),
+      body: body,
+    );
     return _handleResponse(response);
   }
 
@@ -84,7 +100,11 @@ class ApiClient {
     Map<String, String>? headers,
     Object? body,
   }) async {
-    final response = await http.delete(url, headers: headers, body: body);
+    final response = await http.delete(
+      url,
+      headers: _addSecurityHeaders(headers),
+      body: body,
+    );
     return _handleResponse(response);
   }
 }

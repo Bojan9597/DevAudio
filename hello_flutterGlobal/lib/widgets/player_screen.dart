@@ -1023,11 +1023,18 @@ class _PlayerScreenState extends State<PlayerScreen>
       final userId = await _getUserId();
       if (userId == null) return;
 
-      final response = await Dio().post(
-        '${ApiConstants.baseUrl}/books/${widget.book.id}/rate',
-        data: {'user_id': userId, 'stars': stars},
-        options: Options(headers: await _getAuthHeaders()),
-      );
+      final response =
+          await Dio(
+            BaseOptions(
+              headers: {
+                ApiConstants.appSourceHeader: ApiConstants.appSourceValue,
+              },
+            ),
+          ).post(
+            '${ApiConstants.baseUrl}/books/${widget.book.id}/rate',
+            data: {'user_id': userId, 'stars': stars},
+            options: Options(headers: await _getAuthHeaders()),
+          );
 
       if (response.statusCode == 200 && mounted) {
         // Update local book rating if response includes updated rating

@@ -75,7 +75,10 @@ class AuthService {
 
       final response = await http.post(
         Uri.parse('$baseUrl/google-login'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          ApiConstants.appSourceHeader: ApiConstants.appSourceValue,
+        },
         body: json.encode({
           'email': googleUser.email,
           'name': googleUser.displayName,
@@ -111,6 +114,7 @@ class AuthService {
           headers: {
             'Authorization': 'Bearer $token',
             'Content-Type': 'application/json',
+            ApiConstants.appSourceHeader: ApiConstants.appSourceValue,
           },
           body: json.encode({'refresh_token': refreshToken}),
         );
@@ -149,6 +153,7 @@ class AuthService {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
+          ApiConstants.appSourceHeader: ApiConstants.appSourceValue,
         },
       );
 
@@ -171,6 +176,7 @@ class AuthService {
     final request = http.MultipartRequest('POST', uri);
 
     request.headers['Authorization'] = 'Bearer $token';
+    request.headers[ApiConstants.appSourceHeader] = ApiConstants.appSourceValue;
     request.fields['user_id'] = userId.toString();
 
     final mimeType = 'image/jpeg';
@@ -284,6 +290,7 @@ class AuthService {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
+          ApiConstants.appSourceHeader: ApiConstants.appSourceValue,
         },
       );
 

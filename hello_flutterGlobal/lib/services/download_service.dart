@@ -5,9 +5,14 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_service.dart';
 import 'connectivity_service.dart';
+import '../utils/api_constants.dart';
 
 class DownloadService {
-  final Dio _dio = Dio();
+  final Dio _dio = Dio(
+    BaseOptions(
+      headers: {ApiConstants.appSourceHeader: ApiConstants.appSourceValue},
+    ),
+  );
 
   // Track ongoing downloads to prevent duplicate requests
   static final Map<String, Future<void>> _activeDownloads = {};
@@ -513,16 +518,14 @@ class DownloadService {
   }
 
   /// Download PDF for a book
-  Future<void> downloadPdf(
-    String bookId,
-    String pdfUrl, {
-    int? userId,
-  }) async {
+  Future<void> downloadPdf(String bookId, String pdfUrl, {int? userId}) async {
     final downloadKey = 'pdf_$bookId${userId != null ? '_$userId' : ''}';
 
     // If download already in progress, wait for it
     if (_activeDownloads.containsKey(downloadKey)) {
-      print('[DownloadService] PDF download already in progress for $downloadKey');
+      print(
+        '[DownloadService] PDF download already in progress for $downloadKey',
+      );
       await _activeDownloads[downloadKey];
       return;
     }

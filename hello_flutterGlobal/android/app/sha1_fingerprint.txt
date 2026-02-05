@@ -1,0 +1,26 @@
+Alias name: upload
+Creation date: Feb 4, 2026
+Entry type: PrivateKeyEntry
+Certificate chain length: 1
+Certificate[1]:
+Owner: CN=DevAudio, OU=DevAudio, O=DevAudio, L=City, ST=State, C=US
+Issuer: CN=DevAudio, OU=DevAudio, O=DevAudio, L=City, ST=State, C=US
+Serial number: 411900d9
+Valid from: Wed Feb 04 18:32:28 CET 2026 until: Sun Jun 22 19:32:28 CEST 2053
+Certificate fingerprints:
+	 SHA1: 17:89:96:45:A4:FB:B9:8D:C9:7E:66:43:A6:D4:E7:3E:84:70:16:07
+	 SHA256: 2D:67:CA:29:8A:3E:9B:E7:CD:65:E8:25:3A:84:D3:B1:74:3C:D9:FC:EF:E5:61:D8:B6:5E:B2:77:C5:27:51:1E
+Signature algorithm name: SHA256withRSA
+Subject Public Key Algorithm: 2048-bit RSA key
+Version: 3
+
+Extensions: 
+
+#1: ObjectId: 2.5.29.14 Criticality=false
+SubjectKeyIdentifier [
+KeyIdentifier [
+0000: EC E4 51 C4 C9 4A C6 D1   A2 D0 BD 4C 1C 35 4E 9C  ..Q..J.....L.5N.
+0010: 62 7D 87 6C                                        b..l
+]
+]
+

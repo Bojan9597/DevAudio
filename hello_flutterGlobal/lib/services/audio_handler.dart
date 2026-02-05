@@ -182,11 +182,19 @@ class MyAudioHandler extends BaseAudioHandler {
 
       _bgMusicLoaded = true;
 
-      // Start playing if main player is playing, otherwise ensure paused
-      if (_player.playing && _bgMusicEnabled) {
-        // Ensure starting from beginning
+      // After loading, check current main player state and sync
+      // Use a small delay to allow main player state to settle after loadAudio
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      final isMainPlayerPlaying =
+          _player.playing &&
+          _player.processingState != ProcessingState.completed &&
+          _player.processingState != ProcessingState.idle;
+
+      if (isMainPlayerPlaying && _bgMusicEnabled) {
         await _bgPlayer.seek(Duration.zero);
         _bgPlayer.play();
+        print('[AudioHandler] BG music started (post-load sync)');
       } else {
         _bgPlayer.pause();
       }

@@ -24,12 +24,18 @@ R2_URL_EXPIRY = int(os.getenv('R2_URL_EXPIRY', '7200'))
 # Prefix to identify R2 keys stored in DB (not a real URL, just a marker)
 R2_KEY_PREFIX = "r2://"
 
+# R2 Public Domain (Custom Domain for Caching)
+R2_PUBLIC_DOMAIN = os.getenv('R2_PUBLIC_DOMAIN')
+
 # Check if R2 is configured
 R2_ENABLED = all([R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ENDPOINT_URL])
 
 if R2_ENABLED:
     print(f"[R2] Cloudflare R2 storage enabled. Bucket: {R2_BUCKET_NAME}")
-    print(f"[R2] Pre-signed URL expiry: {R2_URL_EXPIRY}s ({R2_URL_EXPIRY // 3600}h)")
+    if R2_PUBLIC_DOMAIN:
+        print(f"[R2] Using Public Domain: {R2_PUBLIC_DOMAIN}")
+    else:
+        print(f"[R2] Pre-signed URL expiry: {R2_URL_EXPIRY}s ({R2_URL_EXPIRY // 3600}h)")
 else:
     print("[R2] WARNING: R2 not configured. Uploads will use local storage.")
 
@@ -191,6 +197,12 @@ def resolve_url(stored_path, base_url=None):
 
     if is_r2_ref(stored_path):
         r2_key = get_r2_key(stored_path)
+        
+        # 1. Prefer Public Domain (Cache Friendly)
+        if R2_PUBLIC_DOMAIN:
+            return f"{R2_PUBLIC_DOMAIN}/{r2_key}"
+            
+        # 2. Fallback to Pre-signed URL (Private)
         url = generate_presigned_url(r2_key)
         if url:
             return url

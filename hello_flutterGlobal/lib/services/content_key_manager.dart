@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'device_id_manager.dart';
 import 'key_derivation_service.dart';
 import 'auth_service.dart';
+import '../utils/api_constants.dart';
 
 /// Manages content keys for encrypted media
 /// Handles fetching wrapped keys from server and unwrapping them
@@ -14,7 +15,11 @@ class ContentKeyManager {
   ContentKeyManager._internal();
 
   final _storage = const FlutterSecureStorage();
-  final _dio = Dio();
+  final _dio = Dio(
+    BaseOptions(
+      headers: {ApiConstants.appSourceHeader: ApiConstants.appSourceValue},
+    ),
+  );
   final _deviceIdManager = DeviceIdManager();
   final _authService = AuthService();
 
@@ -68,9 +73,7 @@ class ContentKeyManager {
       final response = await _dio.get(
         '$baseUrl/v2/content-key/$mediaId',
         queryParameters: {'device_id': deviceId},
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       if (response.statusCode != 200) {
@@ -144,13 +147,13 @@ class ContentKeyManager {
       final response = await _dio.get(
         '$baseUrl/v2/encryption-info/$mediaId',
         queryParameters: {'device_id': deviceId},
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       if (response.statusCode != 200) {
-        throw Exception('Failed to fetch encryption info: ${response.statusCode}');
+        throw Exception(
+          'Failed to fetch encryption info: ${response.statusCode}',
+        );
       }
 
       final data = response.data;
@@ -173,7 +176,11 @@ class ContentKeyManager {
 
   /// Store user-specific wrapping key (called during login)
   /// This key is derived on the server and sent to client once
-  Future<void> storeUserKey(int userId, String deviceId, Uint8List userKey) async {
+  Future<void> storeUserKey(
+    int userId,
+    String deviceId,
+    Uint8List userKey,
+  ) async {
     final keyB64 = base64.encode(userKey);
     await _storage.write(key: 'user_key_$userId', value: keyB64);
   }

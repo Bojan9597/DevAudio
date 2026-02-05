@@ -1,0 +1,56 @@
+Starting a Gradle Daemon, 2 incompatible and 2 stopped Daemons could not be reused, use --status for details
+> Task :gradle:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle:compileKotlin UP-TO-DATE
+> Task :gradle:compileJava NO-SOURCE
+> Task :gradle:compileGroovy NO-SOURCE
+> Task :gradle:pluginDescriptors UP-TO-DATE
+> Task :gradle:processResources
+> Task :gradle:classes
+> Task :gradle:jar
+
+> Configure project :app
+w: file:///C:/Users/bojan/Desktop/TrainingFlutter/hello_flutterGlobal/android/app/build.gradle.kts:23:9: 'jvmTarget: String' is deprecated. Please migrate to the compilerOptions DSL. More details are here: https://kotl.in/u1r8ln
+e: file:///C:/Users/bojan/Desktop/TrainingFlutter/hello_flutterGlobal/android/app/build.gradle.kts:38:9: Unresolved reference. None of the following candidates is applicable because of receiver type mismatch: 
+public open fun NamedDomainObjectContainer<ApplicationBuildType>.release(action: ApplicationBuildType.() -> Unit): Unit defined in com.android.build.gradle.internal.dsl.BaseAppModuleExtension
+e: file:///C:/Users/bojan/Desktop/TrainingFlutter/hello_flutterGlobal/android/app/build.gradle.kts:44:13: Unresolved reference: keyAlias
+e: file:///C:/Users/bojan/Desktop/TrainingFlutter/hello_flutterGlobal/android/app/build.gradle.kts:45:13: Unresolved reference: keyPassword
+e: file:///C:/Users/bojan/Desktop/TrainingFlutter/hello_flutterGlobal/android/app/build.gradle.kts:46:13: Unresolved reference: storeFile
+e: file:///C:/Users/bojan/Desktop/TrainingFlutter/hello_flutterGlobal/android/app/build.gradle.kts:47:13: Unresolved reference: storePassword
+
+FAILURE: Build failed with an exception.
+
+* Where:
+Build file 'C:\Users\bojan\Desktop\TrainingFlutter\hello_flutterGlobal\android\app\build.gradle.kts' line: 23
+
+* What went wrong:
+Script compilation errors:
+
+  Line 23:         jvmTarget = JavaVersion.VERSION_17.toString()
+                   ^ 'jvmTarget: String' is deprecated. Please migrate to the compilerOptions DSL. More details are here: https://kotl.in/u1r8ln
+
+  Line 38:         release {
+                   ^ Unresolved reference. None of the following candidates is applicable because of receiver type mismatch: 
+                       public open fun NamedDomainObjectContainer<ApplicationBuildType>.release(action: ApplicationBuildType.() -> Unit): Unit defined in com.android.build.gradle.internal.dsl.BaseAppModuleExtension
+
+  Line 44:             keyAlias = keystoreProperties["keyAlias"] as String
+                       ^ Unresolved reference: keyAlias
+
+  Line 45:             keyPassword = keystoreProperties["keyPassword"] as String
+                       ^ Unresolved reference: keyPassword
+
+  Line 46:             storeFile = file(keystoreProperties["storeFile"] as String)
+                       ^ Unresolved reference: storeFile
+
+  Line 47:             storePassword = keystoreProperties["storePassword"] as String
+                       ^ Unresolved reference: storePassword
+
+6 errors
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 19s
+4 actionable tasks: 2 executed, 2 up-to-date

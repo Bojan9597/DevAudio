@@ -1,5 +1,9 @@
 from flask import Flask, jsonify, request, send_from_directory, Response
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from dotenv import load_dotenv
+load_dotenv()
 from werkzeug.utils import secure_filename
 import os
 import secrets
@@ -11,7 +15,7 @@ from database import Database
 from badge_service import BadgeService
 from mutagen import File as MutagenFile
 from image_utils import ensure_thumbnail_exists, create_thumbnail
-from r2_storage import upload_fileobj_to_r2, upload_local_file_to_r2, is_r2_enabled, is_r2_ref, get_r2_key, resolve_url, generate_presigned_url
+from r2_storage import upload_fileobj_to_r2, upload_local_file_to_r2, is_r2_enabled, is_r2_ref, get_r2_key, resolve_url, generate_presigned_url, R2_PUBLIC_DOMAIN
 import tempfile
 import shutil
 import wave
@@ -62,14 +66,48 @@ def encrypt_file_data(data, key_base64):
     return data # Mock return to avoid crash if called, though it shouldn't be.
 
 app = Flask(__name__)
-CORS(app) # Enable CORS for all routes
+# Enable CORS for all routes (for web clients if any, but we are restricting now)
+# We can keep CORS for development or specific origins, but the header check is stronger.
+CORS(app)
+
+# RATE LIMITING: 150 requests per minute per IP
+# 150/min is a balanced limit for active users vs shared networks
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["150 per minute"],
+    storage_uri="memory://",
+)
+
+# SECURITY: Shared Secret to allow only App Traffic
+# This matches the Flutter App's "X-App-Source" header
+APP_SOURCE_HEADER = "X-App-Source"
+APP_SOURCE_VALUE = "Echo_Secured_9xQ2zP5mL8kR4wN1vJ7"
+
+@app.before_request
+def check_app_source():
+    # Allow OPTIONS requests (CORS preflight) to pass without header
+    if request.method == 'OPTIONS':
+        return
+        
+    # Skip check for public static files if served via Flask (though Nginx usually handles them)
+    if request.path.startswith('/static/'):
+        return
+
+    # Enforce Secret Header
+    client_secret = request.headers.get(APP_SOURCE_HEADER)
+    if client_secret != APP_SOURCE_VALUE:
+        # Log the attempt?
+        # print(f"Unauthorized Access Attempt from {request.remote_addr}")
+        return jsonify({"error": "Unauthorized: Invalid App Source"}), 403
 
 # Base URL for external access (Ngrok or Local IP)
 # Dynamically set based on current machine IP
 # OR Hardcoded for Production Server
 # current_ip = update_server_ip.get_local_ip()
 # BASE_URL = f"http://{current_ip}:5000/" 
-BASE_URL = "https://velorus.ba/devaudioserver2/"
+# BASE_URL = f"http://{current_ip}:5000/" 
+BASE_URL = os.getenv('BASE_URL', "https://echo.velorus.ba/")
 print(f"Server initialized with BASE_URL: {BASE_URL}")
 
 # Auto-update Flutter Client Configuration (disabled for Prod)
@@ -97,8 +135,18 @@ def resolve_cover_urls(cover_path):
     cover_thumbnail_path = None
 
     if is_r2_ref(cover_path):
-        # R2 reference (r2://BookCovers/filename) - generate pre-signed URLs
+        # R2 reference (r2://BookCovers/filename)
         r2_key = get_r2_key(cover_path)
+        
+        if R2_PUBLIC_DOMAIN:
+             # Use public domain for both cover and thumbnail
+             cover_url = f"{R2_PUBLIC_DOMAIN}/{r2_key}"
+             # Thumbnail key: BookCovers/filename -> BookCovers/thumbnails/filename
+             thumb_key = r2_key.replace('BookCovers/', 'BookCovers/thumbnails/', 1)
+             cover_thumbnail_path = f"{R2_PUBLIC_DOMAIN}/{thumb_key}"
+             return cover_url, cover_thumbnail_path
+        
+        # Fallback to Pre-signed URLs
         cover_url = generate_presigned_url(r2_key)
         # Thumbnail was uploaded at upload time with key: BookCovers/thumbnails/filename
         thumb_key = r2_key.replace('BookCovers/', 'BookCovers/thumbnails/', 1)
@@ -737,13 +785,14 @@ def upload_profile_picture():
             
             user_email = users[0]['email']
             
-            # 2. Create filename from email
-            # Secure the email to be safe for filesystem (replace @ with _, etc if needed, but strict secure_filename might strip too much)
-            # secure_filename("test@example.com") -> "test_example.com" usually. 
-            # Let's keep it simple and safe.
+            # 2. Create filename from email + TIMESTAMP to bust cache
+            import time
+            timestamp = int(time.time())
             file_ext = file.filename.rsplit('.', 1)[1].lower()
             safe_email_name = secure_filename(user_email) # e.g. test_example_com
-            new_filename = f"{safe_email_name}.{file_ext}"
+            
+            # FORMAT: test_example_com_17099382.jpg
+            new_filename = f"{safe_email_name}_{timestamp}.{file_ext}"
 
             # Try R2 upload first, fallback to local
             r2_key = f"profilePictures/{new_filename}"
@@ -853,7 +902,9 @@ def get_categories():
     # Check cache
     cached_data = cache.get("categories")
     if cached_data:
-        return jsonify(cached_data)
+        response = jsonify(cached_data)
+        response.headers['Cache-Control'] = 'public, max-age=300'  # 5 min CDN cache
+        return response
 
     db = Database()
     if not db.connect():
@@ -870,7 +921,9 @@ def get_categories():
         tree = build_category_tree(result)
         
         cache.set("categories", tree, 300)
-        return jsonify(tree)
+        response = jsonify(tree)
+        response.headers['Cache-Control'] = 'public, max-age=300'  # 5 min CDN cache
+        return response
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -3992,7 +4045,9 @@ def app_init():
     # Check cache
     cached_data = cache.get("app_init")
     if cached_data:
-        return jsonify(cached_data), 200
+        response = jsonify(cached_data)
+        response.headers['Cache-Control'] = 'public, max-age=300'  # 5 min CDN cache
+        return response, 200
 
     db = Database()
     if not db.connect():
@@ -4010,7 +4065,9 @@ def app_init():
 
         response_data = {"categories": categories, "backgroundMusic": music_list}
         cache.set("app_init", response_data, 300)
-        return jsonify(response_data), 200
+        response = jsonify(response_data)
+        response.headers['Cache-Control'] = 'public, max-age=300'  # 5 min CDN cache
+        return response, 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
@@ -4109,6 +4166,13 @@ def upload_bg_music():
 
 @app.route('/background-music', methods=['GET'])
 def get_bg_music_list():
+    # Check cache first
+    cached_data = cache.get("bg_music_list")
+    if cached_data:
+        response = jsonify(cached_data)
+        response.headers['Cache-Control'] = 'public, max-age=300'  # 5 min CDN cache
+        return response, 200
+
     db = Database()
     if not db.connect():
         return jsonify({"error": "Database connection failed"}), 500
@@ -4129,7 +4193,10 @@ def get_bg_music_list():
                     "isDefault": bool(row['is_default'])
                 })
         
-        return jsonify(music_list), 200
+        cache.set("bg_music_list", music_list, 300)  # 5 min server cache
+        response = jsonify(music_list)
+        response.headers['Cache-Control'] = 'public, max-age=300'  # 5 min CDN cache
+        return response, 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:

@@ -27,11 +27,11 @@ def get_connection_pool():
         _connection_pool = pool.ThreadedConnectionPool(
             minconn=2,      # Minimum connections to keep open
             maxconn=50,     # Production pool size - PostgreSQL default max is 100
-            host=host,
-            database="velorusb_echoHistory",
-            user="velorusb_echoHistoryAdmin",
-            password="Pijanista123!",
-            port=5432,
+            host=os.getenv("DB_HOST", host),
+            database=os.getenv("DB_NAME", "velorusb_echoHistory"),
+            user=os.getenv("DB_USER", "velorusb_echoHistoryAdmin"),
+            password=os.getenv("DB_PASSWORD", "Pijanista123!"),
+            port=os.getenv("DB_PORT", 5432),
             connect_timeout=3,  # 3 second timeout for establishing connection
             options='-c statement_timeout=3000'  # 3 second query timeout (in ms)
         )

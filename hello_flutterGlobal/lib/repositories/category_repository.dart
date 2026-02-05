@@ -11,6 +11,7 @@ class CategoryRepository {
     try {
       final response = await http.get(
         Uri.parse('${ApiConstants.baseUrl}/categories'),
+        headers: {ApiConstants.appSourceHeader: ApiConstants.appSourceValue},
       );
 
       if (response.statusCode == 200) {

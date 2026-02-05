@@ -1,4 +1,4 @@
-package com.example.dev_audio
+package com.velorus.echoHistory
 
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
