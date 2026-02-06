@@ -737,6 +737,7 @@ class BookRepository {
     if (token != null) {
       request.headers['Authorization'] = 'Bearer $token';
     }
+    request.headers[ApiConstants.appSourceHeader] = ApiConstants.appSourceValue;
 
     request.fields['title'] = title;
     request.fields['author'] = author;
@@ -900,6 +901,7 @@ class BookRepository {
     if (token != null) {
       request.headers['Authorization'] = 'Bearer $token';
     }
+    request.headers[ApiConstants.appSourceHeader] = ApiConstants.appSourceValue;
 
     request.fields['title'] = title;
     request.fields['is_default'] = isDefault.toString();

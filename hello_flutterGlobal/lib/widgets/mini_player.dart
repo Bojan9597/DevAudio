@@ -14,6 +14,8 @@ class MiniPlayer extends StatefulWidget {
 class _MiniPlayerState extends State<MiniPlayer> {
   bool _isHidden = false;
   String? _lastMediaId;
+  bool _isDraggingSlider = false;
+  double _dragSliderValue = 0.0;
 
   @override
   Widget build(BuildContext context) {
@@ -223,14 +225,30 @@ class _MiniPlayerState extends State<MiniPlayer> {
                                       thumbColor: Colors.amber[700],
                                     ),
                                     child: Slider(
-                                      value: progress,
+                                      value: _isDraggingSlider
+                                          ? _dragSliderValue
+                                          : progress,
+                                      onChangeStart: (value) {
+                                        setState(() {
+                                          _isDraggingSlider = true;
+                                          _dragSliderValue = value;
+                                        });
+                                      },
                                       onChanged: (value) {
+                                        setState(() {
+                                          _dragSliderValue = value;
+                                        });
+                                      },
+                                      onChangeEnd: (value) {
                                         final newPosition = Duration(
                                           milliseconds:
                                               (value * duration.inMilliseconds)
                                                   .toInt(),
                                         );
                                         audioHandler.seek(newPosition);
+                                        setState(() {
+                                          _isDraggingSlider = false;
+                                        });
                                       },
                                     ),
                                   ),

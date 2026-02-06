@@ -114,6 +114,8 @@ class _PlayerScreenState extends State<PlayerScreen>
   bool _isInitializingPlayer = false; // Prevent concurrent player init
   bool _isHandlingCompletion =
       false; // Prevent double-handling of track completion
+  bool _isDraggingSlider = false; // Track when user is dragging progress slider
+  double _dragSliderValue = 0.0; // Temporary value while dragging
 
   final GlobalKey _speedButtonKey = GlobalKey();
   final GlobalKey _moreButtonKey = GlobalKey();
@@ -1433,11 +1435,27 @@ class _PlayerScreenState extends State<PlayerScreen>
                                 ),
                               ),
                               child: Slider(
-                                value: sliderValue,
+                                value: _isDraggingSlider
+                                    ? _dragSliderValue
+                                    : sliderValue,
                                 min: 0.0,
                                 max: maxDuration,
+                                onChangeStart: (v) {
+                                  setState(() {
+                                    _isDraggingSlider = true;
+                                    _dragSliderValue = v;
+                                  });
+                                },
                                 onChanged: (v) {
+                                  setState(() {
+                                    _dragSliderValue = v;
+                                  });
+                                },
+                                onChangeEnd: (v) {
                                   _player.seek(Duration(seconds: v.toInt()));
+                                  setState(() {
+                                    _isDraggingSlider = false;
+                                  });
                                 },
                               ),
                             ),
