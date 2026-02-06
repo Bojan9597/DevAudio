@@ -230,21 +230,29 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
 
     final newBooks = data['books'] as List<Book>;
     final hasMore = data['hasMore'] as bool;
-    final isSubscribed = data['isSubscribed'] as bool;
+    // isSubscribed can now be null if there was an error fetching
+    final isSubscribed = data['isSubscribed'] as bool?;
     final savedOffset = data['savedOffset'] as int? ?? 0;
 
     setState(() {
       print(
-        "Reels Refresh: isSubscribed=$isSubscribed, newBooks=${newBooks.length}",
+        "Reels Refresh: isSubscribed=$isSubscribed, newBooks=${newBooks.length}, currentState=$_isSubscribed",
       );
-      // CRITICAL: Never downgrade subscription status from true to false.
-      // If we're already subscribed, stay subscribed even if this call returns false
-      // (which could happen due to parsing errors or stale data).
-      // Only update to false if this is the initial load.
-      if (useInitialOffset || isSubscribed) {
-        _isSubscribed = isSubscribed;
+
+      // CRITICAL: Handle subscription status carefully to prevent downgrades
+      if (isSubscribed != null) {
+        // We have a definitive answer from the server
+        if (useInitialOffset) {
+          // Initial load: trust the server
+          _isSubscribed = isSubscribed;
+        } else if (isSubscribed && !_isSubscribed) {
+          // Upgrade from false to true is always allowed
+          _isSubscribed = true;
+        }
+        // If isSubscribed is false during pagination but we're already subscribed,
+        // IGNORE IT - this prevents false downgrades
       }
-      // If already subscribed and this call says false, ignore it
+      // If isSubscribed is null (error case), preserve existing state
 
       if (useInitialOffset) {
         _books.clear();

@@ -326,8 +326,10 @@ class BookRepository {
       }
     } catch (e) {
       print('Error fetching reels data: $e');
+      // CRITICAL: Return null for isSubscribed so caller can preserve existing state
+      // This prevents subscription downgrade on network errors
       return {
-        'isSubscribed': false,
+        'isSubscribed': null,
         'books': <Book>[],
         'hasMore': false,
         'savedOffset': 0,
