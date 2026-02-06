@@ -326,7 +326,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
     return SliverToBoxAdapter(
       child: SizedBox(
-        height: 296,
+        height:
+            310, // Increased from 296 to accommodate multi-line titles and tags
         child: _isLoading && _books.isEmpty
             ? const Center(child: CircularProgressIndicator())
             : ListView.builder(
@@ -356,7 +357,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
     return SliverToBoxAdapter(
       child: SizedBox(
-        height: 336,
+        height: 350, // Increased from 336 to prevent overflow
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -515,7 +516,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       sliver: SliverGrid(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 0.6,
+          childAspectRatio:
+              0.58, // Adjusted from 0.6 to provide more vertical space
           crossAxisSpacing: 12,
           mainAxisSpacing: 0,
         ),
