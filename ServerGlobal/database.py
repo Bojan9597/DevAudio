@@ -18,24 +18,29 @@ def get_connection_pool():
     """Get or create the global connection pool."""
     global _connection_pool
     if _connection_pool is None or _connection_pool.closed:
-        # Determine host based on platform
+        # Determine host and port based on platform
+        # Windows: direct to PG (dev), Linux: through PgBouncer (prod)
         if platform.system() == "Windows":
             host = "hope.global.ba"
+            port = 5432
+            options = '-c statement_timeout=3000'
         else:
             host = "localhost"
+            port = 6432  # PgBouncer
+            options = ''  # PgBouncer handles timeouts (query_timeout=3)
 
         _connection_pool = pool.ThreadedConnectionPool(
             minconn=2,      # Minimum connections to keep open
-            maxconn=50,     # Production pool size - PostgreSQL default max is 100
+            maxconn=18,     # 18 per worker x 5 workers = 90, leaving 10 for system/admin
             host=os.getenv("DB_HOST", host),
             database=os.getenv("DB_NAME", "velorusb_echoHistory"),
             user=os.getenv("DB_USER", "velorusb_echoHistoryAdmin"),
             password=os.getenv("DB_PASSWORD", "Pijanista123!"),
-            port=os.getenv("DB_PORT", 5432),
-            connect_timeout=3,  # 3 second timeout for establishing connection
-            options='-c statement_timeout=3000'  # 3 second query timeout (in ms)
+            port=int(os.getenv("DB_PORT", port)),
+            connect_timeout=3,
+            options=options
         )
-        print("Database connection pool created (maxconn=5, timeout=3s)")
+        print(f"Database connection pool created (maxconn=18, port={port})")
     return _connection_pool
 
 
@@ -54,7 +59,7 @@ def cleanup_stale_connections():
                 try:
                     p = get_connection_pool()
                     if not conn.closed:
-                        conn.reset()
+                        conn.rollback()
                     p.putconn(conn)
                 except Exception as e:
                     print(f"Error force-releasing connection: {e}")
@@ -140,9 +145,10 @@ class Database:
                     _active_connections.pop(self._conn_id, None)
             
             try:
-                # Reset connection state before returning to pool
+                # Rollback any uncommitted state before returning to pool
+                # (rollback instead of reset for PgBouncer transaction pooling compatibility)
                 if not self.connection.closed:
-                    self.connection.reset()
+                    self.connection.rollback()
                 p = get_connection_pool()
                 p.putconn(self.connection)
             except Exception as e:
