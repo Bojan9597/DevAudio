@@ -376,7 +376,7 @@ class AppLocalizationsSr extends AppLocalizations {
   String get planYearlyTitle => 'Godišnje';
 
   @override
-  String get planYearlySubtitle => 'Uštedite 33% - Najbolja vrednost!';
+  String get planYearlySubtitle => 'Uštedite 33%';
 
   @override
   String get planLifetimeTitle => 'Doživotno';

@@ -779,7 +779,7 @@ abstract class AppLocalizations {
   /// No description provided for @planYearlySubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Save 33% - Best value!'**
+  /// **'Save 33%'**
   String get planYearlySubtitle;
 
   /// No description provided for @planLifetimeTitle.

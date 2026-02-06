@@ -53,7 +53,9 @@ class _SubscriptionBottomSheetState extends State<SubscriptionBottomSheet> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(AppLocalizations.of(context)!.subscriptionActivatedSuccess),
+              content: Text(
+                AppLocalizations.of(context)!.subscriptionActivatedSuccess,
+              ),
               backgroundColor: Colors.green,
             ),
           );
@@ -62,7 +64,10 @@ class _SubscriptionBottomSheetState extends State<SubscriptionBottomSheet> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['error'] ?? AppLocalizations.of(context)!.subscriptionFailed),
+              content: Text(
+                result['error'] ??
+                    AppLocalizations.of(context)!.subscriptionFailed,
+              ),
               backgroundColor: Colors.red,
             ),
           );
@@ -241,21 +246,20 @@ class _SubscriptionBottomSheetState extends State<SubscriptionBottomSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
                     children: [
-                      Flexible(
-                        child: Text(
-                          details['title']!,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: theme.textTheme.bodyLarge?.color,
-                          ),
-                          overflow: TextOverflow.ellipsis,
+                      Text(
+                        details['title']!,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: theme.textTheme.bodyLarge?.color,
                         ),
                       ),
-                      if (isYearly) ...[
-                        const SizedBox(width: 8),
+                      if (isYearly)
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
@@ -274,7 +278,6 @@ class _SubscriptionBottomSheetState extends State<SubscriptionBottomSheet> {
                             ),
                           ),
                         ),
-                      ],
                     ],
                   ),
                   const SizedBox(height: 2),
