@@ -120,6 +120,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   final GlobalKey _speedButtonKey = GlobalKey();
   final GlobalKey _moreButtonKey = GlobalKey();
 
+  late PageController _pageController;
   Timer? _progressTimer;
 
   // Background Music - managed by audioHandler for background continuity
@@ -132,6 +133,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     WidgetsBinding.instance.addObserver(this);
     _currentBook = widget.book;
     _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
     _isFavorite = widget.book.isFavorite;
     _initializeAll();
   }
@@ -308,8 +310,6 @@ class _PlayerScreenState extends State<PlayerScreen>
     if (_currentIndex >= widget.playlist!.length - 1) {
       // End of playlist - save progress and stay on last track
       _saveProgressImmediately();
-      // Don't close the player, allow user to replay or navigate manually
-      // User can manually go back or close the player
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -321,10 +321,10 @@ class _PlayerScreenState extends State<PlayerScreen>
       return;
     }
 
-    setState(() {
-      _currentIndex++;
-      _loadTrackAtIndex(_currentIndex);
-    });
+    _pageController.nextPage(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
   /// Save progress immediately (used when book finishes)
@@ -355,18 +355,19 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   void _playPrevious() {
     if (widget.playlist == null || _currentIndex <= 0) return;
-    setState(() {
-      _currentIndex--;
-      _loadTrackAtIndex(_currentIndex);
-    });
+    _pageController.previousPage(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
-  void _loadTrackAtIndex(int index) {
+  Book _getBookAtIndex(int index) {
+    if (widget.playlist == null) return widget.book;
+
     final track = widget.playlist![index];
     final trackUrl = _getAbsoluteUrl(track['file_path']);
 
-    // Create new book object for state
-    _currentBook = Book(
+    return Book(
       id: widget.book.id, // Same parent ID
       title: track['title'],
       author: widget.book.author,
@@ -379,12 +380,22 @@ class _PlayerScreenState extends State<PlayerScreen>
       price: widget.book.price,
       postedByUserId: widget.book.postedByUserId,
       isPlaylist: false,
-      isFavorite:
-          _isFavorite, // Preserve current favorite state (or logic for track fav?)
-      // Actually favorite is on the PARENT usually for audiobooks.
-      // If tracks can be favorite individually, we'd look it up.
-      // Assuming Album-level favorite for now.
+      isFavorite: _isFavorite,
     );
+  }
+
+  void _onPageChanged(int index) {
+    if (widget.playlist != null && index != _currentIndex) {
+      setState(() {
+        _currentIndex = index;
+        _loadTrackAtIndex(_currentIndex);
+      });
+    }
+  }
+
+  void _loadTrackAtIndex(int index) {
+    // Create new book object for state
+    _currentBook = _getBookAtIndex(index);
 
     _initPlayer();
     // Ownership check shouldn't change for same album, but download status might.
@@ -785,6 +796,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     _progressTimer?.cancel();
     _playerStateSubscription?.cancel();
     _saveProgress(); // Try to save on exit
+    _pageController.dispose();
     // Don't dispose handler players - they're global (both main and background music)
     super.dispose();
   }
@@ -1200,6 +1212,23 @@ class _PlayerScreenState extends State<PlayerScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
+      body: PageView.builder(
+        controller: _pageController,
+        onPageChanged: _onPageChanged,
+        itemCount: widget.playlist?.length ?? 1,
+        itemBuilder: (context, index) {
+          return _buildPlayerPage(context, index);
+        },
+      ),
+    );
+  }
+
+  Widget _buildPlayerPage(BuildContext context, int index) {
+    final localBook = _getBookAtIndex(index);
+    final isCurrent = index == _currentIndex;
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
       body: Stack(
         children: [
           Container(
@@ -1342,10 +1371,10 @@ class _PlayerScreenState extends State<PlayerScreen>
                           ],
                         ),
                         child:
-                            (_currentBook.coverUrl != null &&
-                                _currentBook.coverUrl!.isNotEmpty)
+                            (localBook.coverUrl != null &&
+                                localBook.coverUrl!.isNotEmpty)
                             ? Image.network(
-                                _currentBook.absoluteCoverUrl,
+                                localBook.absoluteCoverUrl,
                                 headers: ApiConstants.imageHeaders,
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) =>
@@ -1375,7 +1404,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                           height: 40,
                           alignment: Alignment.center,
                           child: _ScrollingText(
-                            text: _currentBook.title,
+                            text: localBook.title,
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 24,
@@ -1385,7 +1414,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          _currentBook.author,
+                          localBook.author,
                           style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 18,
@@ -1401,202 +1430,296 @@ class _PlayerScreenState extends State<PlayerScreen>
                   const SizedBox(height: 30),
 
                   // Progress Bar (StreamBuilder)
-                  StreamBuilder<Duration>(
-                    stream: _player.positionStream,
-                    builder: (context, snapshot) {
-                      final position = snapshot.data ?? Duration.zero;
-                      final duration = _player.duration ?? Duration.zero;
+                  if (isCurrent)
+                    StreamBuilder<Duration>(
+                      stream: _player.positionStream,
+                      builder: (context, snapshot) {
+                        final position = snapshot.data ?? Duration.zero;
+                        final duration = _player.duration ?? Duration.zero;
 
-                      // Limit slider value to duration
-                      double sliderValue = position.inSeconds.toDouble();
-                      double maxDuration = duration.inSeconds.toDouble();
-                      if (sliderValue > maxDuration) sliderValue = maxDuration;
-                      if (maxDuration <= 0)
-                        maxDuration = 1; // Avoid div by zero
+                        // Limit slider value to duration
+                        double sliderValue = position.inSeconds.toDouble();
+                        double maxDuration = duration.inSeconds.toDouble();
+                        if (sliderValue > maxDuration)
+                          sliderValue = maxDuration;
+                        if (maxDuration <= 0)
+                          maxDuration = 1; // Avoid div by zero
 
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Column(
-                          children: [
-                            SliderTheme(
-                              data: SliderTheme.of(context).copyWith(
-                                activeTrackColor: Colors.white,
-                                inactiveTrackColor: Colors.white24,
-                                thumbColor: Colors.white,
-                                overlayColor: Colors.white.withOpacity(0.2),
-                                trackHeight: 4,
-                                thumbShape: const RoundSliderThumbShape(
-                                  enabledThumbRadius: 6,
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Column(
+                            children: [
+                              SliderTheme(
+                                data: SliderTheme.of(context).copyWith(
+                                  activeTrackColor: Colors.white,
+                                  inactiveTrackColor: Colors.white24,
+                                  thumbColor: Colors.white,
+                                  overlayColor: Colors.white.withOpacity(0.2),
+                                  trackHeight: 4,
+                                  thumbShape: const RoundSliderThumbShape(
+                                    enabledThumbRadius: 6,
+                                  ),
+                                ),
+                                child: Slider(
+                                  value: _isDraggingSlider
+                                      ? _dragSliderValue
+                                      : sliderValue,
+                                  min: 0.0,
+                                  max: maxDuration,
+                                  onChangeStart: (v) {
+                                    setState(() {
+                                      _isDraggingSlider = true;
+                                      _dragSliderValue = v;
+                                    });
+                                  },
+                                  onChanged: (v) {
+                                    setState(() {
+                                      _dragSliderValue = v;
+                                    });
+                                  },
+                                  onChangeEnd: (v) {
+                                    _player.seek(Duration(seconds: v.toInt()));
+                                    setState(() {
+                                      _isDraggingSlider = false;
+                                    });
+                                  },
                                 ),
                               ),
-                              child: Slider(
-                                value: _isDraggingSlider
-                                    ? _dragSliderValue
-                                    : sliderValue,
-                                min: 0.0,
-                                max: maxDuration,
-                                onChangeStart: (v) {
-                                  setState(() {
-                                    _isDraggingSlider = true;
-                                    _dragSliderValue = v;
-                                  });
-                                },
-                                onChanged: (v) {
-                                  setState(() {
-                                    _dragSliderValue = v;
-                                  });
-                                },
-                                onChangeEnd: (v) {
-                                  _player.seek(Duration(seconds: v.toInt()));
-                                  setState(() {
-                                    _isDraggingSlider = false;
-                                  });
-                                },
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      _formatTime(position),
+                                      style: const TextStyle(
+                                        color: Colors.white54,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    Text(
+                                      _formatTime(duration - position),
+                                      style: const TextStyle(
+                                        color: Colors.white54,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        children: [
+                          SliderTheme(
+                            data: SliderTheme.of(context).copyWith(
+                              activeTrackColor: Colors.white,
+                              inactiveTrackColor: Colors.white24,
+                              thumbColor: Colors.white,
+                              trackHeight: 4,
+                              thumbShape: const RoundSliderThumbShape(
+                                enabledThumbRadius: 6,
                               ),
                             ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                              ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    _formatTime(position),
-                                    style: const TextStyle(
-                                      color: Colors.white54,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  Text(
-                                    _formatTime(duration - position),
-                                    style: const TextStyle(
-                                      color: Colors.white54,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                            child: Slider(
+                              value: 0,
+                              min: 0.0,
+                              max: 100.0,
+                              onChanged: null,
                             ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  "00:00",
+                                  style: const TextStyle(
+                                    color: Colors.white54,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                Text(
+                                  "00:00",
+                                  style: const TextStyle(
+                                    color: Colors.white54,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
 
                   const SizedBox(height: 20),
 
                   // Playback Controls
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.replay_10),
-                        color: Colors.white,
-                        iconSize: 32,
-                        onPressed: () {
-                          _player.seek(
-                            _player.position - const Duration(seconds: 10),
-                          );
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.skip_previous),
-                        color: Colors.white,
-                        iconSize: 40,
-                        onPressed: _playPrevious,
-                      ),
-
-                      // Play/Pause Button
-                      StreamBuilder<PlayerState>(
-                        stream: _player.playerStateStream,
-                        builder: (context, snapshot) {
-                          final playerState = snapshot.data;
-                          final processingState = playerState?.processingState;
-                          final playing = playerState?.playing;
-
-                          if (processingState == ProcessingState.loading ||
-                              processingState == ProcessingState.buffering) {
-                            return Container(
-                              width: 70,
-                              height: 70,
-                              padding: const EdgeInsets.all(20),
-                              child: const CircularProgressIndicator(
-                                color: Colors.white,
-                              ),
+                  if (isCurrent)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.replay_10),
+                          color: Colors.white,
+                          iconSize: 32,
+                          onPressed: () {
+                            _player.seek(
+                              _player.position - const Duration(seconds: 10),
                             );
-                          } else if (playing != true) {
-                            return GestureDetector(
-                              onTap: () async {
-                                // Check if user has access before playing
-                                if (!_isPurchased) {
-                                  _showSubscriptionSheet();
-                                  return;
-                                }
-                                // Check if player has audio loaded
-                                if (_player.processingState ==
-                                    ProcessingState.idle) {
-                                  // No audio loaded - initialize player (will stream)
-                                  _initPlayer();
-                                  return;
-                                }
-                                // Player ready, just play
-                                _player.play();
-                              },
-                              child: Container(
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.skip_previous),
+                          color: Colors.white,
+                          iconSize: 40,
+                          onPressed: _playPrevious,
+                        ),
+
+                        // Play/Pause Button
+                        StreamBuilder<PlayerState>(
+                          stream: _player.playerStateStream,
+                          builder: (context, snapshot) {
+                            final playerState = snapshot.data;
+                            final processingState =
+                                playerState?.processingState;
+                            final playing = playerState?.playing;
+
+                            if (processingState == ProcessingState.loading ||
+                                processingState == ProcessingState.buffering) {
+                              return Container(
                                 width: 70,
                                 height: 70,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.play_arrow,
+                                padding: const EdgeInsets.all(20),
+                                child: const CircularProgressIndicator(
                                   color: Colors.white,
-                                  size: 40,
                                 ),
-                              ),
-                            );
-                          } else {
-                            return GestureDetector(
-                              onTap: _player.pause,
-                              child: Container(
-                                width: 70,
-                                height: 70,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  shape: BoxShape.circle,
+                              );
+                            } else if (playing != true) {
+                              return GestureDetector(
+                                onTap: () async {
+                                  // Check if user has access before playing
+                                  if (!_isPurchased) {
+                                    _showSubscriptionSheet();
+                                    return;
+                                  }
+                                  // Check if player has audio loaded
+                                  if (_player.processingState ==
+                                      ProcessingState.idle) {
+                                    // No audio loaded - initialize player (will stream)
+                                    _initPlayer();
+                                    return;
+                                  }
+                                  // Player ready, just play
+                                  _player.play();
+                                },
+                                child: Container(
+                                  width: 70,
+                                  height: 70,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.play_arrow,
+                                    color: Colors.white,
+                                    size: 40,
+                                  ),
                                 ),
-                                child: const Icon(
-                                  Icons.pause,
-                                  color: Colors.white,
-                                  size: 40,
+                              );
+                            } else {
+                              return GestureDetector(
+                                onTap: _player.pause,
+                                child: Container(
+                                  width: 70,
+                                  height: 70,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.pause,
+                                    color: Colors.white,
+                                    size: 40,
+                                  ),
                                 ),
-                              ),
-                            );
-                          }
-                        },
-                      ),
+                              );
+                            }
+                          },
+                        ),
 
-                      IconButton(
-                        icon: const Icon(Icons.skip_next),
-                        color: Colors.white,
-                        iconSize: 40,
-                        onPressed: _playNext,
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.forward_30),
-                        color: Colors.white,
-                        iconSize: 32,
-                        onPressed: () {
-                          _player.seek(
-                            _player.position + const Duration(seconds: 30),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
+                        IconButton(
+                          icon: const Icon(Icons.skip_next),
+                          color: Colors.white,
+                          iconSize: 40,
+                          onPressed: _playNext,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.forward_30),
+                          color: Colors.white,
+                          iconSize: 32,
+                          onPressed: () {
+                            _player.seek(
+                              _player.position + const Duration(seconds: 30),
+                            );
+                          },
+                        ),
+                      ],
+                    )
+                  else
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        const IconButton(
+                          icon: Icon(Icons.replay_10),
+                          color: Colors.white54,
+                          iconSize: 32,
+                          onPressed: null,
+                        ),
+                        const IconButton(
+                          icon: Icon(Icons.skip_previous),
+                          color: Colors.white54,
+                          iconSize: 40,
+                          onPressed: null,
+                        ),
+                        Container(
+                          width: 70,
+                          height: 70,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.play_arrow,
+                            color: Colors.white54,
+                            size: 40,
+                          ),
+                        ),
+                        const IconButton(
+                          icon: Icon(Icons.skip_next),
+                          color: Colors.white54,
+                          iconSize: 40,
+                          onPressed: null,
+                        ),
+                        const IconButton(
+                          icon: Icon(Icons.forward_30),
+                          color: Colors.white54,
+                          iconSize: 32,
+                          onPressed: null,
+                        ),
+                      ],
+                    ),
 
                   const SizedBox(height: 30),
 
@@ -1610,24 +1733,24 @@ class _PlayerScreenState extends State<PlayerScreen>
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         GestureDetector(
-                          key: _speedButtonKey,
-                          onTap: _showSpeedMenu,
+                          key: isCurrent ? _speedButtonKey : null,
+                          onTap: isCurrent ? _showSpeedMenu : null,
                           child: _buildBottomOption(
                             Icons.speed,
                             '${_playbackSpeed.toString().replaceAll(RegExp(r"([.]*0)(?!.*\d)"), "")}x',
-                            false,
+                            isCurrent && _playbackSpeed != 1.0,
                           ),
                         ),
                         GestureDetector(
-                          onTap: _toggleSleepMode,
+                          onTap: isCurrent ? _toggleSleepMode : null,
                           child: _buildBottomOption(
                             Icons.bedtime,
                             '',
-                            _isSleepTimerActive,
+                            isCurrent && _isSleepTimerActive,
                           ),
                         ),
                         GestureDetector(
-                          onTap: _toggleFavorite,
+                          onTap: isCurrent ? _toggleFavorite : null,
                           child: _buildBottomOption(
                             _isFavorite
                                 ? Icons.favorite
@@ -1637,8 +1760,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                           ),
                         ),
                         GestureDetector(
-                          key: _moreButtonKey,
-                          onTap: _showMoreMenu,
+                          key: isCurrent ? _moreButtonKey : null,
+                          onTap: isCurrent ? _showMoreMenu : null,
                           child: _buildBottomOption(Icons.more_vert, '', false),
                         ),
                       ],
