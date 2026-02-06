@@ -6,6 +6,8 @@ import '../l10n/generated/app_localizations.dart';
 import '../screens/playlist_screen.dart';
 import '../states/layout_state.dart';
 import '../services/auth_service.dart';
+import '../repositories/book_repository.dart';
+import '../screens/login_screen.dart';
 
 class CategoryDetailsView extends StatefulWidget {
   final String categoryId;
@@ -27,13 +29,24 @@ class CategoryDetailsView extends StatefulWidget {
 
 class _CategoryDetailsViewState extends State<CategoryDetailsView> {
   final TextEditingController _searchController = TextEditingController();
+  final BookRepository _bookRepository = BookRepository();
   String _searchQuery = '';
   bool _isSubscribed = false;
+  late List<Book> _localBooks;
 
   @override
   void initState() {
     super.initState();
+    _localBooks = List.from(widget.books);
     _checkSubscriptionStatus();
+  }
+
+  @override
+  void didUpdateWidget(CategoryDetailsView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.books != oldWidget.books) {
+      _localBooks = List.from(widget.books);
+    }
   }
 
   Future<void> _checkSubscriptionStatus() async {
@@ -78,8 +91,8 @@ class _CategoryDetailsViewState extends State<CategoryDetailsView> {
 
   @override
   Widget build(BuildContext context) {
-    // Filter books locally
-    final filteredBooks = widget.books.where((book) {
+    // Filter books locally using our internal mutable list
+    final filteredBooks = _localBooks.where((book) {
       if (_searchQuery.isEmpty) return true;
       final q = _searchQuery.toLowerCase();
       return book.title.toLowerCase().contains(q) ||
@@ -190,7 +203,9 @@ class _CategoryDetailsViewState extends State<CategoryDetailsView> {
             Text(
               _searchQuery.isNotEmpty
                   ? AppLocalizations.of(context)!.noBooksFound
-                  : AppLocalizations.of(context)!.noBooksFoundInCategory(widget.categoryTitle),
+                  : AppLocalizations.of(
+                      context,
+                    )!.noBooksFoundInCategory(widget.categoryTitle),
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 18,
@@ -314,54 +329,60 @@ class _CategoryDetailsViewState extends State<CategoryDetailsView> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Flexible(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ...List.generate(5, (index) {
-                      if (index < book.averageRating.floor()) {
-                        return const Icon(
-                          Icons.star,
-                          size: 16,
-                          color: Colors.amber,
-                        );
-                      } else if (index < book.averageRating) {
-                        return const Icon(
-                          Icons.star_half,
-                          size: 16,
-                          color: Colors.amber,
-                        );
-                      } else {
-                        return const Icon(
-                          Icons.star_border,
-                          size: 16,
-                          color: Colors.amber,
-                        );
-                      }
-                    }),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        book.ratingCount > 0
-                            ? _formatCount(book.ratingCount)
-                            : AppLocalizations.of(context)!.rate,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: textColor.withOpacity(0.6),
+                child: GestureDetector(
+                  onTap: () => _showRatingDialog(book),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ...List.generate(5, (index) {
+                        if (index < book.averageRating.floor()) {
+                          return const Icon(
+                            Icons.star,
+                            size: 16,
+                            color: Colors.amber,
+                          );
+                        } else if (index < book.averageRating) {
+                          return const Icon(
+                            Icons.star_half,
+                            size: 16,
+                            color: Colors.amber,
+                          );
+                        } else {
+                          return const Icon(
+                            Icons.star_border,
+                            size: 16,
+                            color: Colors.amber,
+                          );
+                        }
+                      }),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          book.ratingCount > 0
+                              ? _formatCount(book.ratingCount)
+                              : AppLocalizations.of(context)!.rate,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: textColor.withOpacity(0.6),
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.only(right: 4.0),
-                child: Icon(
-                  book.isFavorite ? Icons.favorite : Icons.favorite_border,
-                  color: book.isFavorite
-                      ? Colors.red
-                      : textColor.withOpacity(0.5),
-                  size: 20,
+              GestureDetector(
+                onTap: () => _toggleFavorite(book),
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 4.0),
+                  child: Icon(
+                    book.isFavorite ? Icons.favorite : Icons.favorite_border,
+                    color: book.isFavorite
+                        ? Colors.red
+                        : textColor.withOpacity(0.5),
+                    size: 20,
+                  ),
                 ),
               ),
             ],
@@ -419,5 +440,209 @@ class _CategoryDetailsViewState extends State<CategoryDetailsView> {
         onTap: () => _openPlayer(book),
       ),
     );
+  }
+
+  // --- Rating & Favorite Logic ---
+
+  Future<void> _toggleFavorite(Book book) async {
+    final userId = await AuthService().getCurrentUserId();
+    if (userId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.pleaseLogInToManageFavorites,
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    // Optimistic update
+    setState(() {
+      _updateBookInLists(book.id);
+    });
+
+    final success = await _bookRepository.toggleFavorite(
+      userId,
+      book.id,
+      book.isFavorite, // Pass OLD state (logic: if isFavorite, we delete)
+    );
+
+    if (!success && mounted) {
+      // Revert if failed
+      setState(() {
+        _updateBookInLists(book.id);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.failedToUpdateFavorite),
+        ),
+      );
+    }
+  }
+
+  void _updateBookInLists(String bookId) {
+    final index = _localBooks.indexWhere((b) => b.id == bookId);
+    if (index != -1) {
+      _localBooks[index] = _localBooks[index].copyWith(
+        isFavorite: !_localBooks[index].isFavorite,
+      );
+    }
+  }
+
+  void _showRatingDialog(Book book) {
+    int selectedStars = 0;
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Colors.brown.shade900, Colors.black],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      AppLocalizations.of(context)!.rateThisBook,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      book.title,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: List.generate(5, (index) {
+                        return GestureDetector(
+                          onTap: () =>
+                              setDialogState(() => selectedStars = index + 1),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Icon(
+                              index < selectedStars
+                                  ? Icons.star
+                                  : Icons.star_border,
+                              color: Colors.amber,
+                              size: 36,
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          child: Text(
+                            AppLocalizations.of(context)!.cancel,
+                            style: const TextStyle(color: Colors.white54),
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: selectedStars > 0
+                              ? () async {
+                                  Navigator.of(ctx).pop();
+                                  await _submitRating(book, selectedStars);
+                                }
+                              : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.amber,
+                            foregroundColor: Colors.black,
+                          ),
+                          child: Text(AppLocalizations.of(context)!.submit),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _submitRating(Book book, int stars) async {
+    final userId = await AuthService().getCurrentUserId();
+    if (userId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.pleaseLogInToRateBooks),
+          ),
+        );
+        // Navigate to login screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
+      }
+      return;
+    }
+
+    final result = await _bookRepository.rateBook(userId, book.id, stars);
+
+    if (!result.containsKey('error') && mounted) {
+      final newAvg = result['averageRating'] as double;
+      final newCount = result['ratingCount'] as int;
+      setState(() {
+        _updateBookRating(book.id, newAvg, newCount);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${AppLocalizations.of(context)!.thanksForRating(stars)} ⭐',
+          ),
+        ),
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            (result['error'] as String?) ??
+                AppLocalizations.of(context)!.failedToSubmitRating,
+          ),
+        ),
+      );
+    }
+  }
+
+  void _updateBookRating(String bookId, double averageRating, int ratingCount) {
+    final index = _localBooks.indexWhere((b) => b.id == bookId);
+    if (index != -1) {
+      _localBooks[index] = _localBooks[index].copyWith(
+        averageRating: averageRating,
+        ratingCount: ratingCount,
+      );
+    }
   }
 }
