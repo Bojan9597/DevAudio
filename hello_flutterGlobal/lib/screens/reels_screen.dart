@@ -366,19 +366,24 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? Colors.black : Theme.of(context).scaffoldBackgroundColor;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final subtitleColor = isDark ? Colors.white54 : Colors.black45;
+
     if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+      return Scaffold(
+        backgroundColor: bgColor,
+        body: Center(child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary)),
       );
     }
 
     if (!_isSubscribed) {
       return Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: bgColor,
         body: RefreshIndicator(
           onRefresh: _onRefresh,
-          color: Colors.black,
+          color: isDark ? Colors.black : Colors.white,
           backgroundColor: Colors.amber,
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -390,9 +395,9 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.lock_outline,
-                          color: Colors.white54,
+                          color: subtitleColor,
                           size: 64,
                         ),
                         const SizedBox(height: 16),
@@ -400,9 +405,9 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                           AppLocalizations.of(
                             context,
                           )!.subscribeToListenToReels,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 18,
-                            color: Colors.white,
+                            color: textColor,
                           ),
                         ),
                         const SizedBox(height: 24),
@@ -454,10 +459,10 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
 
     if (_books.isEmpty) {
       return Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: bgColor,
         body: RefreshIndicator(
           onRefresh: _onRefresh,
-          color: Colors.black,
+          color: isDark ? Colors.black : Colors.white,
           backgroundColor: Colors.amber,
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -468,7 +473,7 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                   child: Center(
                     child: Text(
                       AppLocalizations.of(context)!.noReelsAvailable,
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: textColor),
                     ),
                   ),
                 ),
@@ -480,10 +485,10 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
     }
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: bgColor,
       body: RefreshIndicator(
         onRefresh: _onRefresh,
-        color: Colors.black,
+        color: isDark ? Colors.black : Colors.white,
         backgroundColor: Colors.amber,
         child: PageView.builder(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -532,6 +537,17 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
         ? track['title']
         : (track as dynamic).title ?? book.title;
     final coverUrl = book.absoluteCoverUrl;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final subtitleColor = isDark ? Colors.white70 : Colors.black54;
+    final timeColor = isDark ? Colors.white54 : Colors.black45;
+    final overlayColor = isDark
+        ? Colors.black.withOpacity(0.6)
+        : Colors.white.withOpacity(0.7);
+    final sliderActiveColor = isDark ? Colors.white : Theme.of(context).colorScheme.primary;
+    final sliderInactiveColor = isDark ? Colors.white24 : Colors.black12;
+    final iconColor = isDark ? Colors.white : Colors.black87;
+    final placeholderColor = isDark ? Colors.grey[800] : Colors.grey[300];
 
     return Stack(
       fit: StackFit.expand,
@@ -542,10 +558,10 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
             coverUrl,
             headers: ApiConstants.imageHeaders,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(color: Colors.grey[900]),
+            errorBuilder: (_, __, ___) => Container(color: placeholderColor),
           ),
         Container(
-          color: Colors.black.withOpacity(0.6), // Dim overlay
+          color: overlayColor,
         ),
 
         // Content
@@ -568,11 +584,11 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                       height: artSize,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
-                        boxShadow: const [
+                        boxShadow: [
                           BoxShadow(
-                            color: Colors.black45,
+                            color: isDark ? Colors.black45 : Colors.black26,
                             blurRadius: 20,
-                            offset: Offset(0, 10),
+                            offset: const Offset(0, 10),
                           ),
                         ],
                         image: coverUrl.isNotEmpty
@@ -584,12 +600,12 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                                 fit: BoxFit.cover,
                               )
                             : null,
-                        color: Colors.grey[800],
+                        color: placeholderColor,
                       ),
                       child: coverUrl.isEmpty
                           ? Icon(
                               Icons.music_note,
-                              color: Colors.white,
+                              color: iconColor,
                               size: artSize * 0.4,
                             )
                           : null,
@@ -598,8 +614,8 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                     // Track Info
                     Text(
                       book.title,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: textColor,
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         fontFamily: 'Outfit', // Fallback if not available
@@ -611,8 +627,8 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                     const SizedBox(height: 8),
                     Text(
                       book.author,
-                      style: const TextStyle(
-                        color: Colors.white70,
+                      style: TextStyle(
+                        color: subtitleColor,
                         fontSize: 16,
                       ),
                       textAlign: TextAlign.center,
@@ -627,9 +643,9 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                           enabledThumbRadius: 6,
                         ),
                         trackHeight: 4,
-                        activeTrackColor: Colors.white,
-                        inactiveTrackColor: Colors.white24,
-                        thumbColor: Colors.white,
+                        activeTrackColor: sliderActiveColor,
+                        inactiveTrackColor: sliderInactiveColor,
+                        thumbColor: sliderActiveColor,
                       ),
                       child: Slider(
                         value: (_position.inSeconds.toDouble()).clamp(
@@ -656,15 +672,15 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                         children: [
                           Text(
                             _formatDuration(_position),
-                            style: const TextStyle(
-                              color: Colors.white54,
+                            style: TextStyle(
+                              color: timeColor,
                               fontSize: 12,
                             ),
                           ),
                           Text(
                             _formatDuration(_duration),
-                            style: const TextStyle(
-                              color: Colors.white54,
+                            style: TextStyle(
+                              color: timeColor,
                               fontSize: 12,
                             ),
                           ),
@@ -677,9 +693,9 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         IconButton(
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.skip_previous,
-                            color: Colors.white,
+                            color: iconColor,
                             size: 36,
                           ),
                           onPressed: () {
@@ -699,7 +715,7 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                             _isPlaying
                                 ? Icons.pause_circle_filled
                                 : Icons.play_circle_filled,
-                            color: Colors.white,
+                            color: iconColor,
                             size: 80,
                           ),
                           onPressed: () {
@@ -713,9 +729,9 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                         ),
                         const SizedBox(width: 24),
                         IconButton(
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.skip_next,
-                            color: Colors.white,
+                            color: iconColor,
                             size: 36,
                           ),
                           onPressed: () {
@@ -743,23 +759,23 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
                               color: _selectedBgMusicId != null
-                                  ? Colors.blueAccent.withOpacity(0.4)
-                                  : Colors.white.withOpacity(0.1),
+                                  ? Colors.blueAccent.withOpacity(isDark ? 0.4 : 0.2)
+                                  : (isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.06)),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.music_note,
-                                  color: Colors.white,
+                                  color: iconColor,
                                   size: 20,
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
                                   AppLocalizations.of(context)!.backgroundMusic,
-                                  style: const TextStyle(
-                                    color: Colors.white,
+                                  style: TextStyle(
+                                    color: textColor,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -846,12 +862,18 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final sheetBg = isDark ? Colors.grey[900]! : Colors.white;
+        final sheetTextColor = isDark ? Colors.white : Colors.black87;
+        final sheetSubtitleColor = isDark ? Colors.white70 : Colors.black54;
+        final dropdownBg = isDark ? Colors.grey[800] : Colors.grey[100];
+
         return StatefulBuilder(
           builder: (context, setModalState) {
             return Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.grey[900],
+                color: sheetBg,
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(20),
                 ),
@@ -862,8 +884,8 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                 children: [
                   Text(
                     AppLocalizations.of(context)!.backgroundMusic,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: sheetTextColor,
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
@@ -873,7 +895,7 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                   // Volume Slider
                   Row(
                     children: [
-                      const Icon(Icons.volume_down, color: Colors.white70),
+                      Icon(Icons.volume_down, color: sheetSubtitleColor),
                       Expanded(
                         child: Slider(
                           value: _bgVolume,
@@ -884,7 +906,7 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                           },
                         ),
                       ),
-                      const Icon(Icons.volume_up, color: Colors.white70),
+                      Icon(Icons.volume_up, color: sheetSubtitleColor),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -893,17 +915,17 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                   DropdownButton<int?>(
                     value: _selectedBgMusicId,
                     isExpanded: true,
-                    dropdownColor: Colors.grey[800],
-                    style: const TextStyle(color: Colors.white),
+                    dropdownColor: dropdownBg,
+                    style: TextStyle(color: sheetTextColor),
                     items: [
-                      const DropdownMenuItem<int?>(
+                      DropdownMenuItem<int?>(
                         value: null,
-                        child: Text('None'),
+                        child: Text(AppLocalizations.of(context)!.none),
                       ),
                       ..._bgMusicList.map(
                         (bg) => DropdownMenuItem<int>(
                           value: bg['id'] as int,
-                          child: Text(bg['title'] ?? 'Unknown'),
+                          child: Text(bg['title'] ?? AppLocalizations.of(context)!.unknown),
                         ),
                       ),
                     ],
