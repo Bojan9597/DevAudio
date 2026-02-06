@@ -1,0 +1,200 @@
+Feb 06 17:49:58 srv1330114 gunicorn[61699]: [DEBUG] Request: GET https://echo.velorus.ba/profile-init/50
+Feb 06 17:49:58 srv1330114 gunicorn[61699]: [DEBUG] JSON Body: None
+Feb 06 17:49:58 srv1330114 gunicorn[61699]: [DEBUG] Response Status: 200 OK
+Feb 06 17:49:58 srv1330114 gunicorn[61699]: ==================================================
+Feb 06 17:50:00 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:00 srv1330114 gunicorn[61698]: [DEBUG] Request: POST https://echo.velorus.ba/logout
+Feb 06 17:50:00 srv1330114 gunicorn[61698]: [DEBUG] JSON Body: {'refresh_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo1MCwic2Vzc2lvbl9pZCI6IjdhZTgzNzlmLThmYWYtNDI2Yy04M2E4LWNjNmVhM2M0ZjE5YyIsImV4cCI6MTc3Mjk5MjE5MiwiaWF0IjoxNzcwNDAwMTkyLCJ0eXBlIjoicmVmcmVzaCJ9.IeKubrvxnMcSkFl6yjmPvVTLFEgtBqw6LgZ1pZnryNc'}
+Feb 06 17:50:00 srv1330114 gunicorn[61698]: Session removed for token ...gZ1pZnryNc
+Feb 06 17:50:00 srv1330114 gunicorn[61698]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:00 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:00 srv1330114 gunicorn[61699]: ==================================================
+Feb 06 17:50:00 srv1330114 gunicorn[61699]: [DEBUG] Request: GET https://echo.velorus.ba/discover?page=1&limit=10
+Feb 06 17:50:00 srv1330114 gunicorn[61699]: [DEBUG] JSON Body: None
+Feb 06 17:50:00 srv1330114 gunicorn[61699]: [TIMING] get_discover: total=3ms
+Feb 06 17:50:00 srv1330114 gunicorn[61699]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:00 srv1330114 gunicorn[61699]: ==================================================
+Feb 06 17:50:03 srv1330114 gunicorn[61699]: ==================================================
+Feb 06 17:50:03 srv1330114 gunicorn[61699]: [DEBUG] Request: POST https://echo.velorus.ba/google-login
+Feb 06 17:50:03 srv1330114 gunicorn[61699]: [DEBUG] JSON Body: {'email': 'bojanpejic9597@gmail.com', 'name': 'Bojan Pejic'}
+Feb 06 17:50:03 srv1330114 gunicorn[61699]: Session stored for user 54
+Feb 06 17:50:03 srv1330114 gunicorn[61699]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:03 srv1330114 gunicorn[61699]: ==================================================
+Feb 06 17:50:04 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:04 srv1330114 gunicorn[61698]: [DEBUG] Request: GET https://echo.velorus.ba/discover?page=1&limit=10&user_id=54
+Feb 06 17:50:04 srv1330114 gunicorn[61698]: [DEBUG] JSON Body: None
+Feb 06 17:50:04 srv1330114 gunicorn[61698]: [TIMING] get_discover: total=5ms
+Feb 06 17:50:04 srv1330114 gunicorn[61698]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:04 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:06 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:06 srv1330114 gunicorn[61698]: [DEBUG] Request: GET https://echo.velorus.ba/discover?page=1&limit=10&user_id=54
+Feb 06 17:50:06 srv1330114 gunicorn[61698]: [DEBUG] JSON Body: None
+Feb 06 17:50:06 srv1330114 gunicorn[61698]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:06 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:07 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:07 srv1330114 gunicorn[61698]: [DEBUG] Request: GET https://echo.velorus.ba/profile-init/54
+Feb 06 17:50:07 srv1330114 gunicorn[61698]: [DEBUG] JSON Body: None
+Feb 06 17:50:07 srv1330114 gunicorn[61698]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:07 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:10 srv1330114 gunicorn[61699]: ==================================================
+Feb 06 17:50:10 srv1330114 gunicorn[61699]: [DEBUG] Request: POST https://echo.velorus.ba/logout
+Feb 06 17:50:10 srv1330114 gunicorn[61699]: [DEBUG] JSON Body: {'refresh_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo1NCwic2Vzc2lvbl9pZCI6IjI0ZTRkMWU1LTBmOTEtNDBlYi1hNDc2LWUwZThmZDJmOTJmMiIsImV4cCI6MTc3Mjk5MjIwMywiaWF0IjoxNzcwNDAwMjAzLCJ0eXBlIjoicmVmcmVzaCJ9.Lr9MJgHz0_xCEPIR5mCnftDa1urRmKhlE9KkMLJtWR8'}
+Feb 06 17:50:10 srv1330114 gunicorn[61699]: Session removed for token ...9KkMLJtWR8
+Feb 06 17:50:10 srv1330114 gunicorn[61699]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:10 srv1330114 gunicorn[61699]: ==================================================
+Feb 06 17:50:10 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:10 srv1330114 gunicorn[61698]: [DEBUG] Request: GET https://echo.velorus.ba/discover?page=1&limit=10
+Feb 06 17:50:10 srv1330114 gunicorn[61698]: [DEBUG] JSON Body: None
+Feb 06 17:50:10 srv1330114 gunicorn[61698]: [TIMING] get_discover: total=3ms
+Feb 06 17:50:10 srv1330114 gunicorn[61698]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:10 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:14 srv1330114 gunicorn[61699]: ==================================================
+Feb 06 17:50:14 srv1330114 gunicorn[61699]: [DEBUG] Request: POST https://echo.velorus.ba/google-login
+Feb 06 17:50:14 srv1330114 gunicorn[61699]: [DEBUG] JSON Body: {'email': 'bojanpejic997@gmail.com', 'name': 'Bojan Pejic'}
+Feb 06 17:50:14 srv1330114 gunicorn[61699]: Invalidating old session for user 49
+Feb 06 17:50:14 srv1330114 gunicorn[61699]: Session stored for user 49
+Feb 06 17:50:14 srv1330114 gunicorn[61699]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:14 srv1330114 gunicorn[61699]: ==================================================
+Feb 06 17:50:14 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:14 srv1330114 gunicorn[61698]: [DEBUG] Request: GET https://echo.velorus.ba/discover?page=1&limit=10&user_id=49
+Feb 06 17:50:14 srv1330114 gunicorn[61698]: [DEBUG] JSON Body: None
+Feb 06 17:50:14 srv1330114 gunicorn[61698]: [TIMING] get_discover: total=5ms
+Feb 06 17:50:14 srv1330114 gunicorn[61698]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:14 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:15 srv1330114 gunicorn[61699]: ==================================================
+Feb 06 17:50:15 srv1330114 gunicorn[61699]: [DEBUG] Request: GET https://echo.velorus.ba/background-music
+Feb 06 17:50:15 srv1330114 gunicorn[61699]: [DEBUG] JSON Body: None
+Feb 06 17:50:15 srv1330114 gunicorn[61699]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:15 srv1330114 gunicorn[61699]: ==================================================
+Feb 06 17:50:15 srv1330114 gunicorn[61699]: ==================================================
+Feb 06 17:50:15 srv1330114 gunicorn[61699]: [DEBUG] Request: GET https://echo.velorus.ba/reels?user_id=49&offset=0&limit=5
+Feb 06 17:50:15 srv1330114 gunicorn[61699]: [DEBUG] JSON Body: None
+Feb 06 17:50:15 srv1330114 gunicorn[61699]: [REELS] user_id=49, is_subscribed=True
+Feb 06 17:50:15 srv1330114 gunicorn[61699]: [REELS_OPT] IDs: [55, 56, 57, 58, 59, 60] -> Tracks: 22
+Feb 06 17:50:15 srv1330114 gunicorn[61699]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:15 srv1330114 gunicorn[61699]: ==================================================
+Feb 06 17:50:15 srv1330114 gunicorn[61699]: ==================================================
+Feb 06 17:50:15 srv1330114 gunicorn[61699]: [DEBUG] Request: GET https://echo.velorus.ba/book-status/49/60
+Feb 06 17:50:15 srv1330114 gunicorn[61699]: [DEBUG] JSON Body: None
+Feb 06 17:50:15 srv1330114 gunicorn[61699]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:15 srv1330114 gunicorn[61699]: ==================================================
+Feb 06 17:50:15 srv1330114 gunicorn[61699]: ==================================================
+Feb 06 17:50:15 srv1330114 gunicorn[61699]: [DEBUG] Request: POST https://echo.velorus.ba/reels/offset
+Feb 06 17:50:15 srv1330114 gunicorn[61699]: [DEBUG] JSON Body: {'user_id': 49, 'offset': 35}
+Feb 06 17:50:15 srv1330114 gunicorn[61699]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:15 srv1330114 gunicorn[61699]: ==================================================
+Feb 06 17:50:22 srv1330114 gunicorn[61699]: ==================================================
+Feb 06 17:50:22 srv1330114 gunicorn[61699]: [DEBUG] Request: GET https://echo.velorus.ba/book-status/49/59
+Feb 06 17:50:22 srv1330114 gunicorn[61699]: [DEBUG] JSON Body: None
+Feb 06 17:50:22 srv1330114 gunicorn[61699]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:22 srv1330114 gunicorn[61699]: ==================================================
+Feb 06 17:50:23 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:23 srv1330114 gunicorn[61698]: [DEBUG] Request: GET https://echo.velorus.ba/book-status/49/58
+Feb 06 17:50:23 srv1330114 gunicorn[61698]: [DEBUG] JSON Body: None
+Feb 06 17:50:23 srv1330114 gunicorn[61698]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:23 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:24 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:24 srv1330114 gunicorn[61698]: [DEBUG] Request: GET https://echo.velorus.ba/book-status/49/57
+Feb 06 17:50:24 srv1330114 gunicorn[61698]: [DEBUG] JSON Body: None
+Feb 06 17:50:24 srv1330114 gunicorn[61678]: ==================================================
+Feb 06 17:50:24 srv1330114 gunicorn[61678]: [DEBUG] Request: GET https://echo.velorus.ba/reels?user_id=49&offset=35&limit=5
+Feb 06 17:50:24 srv1330114 gunicorn[61678]: [DEBUG] JSON Body: None
+Feb 06 17:50:24 srv1330114 gunicorn[61698]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:24 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:24 srv1330114 gunicorn[61678]: Database connection pool created (maxconn=40, port=6432)
+Feb 06 17:50:24 srv1330114 gunicorn[61678]: [REELS] user_id=49, is_subscribed=True
+Feb 06 17:50:24 srv1330114 gunicorn[61678]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:24 srv1330114 gunicorn[61678]: ==================================================
+Feb 06 17:50:38 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:38 srv1330114 gunicorn[61698]: [DEBUG] Request: POST https://echo.velorus.ba/logout
+Feb 06 17:50:38 srv1330114 gunicorn[61698]: [DEBUG] JSON Body: {'refresh_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo0OSwic2Vzc2lvbl9pZCI6IjgwMmZiOTk2LTliYTItNGFhNS1hZGZiLTc1N2RkYjEwYjgzZCIsImV4cCI6MTc3Mjk5MjIxNCwiaWF0IjoxNzcwNDAwMjE0LCJ0eXBlIjoicmVmcmVzaCJ9.B0LQSaR-H-nYE1mawIhKEInUWgyx4mB-TvZvtQopN1Q'}
+Feb 06 17:50:38 srv1330114 gunicorn[61698]: Session removed for token ...vZvtQopN1Q
+Feb 06 17:50:38 srv1330114 gunicorn[61698]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:38 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:38 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:38 srv1330114 gunicorn[61698]: [DEBUG] Request: GET https://echo.velorus.ba/discover?page=1&limit=10
+Feb 06 17:50:38 srv1330114 gunicorn[61698]: [DEBUG] JSON Body: None
+Feb 06 17:50:38 srv1330114 gunicorn[61698]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:38 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:43 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:43 srv1330114 gunicorn[61698]: [DEBUG] Request: POST https://echo.velorus.ba/google-login
+Feb 06 17:50:43 srv1330114 gunicorn[61698]: [DEBUG] JSON Body: {'email': 'bojanpejic997@gmail.com', 'name': 'Bojan Pejic'}
+Feb 06 17:50:43 srv1330114 gunicorn[61698]: Session stored for user 49
+Feb 06 17:50:43 srv1330114 gunicorn[61698]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:43 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:44 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:44 srv1330114 gunicorn[61698]: [DEBUG] Request: GET https://echo.velorus.ba/library?user_id=49
+Feb 06 17:50:44 srv1330114 gunicorn[61698]: [DEBUG] JSON Body: None
+Feb 06 17:50:44 srv1330114 gunicorn[61699]: ==================================================
+Feb 06 17:50:44 srv1330114 gunicorn[61699]: [DEBUG] Request: GET https://echo.velorus.ba/discover?page=1&limit=10&user_id=49
+Feb 06 17:50:44 srv1330114 gunicorn[61699]: [DEBUG] JSON Body: None
+Feb 06 17:50:44 srv1330114 gunicorn[61698]: [TIMING] get_library: total=4ms
+Feb 06 17:50:44 srv1330114 gunicorn[61698]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:44 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:44 srv1330114 gunicorn[61699]: [TIMING] get_discover: total=6ms
+Feb 06 17:50:44 srv1330114 gunicorn[61699]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:44 srv1330114 gunicorn[61699]: ==================================================
+Feb 06 17:50:45 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:45 srv1330114 gunicorn[61698]: [DEBUG] Request: GET https://echo.velorus.ba/profile-init/49
+Feb 06 17:50:45 srv1330114 gunicorn[61698]: [DEBUG] JSON Body: None
+Feb 06 17:50:45 srv1330114 gunicorn[61698]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:45 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:48 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:48 srv1330114 gunicorn[61698]: [DEBUG] Request: GET https://echo.velorus.ba/reels?user_id=49&offset=0&limit=5
+Feb 06 17:50:48 srv1330114 gunicorn[61698]: [DEBUG] JSON Body: None
+Feb 06 17:50:48 srv1330114 gunicorn[61698]: [REELS] user_id=49, is_subscribed=True
+Feb 06 17:50:48 srv1330114 gunicorn[61698]: [REELS_OPT] IDs: [55, 56, 57, 58, 59, 60] -> Tracks: 22
+Feb 06 17:50:48 srv1330114 gunicorn[61698]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:48 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:48 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:48 srv1330114 gunicorn[61698]: [DEBUG] Request: POST https://echo.velorus.ba/reels/offset
+Feb 06 17:50:48 srv1330114 gunicorn[61698]: [DEBUG] JSON Body: {'user_id': 49, 'offset': 5}
+Feb 06 17:50:48 srv1330114 gunicorn[61698]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:48 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:48 srv1330114 gunicorn[61678]: ==================================================
+Feb 06 17:50:48 srv1330114 gunicorn[61678]: [DEBUG] Request: GET https://echo.velorus.ba/book-status/49/60
+Feb 06 17:50:48 srv1330114 gunicorn[61678]: [DEBUG] JSON Body: None
+Feb 06 17:50:48 srv1330114 gunicorn[61678]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:48 srv1330114 gunicorn[61678]: ==================================================
+Feb 06 17:50:49 srv1330114 gunicorn[61697]: ==================================================
+Feb 06 17:50:49 srv1330114 gunicorn[61697]: [DEBUG] Request: GET https://echo.velorus.ba/book-status/49/59
+Feb 06 17:50:49 srv1330114 gunicorn[61697]: [DEBUG] JSON Body: None
+Feb 06 17:50:49 srv1330114 gunicorn[61697]: Database connection pool created (maxconn=40, port=6432)
+Feb 06 17:50:49 srv1330114 gunicorn[61697]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:49 srv1330114 gunicorn[61697]: ==================================================
+Feb 06 17:50:50 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:50 srv1330114 gunicorn[61698]: [DEBUG] Request: GET https://echo.velorus.ba/book-status/49/58
+Feb 06 17:50:50 srv1330114 gunicorn[61698]: [DEBUG] JSON Body: None
+Feb 06 17:50:50 srv1330114 gunicorn[61698]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:50 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:50:51 srv1330114 gunicorn[61699]: ==================================================
+Feb 06 17:50:51 srv1330114 gunicorn[61699]: [DEBUG] Request: GET https://echo.velorus.ba/book-status/49/57
+Feb 06 17:50:51 srv1330114 gunicorn[61699]: [DEBUG] JSON Body: None
+Feb 06 17:50:51 srv1330114 gunicorn[61699]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:51 srv1330114 gunicorn[61699]: ==================================================
+Feb 06 17:50:51 srv1330114 gunicorn[61700]: ==================================================
+Feb 06 17:50:51 srv1330114 gunicorn[61700]: [DEBUG] Request: GET https://echo.velorus.ba/reels?user_id=49&offset=5&limit=5
+Feb 06 17:50:51 srv1330114 gunicorn[61700]: [DEBUG] JSON Body: None
+Feb 06 17:50:51 srv1330114 gunicorn[61700]: Database connection pool created (maxconn=40, port=6432)
+Feb 06 17:50:51 srv1330114 gunicorn[61700]: [REELS] user_id=49, is_subscribed=True
+Feb 06 17:50:51 srv1330114 gunicorn[61700]: [REELS_OPT] IDs: [50, 51, 52, 53, 54, 55] -> Tracks: 18
+Feb 06 17:50:51 srv1330114 gunicorn[61700]: [DEBUG] Response Status: 200 OK
+Feb 06 17:50:51 srv1330114 gunicorn[61700]: ==================================================
+Feb 06 17:51:27 srv1330114 gunicorn[61699]: ==================================================
+Feb 06 17:51:27 srv1330114 gunicorn[61699]: [DEBUG] Request: GET https://echo.velorus.ba/discover?page=1&limit=10&user_id=49
+Feb 06 17:51:27 srv1330114 gunicorn[61699]: [DEBUG] JSON Body: None
+Feb 06 17:51:27 srv1330114 gunicorn[61699]: [TIMING] get_discover: total=5ms
+Feb 06 17:51:27 srv1330114 gunicorn[61699]: [DEBUG] Response Status: 200 OK
+Feb 06 17:51:27 srv1330114 gunicorn[61699]: ==================================================
+Feb 06 17:51:30 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:51:30 srv1330114 gunicorn[61698]: [DEBUG] Request: GET https://echo.velorus.ba/discover?page=1&limit=10&user_id=49
+Feb 06 17:51:30 srv1330114 gunicorn[61698]: [DEBUG] JSON Body: None
+Feb 06 17:51:30 srv1330114 gunicorn[61698]: [TIMING] get_discover: total=5ms
+Feb 06 17:51:30 srv1330114 gunicorn[61698]: [DEBUG] Response Status: 200 OK
+Feb 06 17:51:30 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:51:31 srv1330114 gunicorn[61698]: ==================================================
+Feb 06 17:51:31 srv1330114 gunicorn[61698]: [DEBUG] Request: GET https://echo.velorus.ba/library?user_id=49
+Feb 06 17:51:31 srv1330114 gunicorn[61698]: [DEBUG] JSON Body: None
+Feb 06 17:51:31 srv1330114 gunicorn[61698]: [TIMING] get_library: total=2ms
+Feb 06 17:51:31 srv1330114 gunicorn[61698]: [DEBUG] Response Status: 200 OK
+Feb 06 17:51:31 srv1330114 gunicorn[61698]: ==================================================

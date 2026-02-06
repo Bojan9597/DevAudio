@@ -91,8 +91,9 @@ class BookRepository {
     int page = 1,
     int limit = 10,
   }) async {
+    int? userId;
     try {
-      final userId = await _authService.getCurrentUserId();
+      userId = await _authService.getCurrentUserId();
 
       final uri = Uri.parse('${ApiConstants.baseUrl}/discover').replace(
         queryParameters: {
@@ -135,7 +136,8 @@ class BookRepository {
 
         // Cache for offline
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('cached_discover', response.body);
+        final cacheKey = 'cached_discover_${userId ?? "anon"}';
+        await prefs.setString(cacheKey, response.body);
 
         return {
           'newReleases': newReleases,
@@ -152,7 +154,8 @@ class BookRepository {
     } catch (e) {
       print('Error fetching discover data: $e. Trying cache...');
       final prefs = await SharedPreferences.getInstance();
-      final cachedData = prefs.getString('cached_discover');
+      final cacheKey = 'cached_discover_${userId ?? "anon"}';
+      final cachedData = prefs.getString(cacheKey);
       if (cachedData != null) {
         final Map<String, dynamic> data = json.decode(cachedData);
         return {
@@ -302,9 +305,15 @@ class BookRepository {
         final isSubscribed = data['isSubscribed'] as bool? ?? false;
         final hasMore = data['hasMore'] as bool? ?? false;
         final savedOffset = data['savedOffset'] as int? ?? 0;
-        final booksList = (data['books'] as List? ?? [])
-            .map((json) => Book.fromJson(json))
-            .toList();
+        final booksList = <Book>[];
+        for (final bookJson in (data['books'] as List? ?? [])) {
+          try {
+            booksList.add(Book.fromJson(bookJson));
+          } catch (e) {
+            print('Skipping malformed book: $e');
+            continue;
+          }
+        }
 
         return {
           'isSubscribed': isSubscribed,

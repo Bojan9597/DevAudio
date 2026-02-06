@@ -50,9 +50,10 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
   Duration _duration = Duration.zero;
 
   int _offset = 0;
-  final int _limit = 5;
+  final int _limit = 100; // Fetch all books at once for simpler infinite loop
   bool _isFetchingMore = false;
   bool _backendHasMore = true;
+  int _savedBookIndex = 0; // Saved position from server
 
   // Background Music State
   // Background Music is managed by Global Handler
@@ -190,8 +191,17 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
     if (mounted) {
       setState(() => _isLoading = false);
       if (_isSubscribed && _books.isNotEmpty) {
-        _playTrack(0, 0);
-        _updateBgMusicForBook(0);
+        // Start at saved position (clamped to valid range)
+        final startIndex = _savedBookIndex.clamp(0, _books.length - 1);
+        _currentBookIndex = startIndex;
+
+        // Jump to saved position
+        if (startIndex > 0) {
+          _verticalController.jumpToPage(startIndex);
+        }
+
+        _playTrack(startIndex, 0);
+        _updateBgMusicForBook(startIndex);
       }
     }
   }
@@ -200,7 +210,8 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
     try {
       final userId = await _authService.getCurrentUserId();
       if (userId != null) {
-        await _bookRepository.updateReelsOffset(_offset);
+        // Save current BOOK INDEX (not offset) so user resumes here
+        await _bookRepository.updateReelsOffset(_currentBookIndex);
       }
     } catch (e) {
       print("Error saving offset: $e");
@@ -226,7 +237,14 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
       print(
         "Reels Refresh: isSubscribed=$isSubscribed, newBooks=${newBooks.length}",
       );
-      _isSubscribed = isSubscribed;
+      // CRITICAL: Never downgrade subscription status from true to false.
+      // If we're already subscribed, stay subscribed even if this call returns false
+      // (which could happen due to parsing errors or stale data).
+      // Only update to false if this is the initial load.
+      if (useInitialOffset || isSubscribed) {
+        _isSubscribed = isSubscribed;
+      }
+      // If already subscribed and this call says false, ignore it
 
       if (useInitialOffset) {
         _books.clear();
@@ -237,6 +255,11 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
 
       _books.addAll(newBooks);
       _backendHasMore = hasMore;
+
+      // Store saved position from server for initial jump
+      if (useInitialOffset) {
+        _savedBookIndex = savedOffset;
+      }
     });
 
     _saveOffset();
@@ -282,20 +305,12 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
           curve: Curves.easeInOut,
         );
       } else {
-        // Loop back to the beginning
-        // We reached the end of the list.
-        // Wait, if infinite scroll is working, we should have loaded more by now.
-        // If we really are at the end, try loading more immediately?
-        // Or if loop logic failed?
-        _loadMoreReels().then((_) {
-          if (_currentBookIndex < _books.length - 1) {
-            _verticalController.animateToPage(
-              _currentBookIndex + 1,
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.easeInOut,
-            );
-          }
-        });
+        // Loop back to the FIRST book (infinite loop)
+        _verticalController.animateToPage(
+          0,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        );
       }
     }
   }

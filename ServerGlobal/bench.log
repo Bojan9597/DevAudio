@@ -1,0 +1,7 @@
+Generating benchmark token...
+ENDPOINT                       | RPS        | AVG LATENCY (ms)   | ERRORS    
+---------------------------------------------------------------------------
+/categories                    | 690.46     | 18.19              | 0         
+/discover                      | 697.08     | 18.59              | 0         
+/reels?user_id=45&limit=5      | 605.16     | 23.03              | 0         
+/books                         | 637.46     | 21.44              | 0         
