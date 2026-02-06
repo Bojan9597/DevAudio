@@ -30,8 +30,8 @@ def get_connection_pool():
             options = ''  # PgBouncer handles timeouts (query_timeout=3)
 
         _connection_pool = pool.ThreadedConnectionPool(
-            minconn=2,      # Minimum connections to keep open
-            maxconn=18,     # 18 per worker x 5 workers = 90, leaving 10 for system/admin
+            minconn=5,      # Minimum connections to keep open
+            maxconn=40,     # PgBouncer limits real PG connections to 80, app pool can be larger
             host=os.getenv("DB_HOST", host),
             database=os.getenv("DB_NAME", "velorusb_echoHistory"),
             user=os.getenv("DB_USER", "velorusb_echoHistoryAdmin"),
@@ -40,7 +40,7 @@ def get_connection_pool():
             connect_timeout=3,
             options=options
         )
-        print(f"Database connection pool created (maxconn=18, port={port})")
+        print(f"Database connection pool created (maxconn=40, port={port})")
     return _connection_pool
 
 

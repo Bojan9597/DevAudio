@@ -1,0 +1,20 @@
+Feb 06 16:47:07 srv1330114 gunicorn[57006]: [DEBUG] Request: GET https://echo.velorus.ba/profile-init/49
+Feb 06 16:47:41 srv1330114 gunicorn[57007]: [DEBUG] Request: POST https://echo.velorus.ba/upload-profile-picture
+Feb 06 16:47:41 srv1330114 gunicorn[57007]: INFO:R2:[R2] Starting upload to profilePictures/bojanpejic997gmail.com_1770396461.jpg (type: image/jpeg)
+Feb 06 16:48:32 srv1330114 gunicorn[57006]: [DEBUG] Request: GET https://echo.velorus.ba/profile-init/49
+Feb 06 16:48:42 srv1330114 gunicorn[57006]: [DEBUG] Request: POST https://echo.velorus.ba/upload-profile-picture
+Feb 06 16:48:42 srv1330114 gunicorn[57006]: INFO:R2:[R2] Starting upload to profilePictures/bojanpejic997gmail.com_1770396522.jpg (type: image/jpeg)
+Feb 06 16:50:46 srv1330114 gunicorn[57345]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+Feb 06 16:50:46 srv1330114 gunicorn[57345]: [R2] Using Public Domain: https://media.velorus.ba
+Feb 06 16:50:47 srv1330114 gunicorn[57347]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+Feb 06 16:50:47 srv1330114 gunicorn[57347]: [R2] Using Public Domain: https://media.velorus.ba
+Feb 06 16:50:48 srv1330114 gunicorn[57345]: [DEBUG] Request: GET https://echo.velorus.ba/profile-init/45
+Feb 06 16:50:55 srv1330114 gunicorn[57347]: [DEBUG] Request: POST https://echo.velorus.ba/upload-profile-picture
+Feb 06 16:50:55 srv1330114 gunicorn[57347]: INFO:R2:[R2] Starting upload to profilePictures/bojanpejic97gmail.com_1770396655.jpg (type: image/jpeg)
+Feb 06 16:51:28 srv1330114 gunicorn[57343]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+Feb 06 16:51:28 srv1330114 gunicorn[57343]: [R2] Using Public Domain: https://media.velorus.ba
+Feb 06 16:51:29 srv1330114 gunicorn[57346]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+Feb 06 16:51:29 srv1330114 gunicorn[57346]: [R2] Using Public Domain: https://media.velorus.ba
+Feb 06 16:51:30 srv1330114 gunicorn[57344]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+Feb 06 16:51:30 srv1330114 gunicorn[57344]: [R2] Using Public Domain: https://media.velorus.ba
+Feb 06 16:51:31 srv1330114 gunicorn[57343]: [DEBUG] Request: GET https://echo.velorus.ba/profile-init/45

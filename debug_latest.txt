@@ -1,0 +1,25 @@
+Feb 06 16:42:17 srv1330114 gunicorn[56728]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+Feb 06 16:42:17 srv1330114 gunicorn[56728]: [R2] Using Public Domain: https://media.velorus.ba
+Feb 06 16:42:20 srv1330114 gunicorn[56729]: [DEBUG] Request: GET https://echo.velorus.ba/profile-init/45
+Feb 06 16:44:30 srv1330114 gunicorn[56726]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+Feb 06 16:44:30 srv1330114 gunicorn[56726]: [R2] Using Public Domain: https://media.velorus.ba
+Feb 06 16:44:30 srv1330114 gunicorn[56727]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+Feb 06 16:44:30 srv1330114 gunicorn[56727]: [R2] Using Public Domain: https://media.velorus.ba
+Feb 06 16:44:57 srv1330114 gunicorn[57005]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+Feb 06 16:44:57 srv1330114 gunicorn[57005]: [R2] Using Public Domain: https://media.velorus.ba
+Feb 06 16:44:57 srv1330114 gunicorn[57005]: [DEBUG] Request: POST https://echo.velorus.ba/upload-profile-picture
+Feb 06 16:44:58 srv1330114 gunicorn[57005]: INFO:R2:[R2] Starting upload to profilePictures/bojanpejic97gmail.com_1770396298.jpg (type: image/jpeg)
+Feb 06 16:45:08 srv1330114 gunicorn[57009]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+Feb 06 16:45:08 srv1330114 gunicorn[57009]: [R2] Using Public Domain: https://media.velorus.ba
+Feb 06 16:45:10 srv1330114 gunicorn[57008]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+Feb 06 16:45:10 srv1330114 gunicorn[57008]: [R2] Using Public Domain: https://media.velorus.ba
+Feb 06 16:45:11 srv1330114 gunicorn[57007]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+Feb 06 16:45:11 srv1330114 gunicorn[57007]: [R2] Using Public Domain: https://media.velorus.ba
+Feb 06 16:45:18 srv1330114 gunicorn[57009]: [DEBUG] Request: GET https://echo.velorus.ba/profile-init/45
+Feb 06 16:45:22 srv1330114 gunicorn[57008]: [DEBUG] Request: POST https://echo.velorus.ba/upload-profile-picture
+Feb 06 16:45:22 srv1330114 gunicorn[57008]: INFO:R2:[R2] Starting upload to profilePictures/bojanpejic97gmail.com_1770396322.jpg (type: image/jpeg)
+Feb 06 16:45:39 srv1330114 gunicorn[57006]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+Feb 06 16:45:39 srv1330114 gunicorn[57006]: [R2] Using Public Domain: https://media.velorus.ba
+Feb 06 16:45:39 srv1330114 gunicorn[57006]: [DEBUG] Request: GET https://echo.velorus.ba/profile-init/49
+Feb 06 16:45:42 srv1330114 gunicorn[57009]: [DEBUG] Request: POST https://echo.velorus.ba/upload-profile-picture
+Feb 06 16:45:42 srv1330114 gunicorn[57009]: INFO:R2:[R2] Starting upload to profilePictures/bojanpejic997gmail.com_1770396342.jpg (type: image/jpeg)

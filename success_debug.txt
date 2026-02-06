@@ -1,0 +1,34 @@
+Feb 06 17:02:37 srv1330114 gunicorn[58090]: INFO:R2:[R2] Starting threaded upload to AudioBooks/1770397356_boardroom-groove-revolution.mp3 (type: audio/mpeg)
+Feb 06 17:02:37 srv1330114 gunicorn[58090]: INFO:R2:[R2-Thread] Thread started for AudioBooks/1770397356_boardroom-groove-revolution.mp3
+Feb 06 17:04:33 srv1330114 gunicorn[58088]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+Feb 06 17:04:33 srv1330114 gunicorn[58088]: [R2] Using Public Domain: https://media.velorus.ba
+Feb 06 17:05:42 srv1330114 gunicorn[58356]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+Feb 06 17:05:42 srv1330114 gunicorn[58356]: [R2] Using Public Domain: https://media.velorus.ba
+Feb 06 17:05:42 srv1330114 gunicorn[58356]: INFO:R2:[R2] Starting subprocess upload to AudioBooks/1770397542_boardroom-groove-revolution.mp3
+Feb 06 17:05:42 srv1330114 gunicorn[58356]: ERROR:R2:[R2] Unexpected error in upload wrapper: name 'sys' is not defined
+Feb 06 17:05:42 srv1330114 gunicorn[58356]: INFO:R2:[R2] Starting subprocess upload to BookCovers/1770397542_hq720.webp
+Feb 06 17:05:42 srv1330114 gunicorn[58356]: ERROR:R2:[R2] Unexpected error in upload wrapper: name 'sys' is not defined
+Feb 06 17:05:42 srv1330114 gunicorn[58356]: INFO:R2:[R2] Starting subprocess upload to AudioBooks/1770397542_book.pdf
+Feb 06 17:05:42 srv1330114 gunicorn[58356]: ERROR:R2:[R2] Unexpected error in upload wrapper: name 'sys' is not defined
+Feb 06 17:05:42 srv1330114 gunicorn[58359]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+Feb 06 17:05:42 srv1330114 gunicorn[58359]: [R2] Using Public Domain: https://media.velorus.ba
+Feb 06 17:05:47 srv1330114 gunicorn[58357]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+Feb 06 17:05:47 srv1330114 gunicorn[58357]: [R2] Using Public Domain: https://media.velorus.ba
+Feb 06 17:05:47 srv1330114 gunicorn[58355]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+Feb 06 17:05:47 srv1330114 gunicorn[58355]: [R2] Using Public Domain: https://media.velorus.ba
+Feb 06 17:05:53 srv1330114 gunicorn[58358]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+Feb 06 17:05:53 srv1330114 gunicorn[58358]: [R2] Using Public Domain: https://media.velorus.ba
+Feb 06 17:05:59 srv1330114 gunicorn[58359]: [DEBUG] Request: GET https://echo.velorus.ba/profile-init/45
+Feb 06 17:06:02 srv1330114 gunicorn[58357]: [DEBUG] Request: POST https://echo.velorus.ba/upload-profile-picture
+Feb 06 17:06:02 srv1330114 gunicorn[58357]: INFO:R2:[R2] Starting subprocess upload to profilePictures/bojanpejic97gmail.com_1770397562.jpg
+Feb 06 17:06:02 srv1330114 gunicorn[58357]: ERROR:R2:[R2] Unexpected error in upload wrapper: name 'sys' is not defined
+Feb 06 17:06:02 srv1330114 gunicorn[58357]: [PROFILE] Starting upload...
+Feb 06 17:06:02 srv1330114 gunicorn[58357]: [PROFILE] File type allowed: scaled_1000018557.jpg, user_id: 45
+Feb 06 17:06:02 srv1330114 gunicorn[58357]: [PROFILE] File size: 63389 bytes
+Feb 06 17:06:02 srv1330114 gunicorn[58357]: [PROFILE] Querying user email...
+Feb 06 17:06:02 srv1330114 gunicorn[58357]: [PROFILE] User email: bojanpejic97@gmail.com
+Feb 06 17:06:02 srv1330114 gunicorn[58357]: [PROFILE] New filename: bojanpejic97gmail.com_1770397562.jpg
+Feb 06 17:06:02 srv1330114 gunicorn[58357]: [PROFILE] Attempting R2 upload...
+Feb 06 17:06:02 srv1330114 gunicorn[58357]: [PROFILE] R2 failed after 0.00s, using local fallback...
+Feb 06 17:06:02 srv1330114 gunicorn[58357]: [PROFILE] Local fallback succeeded for user 45
+Feb 06 17:06:02 srv1330114 gunicorn[58357]: [DEBUG] Request: GET https://echo.velorus.ba/user/profile

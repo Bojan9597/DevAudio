@@ -1,0 +1,20 @@
+Feb 06 16:34:30 srv1330114 gunicorn[56363]: cannot import name 'ConnectTimeout' from 'botocore.exceptions' (/var/www/server_global/venv/lib/python3.12/site-packages/botocore/exceptions.py)
+Feb 06 16:34:30 srv1330114 gunicorn[56365]: [2026-02-06 16:34:30 +0000] [56365] [ERROR] Exception in worker process
+Feb 06 16:34:30 srv1330114 gunicorn[56365]:     from botocore.exceptions import ClientError, NoCredentialsError, ConnectTimeout, ReadTimeout
+Feb 06 16:34:30 srv1330114 gunicorn[56365]: ImportError: cannot import name 'ConnectTimeout' from 'botocore.exceptions' (/var/www/server_global/venv/lib/python3.12/site-packages/botocore/exceptions.py)
+Feb 06 16:34:30 srv1330114 gunicorn[56365]: cannot import name 'ConnectTimeout' from 'botocore.exceptions' (/var/www/server_global/venv/lib/python3.12/site-packages/botocore/exceptions.py)
+Feb 06 16:34:30 srv1330114 gunicorn[56366]: [2026-02-06 16:34:30 +0000] [56366] [ERROR] Exception in worker process
+Feb 06 16:34:30 srv1330114 gunicorn[56366]:     from botocore.exceptions import ClientError, NoCredentialsError, ConnectTimeout, ReadTimeout
+Feb 06 16:34:30 srv1330114 gunicorn[56366]: ImportError: cannot import name 'ConnectTimeout' from 'botocore.exceptions' (/var/www/server_global/venv/lib/python3.12/site-packages/botocore/exceptions.py)
+Feb 06 16:34:30 srv1330114 gunicorn[56366]: cannot import name 'ConnectTimeout' from 'botocore.exceptions' (/var/www/server_global/venv/lib/python3.12/site-packages/botocore/exceptions.py)
+Feb 06 16:34:30 srv1330114 gunicorn[56360]: [2026-02-06 16:34:30 +0000] [56360] [ERROR] Worker (pid:56363) exited with code 3.
+Feb 06 16:34:30 srv1330114 gunicorn[56367]: [2026-02-06 16:34:30 +0000] [56367] [ERROR] Exception in worker process
+Feb 06 16:34:30 srv1330114 gunicorn[56367]:     from botocore.exceptions import ClientError, NoCredentialsError, ConnectTimeout, ReadTimeout
+Feb 06 16:34:30 srv1330114 gunicorn[56367]: ImportError: cannot import name 'ConnectTimeout' from 'botocore.exceptions' (/var/www/server_global/venv/lib/python3.12/site-packages/botocore/exceptions.py)
+Feb 06 16:34:30 srv1330114 gunicorn[56367]: cannot import name 'ConnectTimeout' from 'botocore.exceptions' (/var/www/server_global/venv/lib/python3.12/site-packages/botocore/exceptions.py)
+Feb 06 16:34:30 srv1330114 gunicorn[56360]: [2026-02-06 16:34:30 +0000] [56360] [ERROR] Worker (pid:56366) exited with code 3.
+Feb 06 16:34:30 srv1330114 gunicorn[56360]:     raise HaltServer(reason, self.WORKER_BOOT_ERROR)
+Feb 06 16:34:30 srv1330114 gunicorn[56360]: gunicorn.errors.HaltServer: <HaltServer 'Worker failed to boot.' 3>
+Feb 06 16:34:30 srv1330114 gunicorn[56360]: During handling of the above exception, another exception occurred:
+Feb 06 16:34:30 srv1330114 gunicorn[56360]:     raise HaltServer(reason, self.WORKER_BOOT_ERROR)
+Feb 06 16:34:30 srv1330114 gunicorn[56360]: gunicorn.errors.HaltServer: <HaltServer 'Worker failed to boot.' 3>

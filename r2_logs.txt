@@ -1,0 +1,50 @@
+2026-02-06T15:47:03.590429+00:00 srv1330114 gunicorn[54026]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T15:47:03.619725+00:00 srv1330114 gunicorn[54027]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T15:47:03.619736+00:00 srv1330114 gunicorn[54027]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T15:48:11.507933+00:00 srv1330114 gunicorn[54382]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T15:48:11.507961+00:00 srv1330114 gunicorn[54382]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T15:48:11.595865+00:00 srv1330114 gunicorn[54385]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T15:48:11.595883+00:00 srv1330114 gunicorn[54385]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T15:48:11.612918+00:00 srv1330114 gunicorn[54383]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T15:48:11.612926+00:00 srv1330114 gunicorn[54383]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T15:48:11.649745+00:00 srv1330114 gunicorn[54384]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T15:48:11.649762+00:00 srv1330114 gunicorn[54384]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T15:48:11.689795+00:00 srv1330114 gunicorn[54386]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T15:48:11.689808+00:00 srv1330114 gunicorn[54386]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T15:48:19.910705+00:00 srv1330114 gunicorn[54513]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T15:48:19.910830+00:00 srv1330114 gunicorn[54513]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T15:52:25.262975+00:00 srv1330114 gunicorn[54514]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T15:52:25.263087+00:00 srv1330114 gunicorn[54514]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T15:52:25.264905+00:00 srv1330114 gunicorn[54515]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T15:52:25.265165+00:00 srv1330114 gunicorn[54515]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T15:52:25.267312+00:00 srv1330114 gunicorn[54512]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T15:52:25.267337+00:00 srv1330114 gunicorn[54512]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T15:52:25.270757+00:00 srv1330114 gunicorn[54511]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T15:52:25.270783+00:00 srv1330114 gunicorn[54511]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T16:01:36.887658+00:00 srv1330114 gunicorn[54595]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T16:01:36.887730+00:00 srv1330114 gunicorn[54595]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T16:03:01.350443+00:00 srv1330114 gunicorn[54606]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T16:03:01.350522+00:00 srv1330114 gunicorn[54606]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T16:07:44.143164+00:00 srv1330114 gunicorn[54638]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T16:07:44.143179+00:00 srv1330114 gunicorn[54638]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T16:09:44.789469+00:00 srv1330114 gunicorn[54724]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T16:09:44.789579+00:00 srv1330114 gunicorn[54724]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T16:09:46.198433+00:00 srv1330114 gunicorn[54726]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T16:09:46.198520+00:00 srv1330114 gunicorn[54726]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T16:10:40.236662+00:00 srv1330114 gunicorn[54725]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T16:10:40.236833+00:00 srv1330114 gunicorn[54725]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T16:12:42.865007+00:00 srv1330114 gunicorn[54723]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T16:12:42.865022+00:00 srv1330114 gunicorn[54723]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T16:12:42.950269+00:00 srv1330114 gunicorn[54722]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T16:12:42.950277+00:00 srv1330114 gunicorn[54722]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T16:15:42.212989+00:00 srv1330114 gunicorn[54909]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T16:15:42.213159+00:00 srv1330114 gunicorn[54909]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T16:15:43.209774+00:00 srv1330114 gunicorn[54911]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T16:15:43.209832+00:00 srv1330114 gunicorn[54911]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T16:22:27.300183+00:00 srv1330114 gunicorn[54911]: [PROFILE] Starting upload...
+2026-02-06T16:22:27.300198+00:00 srv1330114 gunicorn[54911]: [PROFILE] File type allowed: scaled_1000018561.jpg, user_id: 45
+2026-02-06T16:22:27.300209+00:00 srv1330114 gunicorn[54911]: [PROFILE] File size: 34738 bytes
+2026-02-06T16:22:27.300234+00:00 srv1330114 gunicorn[54911]: [PROFILE] Querying user email...
+2026-02-06T16:22:27.300252+00:00 srv1330114 gunicorn[54911]: [PROFILE] User email: bojanpejic97@gmail.com
+2026-02-06T16:22:27.300263+00:00 srv1330114 gunicorn[54911]: [PROFILE] New filename: bojanpejic97gmail.com_1770394647.jpg
+2026-02-06T16:22:27.300273+00:00 srv1330114 gunicorn[54911]: [PROFILE] Attempting R2 upload...

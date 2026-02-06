@@ -1,4 +1,24 @@
+from gevent import monkey
+monkey.patch_all()
+
 from flask import Flask, jsonify, request, send_from_directory, Response
+try:
+    import orjson
+    from flask.json.provider import DefaultJSONProvider
+    from decimal import Decimal
+    class OrjsonProvider(DefaultJSONProvider):
+        def dumps(self, obj, **kwargs):
+            return orjson.dumps(obj, default=self._default).decode()
+        def loads(self, s, **kwargs):
+            return orjson.loads(s)
+        @staticmethod
+        def _default(o):
+            if isinstance(o, Decimal):
+                return float(o)
+            raise TypeError(f"Type is not JSON serializable: {type(o)}")
+    _has_orjson = True
+except ImportError:
+    _has_orjson = False
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -66,6 +86,9 @@ def encrypt_file_data(data, key_base64):
     return data # Mock return to avoid crash if called, though it shouldn't be.
 
 app = Flask(__name__)
+if _has_orjson:
+    app.json_provider_class = OrjsonProvider
+    app.json = OrjsonProvider(app)
 # Enable CORS for all routes (for web clients if any, but we are restricting now)
 # We can keep CORS for development or specific origins, but the header check is stronger.
 CORS(app)
@@ -760,6 +783,9 @@ def uploaded_file(filename):
 @app.route('/upload-profile-picture', methods=['POST'])
 @jwt_required
 def upload_profile_picture():
+    """Upload user profile picture with R2 fallback to local storage."""
+    print(f"[PROFILE] Starting upload...")
+    
     user_id = request.form.get('user_id')
     if not user_id:
         return jsonify({"error": "User ID is required"}), 400
@@ -770,60 +796,81 @@ def upload_profile_picture():
     file = request.files['file']
     if file.filename == '':
         return jsonify({"error": "No selected file"}), 400
+    
+    # Check file type FIRST (don't seek yet)
+    if not (file and allowed_file(file.filename)):
+        return jsonify({"error": "File type not allowed (jpg, png, gif, webp)"}), 400
+    
+    print(f"[PROFILE] File type allowed: {file.filename}, user_id: {user_id}")
+    
+    # Now check file size (safe to seek after type check)
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)
+    print(f"[PROFILE] File size: {file_size} bytes")
+    
+    if file_size > 5 * 1024 * 1024:  # 5MB
+        return jsonify({"error": "File too large (max 5MB)"}), 413
+
+    db = Database()
+    if not db.connect():
+        print(f"[PROFILE] Database connection failed")
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        # 1. Get user email to name the file
+        print(f"[PROFILE] Querying user email...")
+        email_query = "SELECT email FROM users WHERE id = %s"
+        users = db.execute_query(email_query, (user_id,))
+        if not users:
+            return jsonify({"error": "User not found"}), 404
         
-    if file and allowed_file(file.filename):
-        db = Database()
-        if not db.connect():
-             return jsonify({"error": "Database connection failed"}), 500
+        user_email = users[0]['email']
+        print(f"[PROFILE] User email: {user_email}")
+        
+        # 2. Create filename from email + TIMESTAMP to bust cache
+        import time
+        timestamp = int(time.time())
+        file_ext = file.filename.rsplit('.', 1)[1].lower()
+        safe_email_name = secure_filename(user_email)
+        new_filename = f"{safe_email_name}_{timestamp}.{file_ext}"
+        r2_key = f"profilePictures/{new_filename}"
+        print(f"[PROFILE] New filename: {new_filename}")
 
-        try:
-            # 1. Get user email to name the file
-            email_query = "SELECT email FROM users WHERE id = %s"
-            users = db.execute_query(email_query, (user_id,))
-            if not users:
-                return jsonify({"error": "User not found"}), 404
-            
-            user_email = users[0]['email']
-            
-            # 2. Create filename from email + TIMESTAMP to bust cache
-            import time
-            timestamp = int(time.time())
-            file_ext = file.filename.rsplit('.', 1)[1].lower()
-            safe_email_name = secure_filename(user_email) # e.g. test_example_com
-            
-            # FORMAT: test_example_com_17099382.jpg
-            new_filename = f"{safe_email_name}_{timestamp}.{file_ext}"
+        # 3. Try R2 upload first with timeout (max 20 seconds total)
+        print(f"[PROFILE] Attempting R2 upload...")
+        upload_start = time.time()
+        r2_url = upload_fileobj_to_r2(file, r2_key)
+        upload_elapsed = time.time() - upload_start
 
-            # Try R2 upload first, fallback to local
-            r2_key = f"profilePictures/{new_filename}"
-            r2_url = upload_fileobj_to_r2(file, r2_key)
+        if r2_url:
+            # R2 upload succeeded
+            print(f"[PROFILE] R2 succeeded in {upload_elapsed:.2f}s, updating DB...")
+            update_query = "UPDATE users SET profile_picture_url = %s WHERE id = %s"
+            db.execute_query(update_query, (r2_url, user_id))
+            resolved_url = resolve_url(r2_url)
+            print(f"[PROFILE] R2 upload succeeded for user {user_id} in {upload_elapsed:.2f}s")
+            return jsonify({"message": "Profile picture updated via cloud", "url": resolved_url, "path": resolved_url}), 200
+        else:
+            # R2 failed or timed out - use local fallback
+            print(f"[PROFILE] R2 failed after {upload_elapsed:.2f}s, using local fallback...")
+            file.seek(0)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], new_filename)
+            file.save(file_path)
+            relative_path = f"profilePictures/{new_filename}"
+            full_url = f"{request.host_url}{relative_path}"
+            update_query = "UPDATE users SET profile_picture_url = %s WHERE id = %s"
+            db.execute_query(update_query, (relative_path, user_id))
+            print(f"[PROFILE] Local fallback succeeded for user {user_id}")
+            return jsonify({"message": "Profile picture updated locally", "url": full_url, "path": relative_path}), 200
 
-            if r2_url:
-                # Stored as full R2 URL
-                update_query = "UPDATE users SET profile_picture_url = %s WHERE id = %s"
-                db.execute_query(update_query, (r2_url, user_id))
-                
-                # Resolve for client use
-                resolved_url = resolve_url(r2_url)
-                
-                return jsonify({"message": "Profile picture updated", "url": resolved_url, "path": resolved_url}), 200
-            else:
-                # Fallback: save locally
-                file.seek(0)
-                file_path = os.path.join(app.config['UPLOAD_FOLDER'], new_filename)
-                file.save(file_path)
-                relative_path = f"profilePictures/{new_filename}"
-                full_url = f"{request.host_url}{relative_path}"
-                update_query = "UPDATE users SET profile_picture_url = %s WHERE id = %s"
-                db.execute_query(update_query, (relative_path, user_id))
-                return jsonify({"message": "Profile picture updated", "url": full_url, "path": relative_path}), 200
-
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
-        finally:
-            db.disconnect()
-            
-    return jsonify({"error": "File type not allowed"}), 400
+    except Exception as e:
+        print(f"[PROFILE] ERROR uploading for user {user_id}: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"Upload failed: {str(e)}"}), 500
+    finally:
+        db.disconnect()
 
 @app.route('/user/profile', methods=['GET'])
 @jwt_required
@@ -1538,13 +1585,11 @@ def get_discover():
         page = request.args.get('page', 1, type=int)
         limit = request.args.get('limit', 10, type=int)
         
-        # Check cache
-        cache_key = None
-        if user_id:
-            cache_key = f"discover:{user_id}:{page}:{limit}"
-            cached_data = cache.get(cache_key)
-            if cached_data:
-                return jsonify(cached_data)
+        # Check cache (both anonymous and authenticated requests)
+        cache_key = f"discover:{user_id or 'anon'}:{page}:{limit}"
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return jsonify(cached_data)
 
         offset = (page - 1) * limit
         
@@ -1735,9 +1780,7 @@ def get_discover():
         
         print(f"[TIMING] get_discover: total={round((time.time() - start_total) * 1000)}ms")
         
-        if cache_key:
-            cache.set(cache_key, response, 30)
-            
+        cache.set(cache_key, response, 30)
         return jsonify(response)
         
     except Exception as e:

@@ -5,10 +5,17 @@ for temporary access. Falls back to local storage if R2 is not configured.
 """
 import os
 import boto3
+from boto3.s3.transfer import TransferConfig
 from botocore.config import Config
-from botocore.exceptions import ClientError, NoCredentialsError
+from botocore.exceptions import ClientError, NoCredentialsError, BotoCoreError
 from dotenv import load_dotenv
 import mimetypes
+import time
+import logging
+
+# Set up logging for R2 operations
+logging.basicConfig(level=logging.INFO)
+r2_logger = logging.getLogger('R2')
 
 load_dotenv()
 
@@ -41,14 +48,19 @@ else:
 
 
 def get_r2_client():
-    """Get a boto3 S3 client configured for Cloudflare R2."""
+    """Get a boto3 S3 client configured for Cloudflare R2 with timeouts."""
     return boto3.client(
         's3',
         endpoint_url=R2_ENDPOINT_URL,
         aws_access_key_id=R2_ACCESS_KEY_ID,
         aws_secret_access_key=R2_SECRET_ACCESS_KEY,
         region_name='auto',
-        config=Config(signature_version='s3v4'),
+        config=Config(
+            signature_version='s3v4',
+            connect_timeout=10,              # 10s connection timeout
+            read_timeout=30,                 # 30s read timeout (for slower uploads)
+            retries={'max_attempts': 2, 'mode': 'adaptive'},  # Retry once on failure
+        ),
     )
 
 
@@ -77,36 +89,69 @@ def guess_content_type(filename):
 
 def upload_fileobj_to_r2(file_obj, r2_key, content_type=None):
     """
-    Upload a file-like object to R2.
+    Upload a file-like object to R2 using a subprocess worker.
+    This bypasses Gevent/Boto3 compatibility issues completely.
 
     Args:
         file_obj: File-like object (e.g. from request.files or open())
-        r2_key: The key (path) in the R2 bucket, e.g. 'AudioBooks/123_file.mp3'
+        r2_key: The key (path) in the R2 bucket
         content_type: MIME type. If None, guessed from r2_key.
 
     Returns:
         R2 key reference string (r2://key) on success, None on failure.
     """
     if not R2_ENABLED:
+        r2_logger.warning("[R2] R2 not configured, falling back to local storage")
         return None
 
     if content_type is None:
         content_type = guess_content_type(r2_key)
 
+    start_time = time.time()
+    r2_logger.info(f"[R2] Starting subprocess upload to {r2_key}")
+
+    import subprocess
+    import tempfile
+    import shutil
+    import sys
+
+    # Save stream to temp file first (needed for subprocess)
     try:
-        client = get_r2_client()
-        extra_args = {
-            'ContentType': content_type,
-        }
-        client.upload_fileobj(file_obj, R2_BUCKET_NAME, r2_key, ExtraArgs=extra_args)
-        r2_ref = f"{R2_KEY_PREFIX}{r2_key}"
-        print(f"[R2] Uploaded: {r2_key}")
-        return r2_ref
-    except (ClientError, NoCredentialsError) as e:
-        print(f"[R2] Upload failed for {r2_key}: {e}")
-        return None
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            if hasattr(file_obj, 'read'):
+                shutil.copyfileobj(file_obj, tmp)
+            else:
+                tmp.write(file_obj)
+            tmp_path = tmp.name
+
+        # Run worker script
+        # Using the same python interpreter as the parent process
+        worker_path = os.path.join(os.path.dirname(__file__), 'r2_worker.py')
+        
+        result = subprocess.run(
+            [sys.executable, worker_path, tmp_path, r2_key, content_type],
+            capture_output=True,
+            text=True,
+            timeout=120  # Explicit subprocess timeout preventing infinite hang
+        )
+
+        # Cleanup temp file
+        try:
+            os.unlink(tmp_path)
+        except:
+            pass
+
+        if result.returncode == 0 and "SUCCESS" in result.stdout:
+            elapsed = time.time() - start_time
+            r2_logger.info(f"[R2] Subprocess upload success in {elapsed:.2f}s")
+            return f"{R2_KEY_PREFIX}{r2_key}"
+        else:
+            r2_logger.error(f"[R2] Worker failed: {result.stderr} {result.stdout}")
+            return None
+
     except Exception as e:
-        print(f"[R2] Unexpected error uploading {r2_key}: {e}")
+        elapsed = time.time() - start_time
+        r2_logger.error(f"[R2] Unexpected error in upload wrapper: {e}")
         return None
 
 

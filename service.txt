@@ -1,0 +1,13 @@
+[Unit]
+Description=Gunicorn instance to serve echo_history
+After=network.target
+
+[Service]
+User=root
+Group=www-data
+WorkingDirectory=/var/www/server_global
+EnvironmentFile=/var/www/server_global/.env
+ExecStart=/var/www/server_global/venv/bin/gunicorn --workers 5 --worker-class gevent --worker-connections 1000 --timeout 300 --bind unix:echo_history.sock -m 007 api:app
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,51 @@
+780:@app.route('/upload-profile-picture', methods=['POST'])
+781-@jwt_required
+782-def upload_profile_picture():
+783-    """Upload user profile picture with R2 fallback to local storage."""
+784-    print(f"[PROFILE] Starting upload...")
+785-    
+786-    user_id = request.form.get('user_id')
+787-    if not user_id:
+788-        return jsonify({"error": "User ID is required"}), 400
+789-
+790-    if 'file' not in request.files:
+791-        return jsonify({"error": "No file part"}), 400
+792-    
+793-    file = request.files['file']
+794-    if file.filename == '':
+795-        return jsonify({"error": "No selected file"}), 400
+796-    
+797-    # Check file type FIRST (don't seek yet)
+798-    if not (file and allowed_file(file.filename)):
+799-        return jsonify({"error": "File type not allowed (jpg, png, gif, webp)"}), 400
+800-    
+801-    print(f"[PROFILE] File type allowed: {file.filename}, user_id: {user_id}")
+802-    
+803-    # Now check file size (safe to seek after type check)
+804-    file.seek(0, os.SEEK_END)
+805-    file_size = file.tell()
+806-    file.seek(0)
+807-    print(f"[PROFILE] File size: {file_size} bytes")
+808-    
+809-    if file_size > 5 * 1024 * 1024:  # 5MB
+810-        return jsonify({"error": "File too large (max 5MB)"}), 413
+811-
+812-    db = Database()
+813-    if not db.connect():
+814-        print(f"[PROFILE] Database connection failed")
+815-        return jsonify({"error": "Database connection failed"}), 500
+816-
+817-    try:
+818-        # 1. Get user email to name the file
+819-        print(f"[PROFILE] Querying user email...")
+820-        email_query = "SELECT email FROM users WHERE id = %s"
+821-        users = db.execute_query(email_query, (user_id,))
+822-        if not users:
+823-            return jsonify({"error": "User not found"}), 404
+824-        
+825-        user_email = users[0]['email']
+826-        print(f"[PROFILE] User email: {user_email}")
+827-        
+828-        # 2. Create filename from email + TIMESTAMP to bust cache
+829-        import time
+830-        timestamp = int(time.time())

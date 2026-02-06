@@ -1,0 +1,91 @@
+Feb 06 16:12:42 srv1330114 gunicorn[54721]: [2026-02-06 16:12:42 +0000] [54721] [INFO] Handling signal: term
+Feb 06 16:12:42 srv1330114 systemd[1]: Stopping echo_history.service - Gunicorn instance to serve echo_history...
+Feb 06 16:12:42 srv1330114 gunicorn[54723]: [2026-02-06 16:12:42 +0000] [54723] [INFO] Worker exiting (pid: 54723)
+Feb 06 16:12:42 srv1330114 gunicorn[54723]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+Feb 06 16:12:42 srv1330114 gunicorn[54723]: [R2] Using Public Domain: https://media.velorus.ba
+Feb 06 16:12:42 srv1330114 gunicorn[54723]: Server initialized with BASE_URL: https://echo.velorus.ba/
+Feb 06 16:12:42 srv1330114 gunicorn[54723]: --------------------------------------------------
+Feb 06 16:12:42 srv1330114 gunicorn[54723]:    DEBUG LOGGING MIDDLEWARE IS ACTIVE
+Feb 06 16:12:42 srv1330114 gunicorn[54723]:    Requests will be printed here...
+Feb 06 16:12:42 srv1330114 gunicorn[54723]: --------------------------------------------------
+Feb 06 16:12:42 srv1330114 gunicorn[54722]: [2026-02-06 16:12:42 +0000] [54722] [INFO] Worker exiting (pid: 54722)
+Feb 06 16:12:42 srv1330114 gunicorn[54722]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+Feb 06 16:12:42 srv1330114 gunicorn[54722]: [R2] Using Public Domain: https://media.velorus.ba
+Feb 06 16:12:42 srv1330114 gunicorn[54722]: Server initialized with BASE_URL: https://echo.velorus.ba/
+Feb 06 16:12:42 srv1330114 gunicorn[54722]: --------------------------------------------------
+Feb 06 16:12:42 srv1330114 gunicorn[54722]:    DEBUG LOGGING MIDDLEWARE IS ACTIVE
+Feb 06 16:12:42 srv1330114 gunicorn[54722]:    Requests will be printed here...
+Feb 06 16:12:42 srv1330114 gunicorn[54722]: --------------------------------------------------
+Feb 06 16:12:43 srv1330114 gunicorn[54724]: [2026-02-06 16:12:43 +0000] [54724] [INFO] Worker exiting (pid: 54724)
+Feb 06 16:12:43 srv1330114 gunicorn[54725]: [2026-02-06 16:12:43 +0000] [54725] [INFO] Worker exiting (pid: 54725)
+Feb 06 16:13:12 srv1330114 gunicorn[54721]: [2026-02-06 16:13:12 +0000] [54721] [INFO] Shutting down: Master
+Feb 06 16:13:12 srv1330114 systemd[1]: echo_history.service: Deactivated successfully.
+Feb 06 16:13:12 srv1330114 systemd[1]: Stopped echo_history.service - Gunicorn instance to serve echo_history.
+Feb 06 16:13:12 srv1330114 systemd[1]: echo_history.service: Consumed 1.546s CPU time.
+Feb 06 16:13:12 srv1330114 systemd[1]: Started echo_history.service - Gunicorn instance to serve echo_history.
+Feb 06 16:13:12 srv1330114 gunicorn[54906]: [2026-02-06 16:13:12 +0000] [54906] [INFO] Starting gunicorn 25.0.1
+Feb 06 16:13:12 srv1330114 gunicorn[54906]: [2026-02-06 16:13:12 +0000] [54906] [INFO] Listening at: unix:echo_history.sock (54906)
+Feb 06 16:13:12 srv1330114 gunicorn[54906]: [2026-02-06 16:13:12 +0000] [54906] [INFO] Using worker: gevent
+Feb 06 16:13:12 srv1330114 gunicorn[54907]: [2026-02-06 16:13:12 +0000] [54907] [INFO] Booting worker with pid: 54907
+Feb 06 16:13:13 srv1330114 gunicorn[54908]: [2026-02-06 16:13:13 +0000] [54908] [INFO] Booting worker with pid: 54908
+Feb 06 16:13:13 srv1330114 gunicorn[54909]: [2026-02-06 16:13:13 +0000] [54909] [INFO] Booting worker with pid: 54909
+Feb 06 16:13:13 srv1330114 gunicorn[54910]: [2026-02-06 16:13:13 +0000] [54910] [INFO] Booting worker with pid: 54910
+Feb 06 16:13:13 srv1330114 gunicorn[54911]: [2026-02-06 16:13:13 +0000] [54911] [INFO] Booting worker with pid: 54911
+Feb 06 16:15:42 srv1330114 gunicorn[54909]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+Feb 06 16:15:42 srv1330114 gunicorn[54909]: [R2] Using Public Domain: https://media.velorus.ba
+Feb 06 16:15:42 srv1330114 gunicorn[54909]: Server initialized with BASE_URL: https://echo.velorus.ba/
+Feb 06 16:15:42 srv1330114 gunicorn[54909]: --------------------------------------------------
+Feb 06 16:15:42 srv1330114 gunicorn[54909]:    DEBUG LOGGING MIDDLEWARE IS ACTIVE
+Feb 06 16:15:42 srv1330114 gunicorn[54909]:    Requests will be printed here...
+Feb 06 16:15:42 srv1330114 gunicorn[54909]: --------------------------------------------------
+Feb 06 16:15:42 srv1330114 gunicorn[54909]: ==================================================
+Feb 06 16:15:42 srv1330114 gunicorn[54909]: [DEBUG] Request: GET https://echo.velorus.ba/library?user_id=45
+Feb 06 16:15:42 srv1330114 gunicorn[54909]: [DEBUG] JSON Body: None
+Feb 06 16:15:42 srv1330114 gunicorn[54909]: Database connection pool created (maxconn=40, port=6432)
+Feb 06 16:15:42 srv1330114 gunicorn[54909]: [TIMING] get_library: total=4ms
+Feb 06 16:15:42 srv1330114 gunicorn[54909]: [DEBUG] Response Status: 200 OK
+Feb 06 16:15:42 srv1330114 gunicorn[54909]: ==================================================
+Feb 06 16:15:43 srv1330114 gunicorn[54911]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+Feb 06 16:15:43 srv1330114 gunicorn[54911]: [R2] Using Public Domain: https://media.velorus.ba
+Feb 06 16:15:43 srv1330114 gunicorn[54911]: Server initialized with BASE_URL: https://echo.velorus.ba/
+Feb 06 16:15:43 srv1330114 gunicorn[54911]: --------------------------------------------------
+Feb 06 16:15:43 srv1330114 gunicorn[54911]:    DEBUG LOGGING MIDDLEWARE IS ACTIVE
+Feb 06 16:15:43 srv1330114 gunicorn[54911]:    Requests will be printed here...
+Feb 06 16:15:43 srv1330114 gunicorn[54911]: --------------------------------------------------
+Feb 06 16:15:43 srv1330114 gunicorn[54911]: ==================================================
+Feb 06 16:15:43 srv1330114 gunicorn[54911]: [DEBUG] Request: GET https://echo.velorus.ba/background-music
+Feb 06 16:15:43 srv1330114 gunicorn[54911]: [DEBUG] JSON Body: None
+Feb 06 16:15:43 srv1330114 gunicorn[54911]: Database connection pool created (maxconn=40, port=6432)
+Feb 06 16:15:43 srv1330114 gunicorn[54911]: [DEBUG] Response Status: 200 OK
+Feb 06 16:15:43 srv1330114 gunicorn[54911]: ==================================================
+Feb 06 16:15:43 srv1330114 gunicorn[54909]: ==================================================
+Feb 06 16:15:43 srv1330114 gunicorn[54909]: [DEBUG] Request: GET https://echo.velorus.ba/reels?user_id=45&offset=0&limit=5
+Feb 06 16:15:43 srv1330114 gunicorn[54909]: [DEBUG] JSON Body: None
+Feb 06 16:15:43 srv1330114 gunicorn[54909]: [REELS] user_id=45, is_subscribed=False
+Feb 06 16:15:43 srv1330114 gunicorn[54909]: [DEBUG] Response Status: 200 OK
+Feb 06 16:15:43 srv1330114 gunicorn[54909]: ==================================================
+Feb 06 16:15:43 srv1330114 gunicorn[54909]: ==================================================
+Feb 06 16:15:43 srv1330114 gunicorn[54909]: [DEBUG] Request: POST https://echo.velorus.ba/reels/offset
+Feb 06 16:15:43 srv1330114 gunicorn[54909]: [DEBUG] JSON Body: {'user_id': 45, 'offset': 0}
+Feb 06 16:15:43 srv1330114 gunicorn[54909]: [DEBUG] Response Status: 200 OK
+Feb 06 16:15:43 srv1330114 gunicorn[54909]: ==================================================
+Feb 06 16:15:43 srv1330114 gunicorn[54909]: ==================================================
+Feb 06 16:15:43 srv1330114 gunicorn[54909]: [DEBUG] Request: GET https://echo.velorus.ba/profile-init/45
+Feb 06 16:15:43 srv1330114 gunicorn[54909]: [DEBUG] JSON Body: None
+Feb 06 16:15:43 srv1330114 gunicorn[54909]: [DEBUG] Response Status: 200 OK
+Feb 06 16:15:43 srv1330114 gunicorn[54909]: ==================================================
+Feb 06 16:15:44 srv1330114 gunicorn[54911]: ==================================================
+Feb 06 16:15:44 srv1330114 gunicorn[54911]: [DEBUG] Request: GET https://echo.velorus.ba/discover?page=1&limit=10&user_id=45
+Feb 06 16:15:44 srv1330114 gunicorn[54911]: [DEBUG] JSON Body: None
+Feb 06 16:15:44 srv1330114 gunicorn[54911]: [TIMING] get_discover: total=6ms
+Feb 06 16:15:44 srv1330114 gunicorn[54911]: [DEBUG] Response Status: 200 OK
+Feb 06 16:15:44 srv1330114 gunicorn[54911]: ==================================================
+Feb 06 16:17:24 srv1330114 gunicorn[54909]: ==================================================
+Feb 06 16:17:24 srv1330114 gunicorn[54909]: [DEBUG] Request: GET https://echo.velorus.ba/profile-init/45
+Feb 06 16:17:24 srv1330114 gunicorn[54909]: [DEBUG] JSON Body: None
+Feb 06 16:17:24 srv1330114 gunicorn[54909]: [DEBUG] Response Status: 200 OK
+Feb 06 16:17:24 srv1330114 gunicorn[54909]: ==================================================
+Feb 06 16:17:27 srv1330114 gunicorn[54911]: ==================================================
+Feb 06 16:17:27 srv1330114 gunicorn[54911]: [DEBUG] Request: POST https://echo.velorus.ba/upload-profile-picture
+Feb 06 16:17:27 srv1330114 gunicorn[54911]: [DEBUG] Form Data: ImmutableMultiDict([('user_id', '45')])
+Feb 06 16:17:27 srv1330114 gunicorn[54911]: [DEBUG] Files: ImmutableMultiDict([('file', <FileStorage: 'scaled_1000018561.jpg' ('image/jpeg')>)])

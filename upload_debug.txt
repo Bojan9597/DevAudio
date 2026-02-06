@@ -1,0 +1,30 @@
+2026-02-06T16:22:27.300273+00:00 srv1330114 gunicorn[54911]: [PROFILE] Attempting R2 upload...
+2026-02-06T16:34:28.836786+00:00 srv1330114 gunicorn[54908]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T16:34:28.836798+00:00 srv1330114 gunicorn[54908]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T16:34:29.202700+00:00 srv1330114 gunicorn[54910]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T16:34:29.202712+00:00 srv1330114 gunicorn[54910]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T16:34:29.401691+00:00 srv1330114 gunicorn[55323]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T16:34:29.401700+00:00 srv1330114 gunicorn[55323]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T16:34:29.714157+00:00 srv1330114 gunicorn[54907]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T16:34:29.714166+00:00 srv1330114 gunicorn[54907]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T16:34:30.408195+00:00 srv1330114 gunicorn[56364]:     from r2_storage import upload_fileobj_to_r2, upload_local_file_to_r2, is_r2_enabled, is_r2_ref, get_r2_key, resolve_url, generate_presigned_url, R2_PUBLIC_DOMAIN
+2026-02-06T16:34:30.408481+00:00 srv1330114 gunicorn[56363]:     from r2_storage import upload_fileobj_to_r2, upload_local_file_to_r2, is_r2_enabled, is_r2_ref, get_r2_key, resolve_url, generate_presigned_url, R2_PUBLIC_DOMAIN
+2026-02-06T16:34:30.502044+00:00 srv1330114 gunicorn[56365]:     from r2_storage import upload_fileobj_to_r2, upload_local_file_to_r2, is_r2_enabled, is_r2_ref, get_r2_key, resolve_url, generate_presigned_url, R2_PUBLIC_DOMAIN
+2026-02-06T16:34:30.586886+00:00 srv1330114 gunicorn[56366]:     from r2_storage import upload_fileobj_to_r2, upload_local_file_to_r2, is_r2_enabled, is_r2_ref, get_r2_key, resolve_url, generate_presigned_url, R2_PUBLIC_DOMAIN
+2026-02-06T16:34:30.596483+00:00 srv1330114 gunicorn[56367]:     from r2_storage import upload_fileobj_to_r2, upload_local_file_to_r2, is_r2_enabled, is_r2_ref, get_r2_key, resolve_url, generate_presigned_url, R2_PUBLIC_DOMAIN
+2026-02-06T16:39:39.709021+00:00 srv1330114 gunicorn[56729]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T16:39:39.709167+00:00 srv1330114 gunicorn[56729]: [R2] Using Public Domain: https://media.velorus.ba
+2026-02-06T16:39:39.709218+00:00 srv1330114 gunicorn[56729]: [DEBUG] Request: POST https://echo.velorus.ba/upload-profile-picture
+2026-02-06T16:39:39.732724+00:00 srv1330114 gunicorn[56729]: INFO:R2:[R2] Starting upload to profilePictures/bojanpejic97gmail.com_1770395979.jpg (type: image/jpeg)
+2026-02-06T16:39:39.777404+00:00 srv1330114 gunicorn[56729]: ERROR:R2:[R2] Unexpected error uploading profilePictures/bojanpejic97gmail.com_1770395979.jpg after 0.04s: TypeError: TransferConfig.__init__() got an unexpected keyword argument 'max_in_memory_chunk_size'
+2026-02-06T16:39:39.779075+00:00 srv1330114 gunicorn[56729]: [PROFILE] Starting upload...
+2026-02-06T16:39:39.779087+00:00 srv1330114 gunicorn[56729]: [PROFILE] File type allowed: scaled_1000018557.jpg, user_id: 45
+2026-02-06T16:39:39.779095+00:00 srv1330114 gunicorn[56729]: [PROFILE] File size: 63389 bytes
+2026-02-06T16:39:39.779103+00:00 srv1330114 gunicorn[56729]: [PROFILE] Querying user email...
+2026-02-06T16:39:39.779113+00:00 srv1330114 gunicorn[56729]: [PROFILE] User email: bojanpejic97@gmail.com
+2026-02-06T16:39:39.779119+00:00 srv1330114 gunicorn[56729]: [PROFILE] New filename: bojanpejic97gmail.com_1770395979.jpg
+2026-02-06T16:39:39.779127+00:00 srv1330114 gunicorn[56729]: [PROFILE] Attempting R2 upload...
+2026-02-06T16:39:39.779133+00:00 srv1330114 gunicorn[56729]: [PROFILE] R2 failed after 0.05s, using local fallback...
+2026-02-06T16:39:39.779141+00:00 srv1330114 gunicorn[56729]: [PROFILE] Local fallback succeeded for user 45
+2026-02-06T16:39:39.889493+00:00 srv1330114 gunicorn[56730]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+2026-02-06T16:39:39.889569+00:00 srv1330114 gunicorn[56730]: [R2] Using Public Domain: https://media.velorus.ba
