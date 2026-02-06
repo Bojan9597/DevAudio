@@ -356,10 +356,10 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
         final mediaItem = MediaItem(
           id: track['id']?.toString() ?? 'reel_$bookIndex\_$trackIndex',
           album: book.title,
+          artist: book.title, // Use book title as artist for notification
           title: (track is Map)
               ? track['title']
               : (track as dynamic).title ?? 'Track $trackIndex',
-          artist: book.author,
           artUri: book.absoluteCoverUrl.isNotEmpty
               ? Uri.parse(book.absoluteCoverUrl)
               : null,
@@ -658,7 +658,7 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      book.author,
+                      title, // Use track title instead of author
                       style: TextStyle(color: subtitleColor, fontSize: 16),
                       textAlign: TextAlign.center,
                       maxLines: 1,
