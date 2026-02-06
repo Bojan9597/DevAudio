@@ -3,7 +3,7 @@ import 'package:screen_brightness/screen_brightness.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../l10n/generated/app_localizations.dart';
 import '../models/book.dart';
-import '../screens/playlist_screen.dart';
+
 import 'dart:async';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
@@ -1244,12 +1244,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                               child: Center(
                                 child: TextButton.icon(
                                   onPressed: () {
-                                    Navigator.of(context).pushReplacement(
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            PlaylistScreen(book: _currentBook),
-                                      ),
-                                    );
+                                    Navigator.of(context).pop();
                                   },
                                   icon: const Icon(
                                     Icons.map_outlined,
