@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../l10n/generated/app_localizations.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
@@ -64,6 +65,10 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
   bool _isDraggingSlider = false;
   double _dragSliderValue = 0.0;
 
+  // Speed Control
+  double _playbackSpeed = 1.0;
+  StreamSubscription<double>? _speedSubscription;
+
   @override
   void initState() {
     super.initState();
@@ -93,6 +98,11 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
 
       player.durationStream.listen((d) {
         if (mounted && d != null) setState(() => _duration = d);
+      });
+
+      // Listen to speed changes
+      _speedSubscription = player.speedStream.listen((speed) {
+        if (mounted) setState(() => _playbackSpeed = speed);
       });
     }
   }
@@ -131,6 +141,8 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
 
     // _audioPlayer.dispose(); // REMOVED
     // _bgPlayer.dispose(); // REMOVED
+
+    _speedSubscription?.cancel();
 
     super.dispose();
   }
@@ -765,6 +777,38 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        // Speed Control
+                        GestureDetector(
+                          onTap: _showSpeedMenu,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: _playbackSpeed != 1.0
+                                  ? Colors.blueAccent.withOpacity(
+                                      isDark ? 0.4 : 0.2,
+                                    )
+                                  : (isDark
+                                        ? Colors.white.withOpacity(0.1)
+                                        : Colors.black.withOpacity(0.06)),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.speed, color: iconColor, size: 20),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '${_playbackSpeed.toString().replaceAll(RegExp(r"([.]*0)(?!.*\d)"), "")}x',
+                                  style: TextStyle(
+                                    color: textColor,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
                         GestureDetector(
                           onTap: _showBgMusicSettings,
                           child: Container(
@@ -981,5 +1025,65 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
     int min = d.inMinutes;
     int sec = d.inSeconds % 60;
     return '${min.toString().padLeft(2, '0')}:${sec.toString().padLeft(2, '0')}';
+  }
+
+  void _showSpeedMenu() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.grey[900] : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Playback Speed',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                alignment: WrapAlignment.center,
+                children: [0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map((speed) {
+                  final isSelected = _playbackSpeed == speed;
+                  return ChoiceChip(
+                    label: Text('${speed}x'),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      if (selected) {
+                        AudioConnector.handler?.setSpeed(speed);
+                        Navigator.pop(context);
+                      }
+                    },
+                    selectedColor: Colors.amber,
+                    labelStyle: TextStyle(
+                      color: isSelected
+                          ? Colors.black
+                          : (isDark ? Colors.white : Colors.black),
+                      fontWeight: FontWeight.bold,
+                    ),
+                    backgroundColor: isDark
+                        ? Colors.grey[800]
+                        : Colors.grey[200],
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

@@ -136,6 +136,15 @@ class _PlayerScreenState extends State<PlayerScreen>
     _pageController = PageController(initialPage: widget.initialIndex);
     _isFavorite = widget.book.isFavorite;
     _initializeAll();
+
+    // Listen to speed changes to keep UI in sync
+    _speedSubscription = _player.speedStream.listen((speed) {
+      if (mounted) {
+        setState(() {
+          _playbackSpeed = speed;
+        });
+      }
+    });
   }
 
   /// Initialize everything in the correct order
@@ -290,6 +299,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 
   StreamSubscription<PlayerState>? _playerStateSubscription;
+  StreamSubscription<double>? _speedSubscription;
 
   String _getUniqueAudioId() {
     if (widget.playlist != null && widget.playlist!.isNotEmpty) {
@@ -795,6 +805,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     _resetBrightness(); // Reset brightness on exit
     _progressTimer?.cancel();
     _playerStateSubscription?.cancel();
+    _speedSubscription?.cancel();
     _saveProgress(); // Try to save on exit
     _pageController.dispose();
     // Don't dispose handler players - they're global (both main and background music)
