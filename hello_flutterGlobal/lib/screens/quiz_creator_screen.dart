@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../utils/api_constants.dart';
 import '../models/quiz_question.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class QuizCreatorScreen extends StatefulWidget {
   final String bookId;
@@ -32,7 +33,13 @@ class _QuizCreatorScreenState extends State<QuizCreatorScreen> {
         urlString += '?playlist_item_id=${widget.playlistItemId}';
       }
       final url = Uri.parse(urlString);
-      final response = await http.get(url);
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('access_token');
+
+      final response = await http.get(
+        url,
+        headers: {if (token != null) 'Authorization': 'Bearer $token'},
+      );
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -124,10 +131,23 @@ class _QuizCreatorScreenState extends State<QuizCreatorScreen> {
     setState(() => _isSaving = true);
 
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('access_token');
+      print("[DEBUG] QuizCreator token: $token");
+
       final url = Uri.parse('${ApiConstants.baseUrl}/quiz');
+      print("[DEBUG] Posting to $url");
+
+      final headers = {
+        'Content-Type': 'application/json',
+        ApiConstants.appSourceHeader: ApiConstants.appSourceValue,
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
+      print("[DEBUG] Headers: $headers");
+
       final response = await http.post(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: json.encode({
           'book_id': widget.bookId,
           'playlist_item_id': widget.playlistItemId,

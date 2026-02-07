@@ -1138,18 +1138,29 @@ def get_playlist(book_id):
         db.disconnect()
 
 @app.route('/quiz', methods=['POST'])
+@jwt_required
 def save_quiz():
+    user_id = getattr(request, 'user_id', None)
+    if not user_id:
+        return jsonify({"error": "Authentication required"}), 401
+
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+
+    # Admin check
+    if not is_admin_user(user_id, db):
+        db.disconnect()
+        return jsonify({"error": "Admin access required"}), 403
+
     data = request.get_json()
     book_id = data.get('book_id')
     playlist_item_id = data.get('playlist_item_id') # Optional
     questions = data.get('questions') # List of dicts
     
     if not all([book_id, questions]):
+        db.disconnect()
         return jsonify({"error": "Missing book_id or questions"}), 400
-        
-    db = Database()
-    if not db.connect():
-        return jsonify({"error": "Database connection failed"}), 500
         
     try:
         # Check if quiz exists, if so, we can replace it or append.
