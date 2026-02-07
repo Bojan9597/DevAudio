@@ -1633,7 +1633,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                                     return;
                                   }
                                   // Player ready, just play
-                                  _player.play();
+                                  // USE HANDLER TO ENSURE SYNC
+                                  audioHandler.play();
                                 },
                                 child: Container(
                                   width: 70,
@@ -1651,7 +1652,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                               );
                             } else {
                               return GestureDetector(
-                                onTap: _player.pause,
+                                // USE HANDLER TO ENSURE SYNC
+                                onTap: audioHandler.pause,
                                 child: Container(
                                   width: 70,
                                   height: 70,
@@ -1901,27 +1903,25 @@ class _PlayerScreenState extends State<PlayerScreen>
         _bgMusicList = await BookRepository().getBackgroundMusicList();
       }
 
-      // Determine which music to use (prioritize existing selection in audioHandler)
-      int? bgMusicId = audioHandler.selectedBgMusicId;
+      // Always prioritize the book's default (or global default) when entering PlayerScreen.
+      // We do NOT use audioHandler.selectedBgMusicId here because it might be holding
+      // the music from the *previous* screen (e.g. Reels), which we want to override.
+      int? bgMusicId = widget.book.backgroundMusicId;
 
-      // If no current selection, use book's default or global default
-      if (bgMusicId == null) {
-        bgMusicId = widget.book.backgroundMusicId;
-        if (bgMusicId == null && _bgMusicList.isNotEmpty) {
-          final defaultTrack = _bgMusicList.firstWhere(
-            (e) => e['isDefault'] == true,
-            orElse: () => {},
-          );
-          if (defaultTrack.isNotEmpty) {
-            bgMusicId = defaultTrack['id'];
-          }
+      // If no default on book, use Global Default
+      if (bgMusicId == null && _bgMusicList.isNotEmpty) {
+        final defaultTrack = _bgMusicList.firstWhere(
+          (e) => e['isDefault'] == true,
+          orElse: () => {},
+        );
+        if (defaultTrack.isNotEmpty) {
+          bgMusicId = defaultTrack['id'];
         }
       }
 
       // Set the background music source via audioHandler (handles looping, syncing, etc.)
-      if (bgMusicId != null) {
-        await audioHandler.setBgMusicSource(bgMusicId, _bgMusicList);
-      }
+      // Note: audioHandler.setBgMusicSource checks if the ID is the same and avoids reloading if so.
+      await audioHandler.setBgMusicSource(bgMusicId, _bgMusicList);
 
       if (mounted) setState(() {});
     } catch (e) {

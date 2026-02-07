@@ -1358,7 +1358,7 @@ def get_books():
         base_select = f"""
             SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug,
                    u.name as posted_by_name, b.description, b.price, b.posted_by_user_id, b.duration_seconds, b.pdf_path,
-                   b.premium,
+                   b.premium, b.background_music_id,
                    {is_fav_col},
                    COALESCE(pi_count.cnt, 0) as playlist_count,
                    br_stats.avg_rating as average_rating,
@@ -1422,17 +1422,17 @@ def get_books():
                     if bid not in subcats_by_book:
                         subcats_by_book[bid] = []
                     subcats_by_book[bid].append(row['slug'])
-        
-        # ============ BATCH QUERY 2: User progress data (if user_id provided) ============
+                # ============ BATCH QUERY 2: User progress data (if user_id provided) ============
         progress_by_book = {}
         read_status_by_book = {}
+        user_bg_prefs = {}
         
         if user_id and book_ids:
             placeholders = ','.join(['%s'] * len(book_ids))
             
-            # 2a: Batch query for read status
+            # 2a: Batch query for read status AND background music preference
             read_query = f"""
-                SELECT book_id, is_read 
+                SELECT book_id, is_read, background_music_id
                 FROM user_books 
                 WHERE user_id = %s AND book_id IN ({placeholders})
             """
@@ -1440,6 +1440,8 @@ def get_books():
             if read_result:
                 for row in read_result:
                     read_status_by_book[row['book_id']] = row.get('is_read', False)
+                    if row.get('background_music_id'):
+                        user_bg_prefs[row['book_id']] = row['background_music_id']
             
             # 2b: Batch query for single-book progress (non-playlist books)
             single_progress_query = f"""
@@ -1521,6 +1523,12 @@ def get_books():
                     else:
                         percentage = 0
             
+            # Determine Background Music
+            # Prioritize User Preference -> then Book Default
+            bg_music_id = user_bg_prefs.get(book_id)
+            if bg_music_id is None:
+                bg_music_id = row.get('background_music_id')
+
             book_data = {
                 "id": str(book_id),
                 "title": row['title'],
@@ -1540,7 +1548,8 @@ def get_books():
                 "ratingCount": row['rating_count'] or 0,
                 "pdfUrl": resolve_stored_url(row['pdf_path'], "AudioBooks"),
                 "premium": bool(row['premium']),
-                "isFavorite": bool(row.get('is_favorite', 0))
+                "isFavorite": bool(row.get('is_favorite', 0)),
+                "backgroundMusicId": bg_music_id
             }
             
             if percentage is not None:
@@ -1594,7 +1603,7 @@ def get_discover():
         offset = (page - 1) * limit
         
         # Helper function to build book list from query results
-        def build_books(books_result, subcats_by_book, progress_by_book, read_status_by_book, favIds):
+        def build_books(books_result, subcats_by_book, progress_by_book, read_status_by_book, favIds, user_bg_prefs):
             books = []
             for row in books_result:
                 book_id = row['id']
@@ -1625,6 +1634,12 @@ def get_discover():
                         else:
                             percentage = 0
                 
+                # Determine Background Music
+                # Prioritize User Preference -> then Book Default
+                bg_music_id = user_bg_prefs.get(book_id)
+                if bg_music_id is None:
+                    bg_music_id = row.get('background_music_id')
+
                 books.append({
                     "id": str(book_id),
                     "title": row['title'],
@@ -1647,6 +1662,7 @@ def get_discover():
                     "isFavorite": int(book_id) in favIds,
                     "percentage": percentage,
                     "lastPosition": row.get('last_position'),
+                    "backgroundMusicId": bg_music_id
                 })
             return books
         
@@ -1666,7 +1682,7 @@ def get_discover():
         base_select = """
             SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug,
                    u.name as posted_by_name, b.description, b.price, b.posted_by_user_id, b.duration_seconds, b.pdf_path,
-                   b.premium,
+                   b.premium, b.background_music_id,
                    COALESCE(pi_count.cnt, 0) as playlist_count,
                    br_stats.avg_rating as average_rating,
                    COALESCE(br_stats.rating_cnt, 0) as rating_count
@@ -1716,16 +1732,20 @@ def get_discover():
         # Batch fetch progress data (if user logged in)
         progress_by_book = {}
         read_status_by_book = {}
+        user_bg_prefs = {}
+        
         if user_id and all_book_ids:
             placeholders = ','.join(['%s'] * len(all_book_ids))
             
             read_result = db.execute_query(f"""
-                SELECT book_id, is_read FROM user_books 
+                SELECT book_id, is_read, background_music_id FROM user_books 
                 WHERE user_id = %s AND book_id IN ({placeholders})
             """, (user_id, *all_book_ids))
             if read_result:
                 for row in read_result:
                     read_status_by_book[row['book_id']] = row.get('is_read', False)
+                    if row.get('background_music_id'):
+                        user_bg_prefs[row['book_id']] = row['background_music_id']
             
             single_result = db.execute_query(f"""
                 SELECT book_id, COALESCE(MAX(played_seconds), 0) as last_position
@@ -1760,7 +1780,7 @@ def get_discover():
             """
             history_result = db.execute_query(history_query, (user_id,))
             if history_result:
-                listen_history = build_books(history_result, subcats_by_book, progress_by_book, read_status_by_book, favIds)
+                listen_history = build_books(history_result, subcats_by_book, progress_by_book, read_status_by_book, favIds, user_bg_prefs)
         
         # Build response
         # Fetch categories (reuse the same logic as /categories endpoint)
@@ -1769,9 +1789,9 @@ def get_discover():
         
         # Build response
         response = {
-            "newReleases": build_books(newest_result or [], subcats_by_book, progress_by_book, read_status_by_book, favIds),
-            "topPicks": build_books(popular_result or [], subcats_by_book, progress_by_book, read_status_by_book, favIds),
-            "allBooks": build_books(all_result or [], subcats_by_book, progress_by_book, read_status_by_book, favIds),
+            "newReleases": build_books(newest_result or [], subcats_by_book, progress_by_book, read_status_by_book, favIds, user_bg_prefs),
+            "topPicks": build_books(popular_result or [], subcats_by_book, progress_by_book, read_status_by_book, favIds, user_bg_prefs),
+            "allBooks": build_books(all_result or [], subcats_by_book, progress_by_book, read_status_by_book, favIds, user_bg_prefs),
             "favorites": favIds,
             "isSubscribed": is_subscribed,
             "listenHistory": listen_history,

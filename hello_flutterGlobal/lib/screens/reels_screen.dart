@@ -892,6 +892,9 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
 
     // Use pre-fetched backgroundMusicId from the book object
     int? musicId = book.backgroundMusicId;
+    print(
+      "[DEBUG] _applyBgMusicFromBook: Index $index, Book: ${book.title}, ID: $musicId",
+    );
 
     // If no preference/default on book, use Global Default
     if (musicId == null && _bgMusicList.isNotEmpty) {
@@ -901,6 +904,7 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
       );
       if (defaultTrack.isNotEmpty) {
         musicId = defaultTrack['id'];
+        print("[DEBUG] Using global default music: $musicId");
       }
     }
 
@@ -1013,11 +1017,26 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
 
                       // Save Preference
                       try {
+                        print(
+                          "[DEBUG] User selected music: $val for book ${_books[_currentBookIndex].title}",
+                        );
                         if (_books.isNotEmpty) {
+                          // Update local state immediately so scrolling back/forth checks get the new value
+                          setState(() {
+                            final currentBook = _books[_currentBookIndex];
+                            _books[_currentBookIndex] = currentBook.copyWith(
+                              backgroundMusicId: val,
+                            );
+                            print(
+                              "[DEBUG] Updated local book backgroundMusicId to: ${_books[_currentBookIndex].backgroundMusicId}",
+                            );
+                          });
+
                           await _bookRepository.updateUserBackgroundMusic(
                             int.parse(_books[_currentBookIndex].id),
                             val,
                           );
+                          print("[DEBUG] Saved preference to server");
                         }
                       } catch (e) {
                         print("Error saving music pref: $e");

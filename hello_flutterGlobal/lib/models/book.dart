@@ -140,6 +140,7 @@ class Book {
     bool? isPremium,
     double? averageRating,
     int? ratingCount,
+    List<dynamic>? tracks,
     int? backgroundMusicId,
   }) {
     return Book(
@@ -164,6 +165,7 @@ class Book {
       ratingCount: ratingCount ?? this.ratingCount,
       pdfUrl: pdfUrl ?? this.pdfUrl,
       isPremium: isPremium ?? this.isPremium,
+      tracks: tracks ?? this.tracks,
       backgroundMusicId: backgroundMusicId ?? this.backgroundMusicId,
     );
   }
