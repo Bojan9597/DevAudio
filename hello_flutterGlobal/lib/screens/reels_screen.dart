@@ -348,6 +348,14 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
           extras: {'isReel': true},
         );
 
+        // Set current book and playlist in handler to enable background progress saving (every 15s)
+        AudioConnector.handler?.currentBook = book;
+        if (book.tracks.isNotEmpty) {
+          AudioConnector.handler?.currentPlaylist =
+              List<Map<String, dynamic>>.from(book.tracks);
+          AudioConnector.handler?.currentIndex = trackIndex;
+        }
+
         await AudioConnector.handler?.loadAudio(url, mediaItem);
         // Play is called inside loadAudio usually? No, `loadAudio` in handler calls `setUrl`
         // We need to call play() explicitly or update `loadAudio` to play.
