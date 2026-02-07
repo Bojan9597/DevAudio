@@ -248,35 +248,17 @@ class _PlayerScreenState extends State<PlayerScreen>
                   ),
                 );
 
-                // After quiz, advance to next track but don't auto-play
+                // After quiz, advance to next track using existing flow
                 _isHandlingCompletion = false;
                 if (mounted && widget.playlist != null) {
-                  // Move to next track if not at end
-                  if (_currentIndex < widget.playlist!.length - 1) {
-                    // Stop current playback
-                    await _player.stop();
-
-                    // Update to next track WITHOUT initializing player
-                    setState(() {
-                      _currentIndex++;
-                      final track = widget.playlist![_currentIndex];
-                      _currentBook = Book(
-                        id: widget.book.id,
-                        title: track['title'],
-                        author: widget.book.author,
-                        audioUrl: _getAbsoluteUrl(track['file_path']),
-                        coverUrl: widget.book.absoluteCoverUrl,
-                        categoryId: widget.book.categoryId,
-                        subcategoryIds: const [],
-                        postedBy: widget.book.postedBy,
-                        description: widget.book.description,
-                        price: widget.book.price,
-                        postedByUserId: widget.book.postedByUserId,
-                        isPlaylist: false,
-                        isFavorite: _isFavorite,
-                      );
-                    });
-                    // User can now manually press play to start the next track
+                  // Use same flow as non-quiz path - this properly handles page transition and audio loading
+                  _playNext();
+                  // Auto-play the next track and start background music
+                  await Future.delayed(
+                    const Duration(milliseconds: 500),
+                  ); // Wait for player to load
+                  if (mounted) {
+                    await audioHandler.play();
                   }
                 }
               }
