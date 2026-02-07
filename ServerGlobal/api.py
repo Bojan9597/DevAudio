@@ -1979,6 +1979,7 @@ def get_reels():
                     "title": book['title'] or "Untitled",
                     "author": book['author'] or "Unknown",
                     "coverUrl": cover_path,
+                    "coverUrlThumbnail": cover_thumb,
                     "description": book['description'] or "",
                     "postedByUserId": str(book['posted_by_user_id'] or ""),
                     "categoryId": "",

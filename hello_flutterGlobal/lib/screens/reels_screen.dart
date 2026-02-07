@@ -562,7 +562,7 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
     final title = (track is Map)
         ? track['title']
         : (track as dynamic).title ?? book.title;
-    final coverUrl = book.absoluteCoverUrl;
+    final coverUrl = book.absoluteCoverUrlThumbnail;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : Colors.black87;
     final subtitleColor = isDark ? Colors.white70 : Colors.black54;
