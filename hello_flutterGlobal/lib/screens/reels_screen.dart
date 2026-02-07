@@ -9,6 +9,7 @@ import '../widgets/subscription_bottom_sheet.dart';
 import '../services/audio_connector.dart';
 import '../main.dart'; // Access to routeObserver
 import '../utils/api_constants.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 // We need access to the global audio player state if we want to sync with MiniPlayer
 // But user said "It should look like that audio player with profile picture and everything"
 // This implies a FULL SCREEN EXPERIENCE.
@@ -562,7 +563,8 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
     final title = (track is Map)
         ? track['title']
         : (track as dynamic).title ?? book.title;
-    final coverUrl = book.absoluteCoverUrlThumbnail;
+    final coverUrl = book.absoluteCoverUrl;
+    final coverUrlThumbnail = book.absoluteCoverUrlThumbnail;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : Colors.black87;
     final subtitleColor = isDark ? Colors.white70 : Colors.black54;
@@ -580,13 +582,13 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Background Image (Blurred)
-        if (coverUrl.isNotEmpty)
-          Image.network(
-            coverUrl,
-            headers: ApiConstants.imageHeaders,
+        // Background Image (Blurred) - Use Thumbnail for performance
+        if (coverUrlThumbnail.isNotEmpty)
+          CachedNetworkImage(
+            imageUrl: coverUrlThumbnail,
+            httpHeaders: ApiConstants.imageHeaders,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(color: placeholderColor),
+            errorWidget: (_, __, ___) => Container(color: placeholderColor),
           ),
         Container(color: overlayColor),
 
@@ -617,24 +619,43 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                             offset: const Offset(0, 10),
                           ),
                         ],
-                        image: coverUrl.isNotEmpty
-                            ? DecorationImage(
-                                image: NetworkImage(
-                                  coverUrl,
-                                  headers: ApiConstants.imageHeaders,
-                                ),
-                                fit: BoxFit.cover,
-                              )
-                            : null,
                         color: placeholderColor,
                       ),
-                      child: coverUrl.isEmpty
-                          ? Icon(
+                      child: coverUrl.isNotEmpty
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: CachedNetworkImage(
+                                imageUrl: coverUrl,
+                                httpHeaders: ApiConstants.imageHeaders,
+                                fit: BoxFit.cover,
+                                placeholder: (context, url) =>
+                                    CachedNetworkImage(
+                                      imageUrl: coverUrlThumbnail,
+                                      httpHeaders: ApiConstants.imageHeaders,
+                                      fit: BoxFit.cover,
+                                      placeholder: (context, url) => Container(
+                                        color: placeholderColor,
+                                        child: Icon(
+                                          Icons.music_note,
+                                          color: iconColor,
+                                          size: artSize * 0.4,
+                                        ),
+                                      ),
+                                      errorWidget: (_, __, ___) =>
+                                          Container(color: placeholderColor),
+                                    ),
+                                errorWidget: (_, __, ___) => Icon(
+                                  Icons.broken_image,
+                                  color: iconColor,
+                                  size: artSize * 0.4,
+                                ),
+                              ),
+                            )
+                          : Icon(
                               Icons.music_note,
                               color: iconColor,
                               size: artSize * 0.4,
-                            )
-                          : null,
+                            ),
                     ),
                     SizedBox(height: maxHeight * 0.05), // 5% spacer
                     // Track Info
