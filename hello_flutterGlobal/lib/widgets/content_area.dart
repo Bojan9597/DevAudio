@@ -618,17 +618,34 @@ class _ContentAreaState extends State<ContentArea> {
     // Returns List<Book?> where null means not downloaded
     final results = await Future.wait(
       books.map((book) async {
-        // Check if playlist is downloaded for this book
-        final isPlaylistDownloaded = await downloadService.isPlaylistDownloaded(
+        // Get saved playlist JSON for this book
+        final playlistData = await downloadService.getPlaylistJson(
           book.id,
           userId: _userId,
         );
-        if (isPlaylistDownloaded) return book;
 
-        // Also check if book itself is downloaded
+        if (playlistData != null) {
+          // Extract playlist tracks from saved JSON
+          final List<Map<String, dynamic>>? playlist =
+              (playlistData['tracks'] as List?)?.cast<Map<String, dynamic>>();
+
+          if (playlist != null && playlist.isNotEmpty) {
+            // Check if ALL tracks are actually downloaded on disk
+            final isFullyDownloaded = await downloadService
+                .isPlaylistFullyDownloaded(
+                  playlist,
+                  userId: _userId,
+                  bookId: book.id,
+                );
+            if (isFullyDownloaded) return book;
+          }
+        }
+
+        // Fallback for single-track books: check if book itself is downloaded
         final isBookDownloaded = await downloadService.isBookDownloaded(
           book.id,
           userId: _userId,
+          bookId: book.id,
         );
         if (isBookDownloaded) return book;
 

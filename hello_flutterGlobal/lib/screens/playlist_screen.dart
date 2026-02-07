@@ -215,28 +215,44 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       );
       print('[PlaylistScreen] isSubscribed: $isSubscribed');
 
-      // Check if downloaded locally (User explicitly owns/downloaded it)
+      // Check if downloaded locally (Verify actual files on disk, not just metadata)
       final downloadService = DownloadService();
-      // Check both playlist (multi-track) and single book file
-      final isPlaylistDownloaded = await downloadService.isPlaylistDownloaded(
+      bool isDownloaded = false;
+
+      // Get saved playlist JSON and verify ALL tracks exist on disk
+      final playlistData = await downloadService.getPlaylistJson(
         widget.book.id,
         userId: userId,
       );
-      print('[PlaylistScreen] isPlaylistDownloaded: $isPlaylistDownloaded');
 
-      final isBookDownloaded = await downloadService.isBookDownloaded(
-        widget.book.id,
-        userId: userId,
-      );
-      print('[PlaylistScreen] isBookDownloaded: $isBookDownloaded');
+      if (playlistData != null) {
+        final List<Map<String, dynamic>>? playlist =
+            (playlistData['tracks'] as List?)?.cast<Map<String, dynamic>>();
 
-      final isDownloaded = isPlaylistDownloaded || isBookDownloaded;
-      print('[PlaylistScreen] isDownloaded (combined): $isDownloaded');
+        if (playlist != null && playlist.isNotEmpty) {
+          isDownloaded = await downloadService.isPlaylistFullyDownloaded(
+            playlist,
+            userId: userId,
+            bookId: widget.book.id,
+          );
+        }
+      }
+
+      // Fallback for single-track books
+      if (!isDownloaded) {
+        isDownloaded = await downloadService.isBookDownloaded(
+          widget.book.id,
+          userId: userId,
+          bookId: widget.book.id,
+        );
+      }
+
+      print('[PlaylistScreen] isDownloaded (verified on disk): $isDownloaded');
 
       // Access Rules:
       // 1. Admin always has access
       // 2. Subscriber has access
-      // 3. Downloaded content (Offline) has access
+      // 3. Downloaded content (verified on disk) has access
       final hasAccess = isAdmin || isSubscribed || isDownloaded;
 
       print(
