@@ -1811,54 +1811,121 @@ def get_reels():
     if not db.connect():
         return jsonify({"error": "Database connection failed"}), 500
         
-    # Fetch parameters
-    offset = int(request.args.get('offset', 0))
+    # STATEFUL REELS: Server manages the offset.
+    # Client asks for "more", we give next batch and update offset.
+    # STATEFUL REELS: Hybrid approach.
+    # Client CAN send offset. If valid, we use it. If not, we use DB.
+    # This allows client to retry specific pages or sync state.
     limit = int(request.args.get('limit', 5))
+    client_offset = request.args.get('offset') # string or None
 
     try:
-        # Get user's saved offset (for initial load)
+        # 1. Determine start offset
+        offset = 0
         saved_offset = 0
+        
+        # Get DB offset (always needed for fallback or "Resume")
         try:
             offset_result = db.execute_query("SELECT reels_offset FROM users WHERE id = %s", (user_id,))
             if offset_result and offset_result[0].get('reels_offset') is not None:
                 saved_offset = offset_result[0]['reels_offset']
         except Exception as e:
-            print(f"Could not fetch reels_offset (column may not exist): {e}")
-            saved_offset = 0
+            print(f"Could not fetch reels_offset: {e}")
         
-        # Check subscription (ensure user_id is int for consistent comparison)
+        # Decide which offset to use
+        if client_offset is not None:
+            try:
+                offset = int(client_offset)
+                # If client says 0, but we have saved progress, should we override?
+                # User said: "if current offset is 0, offset should be 5... on server... update offset"
+                # If client sends 0, they might mean "Restart" or "Fresh".
+                # But usually we want Resume.
+                # If client sends explicit 0, we treat it as 0 unless smart resume is active?
+                # Let's trust client if they send explicit value, BUT if value is 0 and we have >0, maybe resume?
+                # User complained "returns to beginning always".
+                if offset == 0:
+                     offset = saved_offset
+            except ValueError:
+                offset = saved_offset
+        else:
+            offset = saved_offset
+        
+        # Check subscription
         user_id_int = int(user_id)
         subscribed = is_subscriber(user_id_int, db)
-        print(f"[REELS] user_id={user_id_int}, is_subscribed={subscribed}")
         
         if not subscribed:
              return jsonify({
                  "isSubscribed": False,
                  "books": [],
                  "hasMore": False,
-                 "savedOffset": saved_offset
+                 "savedOffset": offset
              }), 200
 
-        # Fetch books with pagination
-        # We fetch limit + 1 to check if there are more
+        # 2. Get total book count
+        count_result = db.execute_query("SELECT COUNT(*) as count FROM books")
+        if not count_result:
+             print("[REELS] Error: Could not fetch book count.")
+             return jsonify({"isSubscribed": True, "books": [], "hasMore": False, "savedOffset": offset}), 200
+             
+        total_books = count_result[0]['count']
+        
+        if total_books == 0:
+            return jsonify({"isSubscribed": True, "books": [], "hasMore": False, "savedOffset": 0}), 200
+        
+        # 3. Calculate effective offset (circular)
+        effective_offset = offset % total_books
+        print(f"[REELS] Stateful Fetch: User {user_id} at offset {offset} (effective {effective_offset}). Fetching {limit} items.")
+
+        # 4. Fetch books (Joined with user_books for background music preference)
         books_query = """
             SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, b.duration_seconds,
-                   b.description, b.posted_by_user_id
+                   b.description, b.posted_by_user_id, b.background_music_id as default_bg_id,
+                   ub.background_music_id as user_bg_id
             FROM books b
+            LEFT JOIN user_books ub ON b.id = ub.book_id AND ub.user_id = %s
             ORDER BY b.id DESC
             LIMIT %s OFFSET %s
         """
-        books_result = db.execute_query(books_query, (limit + 5, offset))
+        books_result = db.execute_query(books_query, (user_id, limit + 5, effective_offset))
         
-        if not books_result:
-             return jsonify({"isSubscribed": True, "books": []}), 200
+        # Wrap around logic
+        if books_result and len(books_result) < limit:
+            remaining = limit - len(books_result)
+            wrap_query = """
+                SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, b.duration_seconds,
+                       b.description, b.posted_by_user_id, b.background_music_id as default_bg_id,
+                       ub.background_music_id as user_bg_id
+                FROM books b
+                LEFT JOIN user_books ub ON b.id = ub.book_id AND ub.user_id = %s
+                ORDER BY b.id DESC
+                LIMIT %s OFFSET 0
+            """
+            wrap_result = db.execute_query(wrap_query, (user_id, remaining + 5,))
+            if wrap_result:
+                existing_ids = {b['id'] for b in books_result}
+                for book in wrap_result:
+                    if book['id'] not in existing_ids:
+                        books_result.append(book)
+        
+        # 5. IMMEDIATE UPDATE: Advance offset for next time
+        # We increment by 'limit' to advance by page size, regardless of actual returned (due to wrap).
+        # Ensures smooth pagination.
+        new_offset = (offset + limit) % total_books
+        try:
+            db.execute_query("UPDATE users SET reels_offset = %s WHERE id = %s", (new_offset, user_id))
+            print(f"[REELS] Updated offset to {new_offset} for user {user_id}")
+        except Exception as e:
+            print(f"Failed to update reels_offset: {e}")
 
-        # Collect book IDs for efficient filtering
+        if not books_result:
+             return jsonify({"isSubscribed": True, "books": [], "hasMore": True, "savedOffset": offset}), 200
+
+        # Collect IDs and fetch playlist items (same as before)
         book_ids = list(set([b['id'] for b in books_result]))
         
         playlist_result = []
         if book_ids:
-            # Fetch ONLY playlist items for the fetched books
             placeholders = ','.join(['%s'] * len(book_ids))
             playlist_query = f"""
                 SELECT id, book_id, file_path, title, duration_seconds, track_order
@@ -1867,19 +1934,14 @@ def get_reels():
                 ORDER BY book_id, track_order
             """
             playlist_result = db.execute_query(playlist_query, tuple(book_ids))
-            print(f"[REELS_OPT] IDs: {book_ids} -> Tracks: {len(playlist_result) if playlist_result else 0}")
         
-        # Group items by book_id
         tracks_by_book = {}
         if playlist_result:
             for row in playlist_result:
                 bid = row['book_id']
                 if bid not in tracks_by_book:
                     tracks_by_book[bid] = []
-                
-                # Resolve audio URL
                 audio_path = resolve_stored_url(row['file_path'], "AudioBooks")
-                
                 tracks_by_book[bid].append({
                     "id": str(row['id']),
                     "title": row['title'] or "Unknown Track",
@@ -1888,32 +1950,29 @@ def get_reels():
                     "order": row['track_order'] or 0
                 })
         
-        # Build response
         books_data = []
         for book in books_result:
             try:
                 book_id = book['id']
-                
-                # Resolve book URLs
                 cover_path, cover_thumb = resolve_cover_urls(book['cover_image_path'])
                 audio_path = resolve_stored_url(book['audio_path'], "AudioBooks")
-                
-                # Get tracks
                 tracks = tracks_by_book.get(book_id, [])
                 
-                # If no tracks, but book has audio_path (single file), crate synthetic track
                 if not tracks and book['audio_path']:
                     tracks = [{
-                        "id": f"book_{book_id}", # Virtual ID
+                        "id": f"book_{book_id}",
                         "title": book['title'] or "Untitled",
                         "audioUrl": audio_path or "",
                         "duration": book['duration_seconds'] or 0,
                         "order": 0
                     }]
                 
-                # Skip books with no audio content at all?
                 if not tracks:
                     continue
+                
+                active_bg_id = book.get('user_bg_id')
+                if active_bg_id is None:
+                    active_bg_id = book.get('default_bg_id')
 
                 books_data.append({
                     "id": str(book_id),
@@ -1922,15 +1981,16 @@ def get_reels():
                     "coverUrl": cover_path,
                     "description": book['description'] or "",
                     "postedByUserId": str(book['posted_by_user_id'] or ""),
-                    "categoryId": "", # Required by Book.fromJson
-                    "subcategoryIds": [], # Required by Book.fromJson
+                    "categoryId": "",
+                    "subcategoryIds": [],
                     "audioUrl": audio_path if book['audio_path'] else "",
                     "isPlaylist": len(tracks) > 0,
-                    "isPremium": True, # Reels are premium
+                    "isPremium": True,
                     "price": 0.0,
                     "averageRating": 0.0,
                     "ratingCount": 0,
-                    "tracks": tracks
+                    "tracks": tracks,
+                    "backgroundMusicId": active_bg_id
                 })
             except Exception as e:
                 print(f"Skipping bad book {book.get('id')}: {e}")

@@ -324,4 +324,37 @@ class AuthService {
     await prefs.setString(_accessTokenKey, accessToken);
     await prefs.setString(_refreshTokenKey, refreshToken);
   }
+
+  Future<bool> refreshAccessToken() async {
+    try {
+      if (ConnectivityService().isOffline) return false;
+
+      final prefs = await SharedPreferences.getInstance();
+      final refreshToken = prefs.getString(_refreshTokenKey);
+
+      if (refreshToken == null) return false;
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/refresh-token'),
+        headers: {
+          'Content-Type': 'application/json',
+          ApiConstants.appSourceHeader: ApiConstants.appSourceValue,
+        },
+        body: json.encode({'refresh_token': refreshToken}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final newAccessToken = data['access_token'];
+        if (newAccessToken != null) {
+          await prefs.setString(_accessTokenKey, newAccessToken);
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      print('Error refreshing token: $e');
+      return false;
+    }
+  }
 }

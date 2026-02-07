@@ -5,7 +5,6 @@ import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import '../models/book.dart';
 import '../repositories/book_repository.dart';
-import '../services/auth_service.dart';
 import '../widgets/subscription_bottom_sheet.dart';
 import '../services/audio_connector.dart';
 import '../main.dart'; // Access to routeObserver
@@ -23,7 +22,7 @@ class ReelsScreen extends StatefulWidget {
 
 class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
   final BookRepository _bookRepository = BookRepository();
-  final AuthService _authService = AuthService();
+  // AuthService removed as it is used internally by BookRepository
   // REMOVED local players: _audioPlayer, _bgPlayer
   // We now use AudioConnector.handler for everything.
   // Ideally we should use the SAME player as the rest of the app to avoid double audio.
@@ -49,11 +48,10 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
 
-  int _offset = 0;
   final int _limit = 100; // Fetch all books at once for simpler infinite loop
   bool _isFetchingMore = false;
   bool _backendHasMore = true;
-  int _savedBookIndex = 0; // Saved position from server
+  // Offset is managed by server
 
   // Background Music State
   // Background Music is managed by Global Handler
@@ -69,6 +67,7 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
   // Speed Control
   double _playbackSpeed = 1.0;
   StreamSubscription<double>? _speedSubscription;
+  // Timer? _bgMusicDebounceTimer; // Removed as we use pre-fetched data
 
   @override
   void initState() {
@@ -144,6 +143,7 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
     // _bgPlayer.dispose(); // REMOVED
 
     _speedSubscription?.cancel();
+    // _bgMusicDebounceTimer?.cancel(); // Removed
 
     super.dispose();
   }
@@ -185,92 +185,63 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
       print("Error loading BG music list: $e");
     }
 
-    // Single API call now includes savedOffset + books + subscription status
-    await _fetchReels(useInitialOffset: true);
+    try {
+      // Single API call now includes savedOffset + books + subscription status
+      await _fetchReels();
+    } catch (e) {
+      print("Error fetching reels: $e");
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
 
     if (mounted) {
-      setState(() => _isLoading = false);
       if (_isSubscribed && _books.isNotEmpty) {
-        // Start at saved position (clamped to valid range)
-        final startIndex = _savedBookIndex.clamp(0, _books.length - 1);
-        _currentBookIndex = startIndex;
-
-        // Jump to saved position
+        const startIndex = 0;
+        // Start at beginning of the new batch
         if (startIndex > 0) {
           _verticalController.jumpToPage(startIndex);
         }
 
         _playTrack(startIndex, 0);
-        _updateBgMusicForBook(startIndex);
+        _applyBgMusicFromBook(startIndex);
       }
     }
   }
 
-  Future<void> _saveOffset() async {
-    try {
-      final userId = await _authService.getCurrentUserId();
-      if (userId != null) {
-        // Save current BOOK INDEX (not offset) so user resumes here
-        await _bookRepository.updateReelsOffset(_currentBookIndex);
-      }
-    } catch (e) {
-      print("Error saving offset: $e");
-    }
-  }
+  // _saveOffset removed - Server updates offset automatically on fetch
 
-  Future<void> _fetchReels({bool useInitialOffset = false}) async {
-    // On initial load, fetch with offset 0 and then use savedOffset from response
-    final fetchOffset = useInitialOffset ? 0 : _offset;
-
-    final data = await _bookRepository.getReelsData(
-      offset: fetchOffset,
-      limit: _limit,
-    );
+  Future<void> _fetchReels() async {
+    // Stateful API: Server tracks offset. We just ask for "more".
+    final data = await _bookRepository.getReelsData(limit: _limit);
     if (!mounted) return;
 
     final newBooks = data['books'] as List<Book>;
     final hasMore = data['hasMore'] as bool;
-    // isSubscribed can now be null if there was an error fetching
     final isSubscribed = data['isSubscribed'] as bool?;
-    final savedOffset = data['savedOffset'] as int? ?? 0;
 
     setState(() {
       print(
-        "Reels Refresh: isSubscribed=$isSubscribed, newBooks=${newBooks.length}, currentState=$_isSubscribed",
+        "Reels Fetch: isSubscribed=$isSubscribed, newBooks=${newBooks.length}, currentBooks=${_books.length}",
       );
 
-      // CRITICAL: Handle subscription status carefully to prevent downgrades
+      // Handle subscription status
       if (isSubscribed != null) {
-        // We have a definitive answer from the server
-        if (useInitialOffset) {
-          // Initial load: trust the server
-          _isSubscribed = isSubscribed;
+        if (_books.isEmpty) {
+          _isSubscribed = isSubscribed; // Trust server on initial load
         } else if (isSubscribed && !_isSubscribed) {
-          // Upgrade from false to true is always allowed
-          _isSubscribed = true;
+          _isSubscribed = true; // Allow upgrade
         }
-        // If isSubscribed is false during pagination but we're already subscribed,
-        // IGNORE IT - this prevents false downgrades
       }
-      // If isSubscribed is null (error case), preserve existing state
 
-      if (useInitialOffset) {
-        _books.clear();
-        _offset = savedOffset + newBooks.length;
-      } else {
-        _offset += newBooks.length;
+      if (_books.isEmpty) {
+        // Initial load (or refresh)
       }
 
       _books.addAll(newBooks);
       _backendHasMore = hasMore;
-
-      // Store saved position from server for initial jump
-      if (useInitialOffset) {
-        _savedBookIndex = savedOffset;
-      }
     });
-
-    _saveOffset();
   }
 
   Future<void> _loadMoreReels() async {
@@ -280,14 +251,17 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
     // Looping logic:
     // If backend has no more, we start fetching from offset 0 again
     // But we append to our local list so user can scroll up.
+    // Stateful API: Server handles wrap-around.
     if (!_backendHasMore) {
-      _offset = 0;
-      _saveOffset();
+      // If server specifically says "no more" (which it shouldn't in circular mode),
+      // we might stop or try again. But for now, we just stop.
+    } else {
+      await _fetchReels();
     }
 
-    await _fetchReels();
-
-    if (mounted) setState(() => _isFetchingMore = false);
+    if (mounted) {
+      setState(() => _isFetchingMore = false);
+    }
   }
 
   void _onTrackFinished() {
@@ -391,7 +365,9 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
   }
 
   Future<void> _onRefresh() async {
-    await _fetchReels(useInitialOffset: true);
+    // Clear list to force "new" batch feeling, although server offset handles continuity
+    _books.clear();
+    await _fetchReels();
     if (mounted) {
       // Reset indices if needed, or if empty
       if (_books.isEmpty) {
@@ -536,9 +512,11 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
           controller: _verticalController,
           itemCount: _books.length,
           onPageChanged: (index) {
-            // Play first track of new book
+            // Play first track of new book immediately
             _playTrack(index, 0);
-            _updateBgMusicForBook(index);
+
+            // Apply background music from pre-fetched data (No API call!)
+            _applyBgMusicFromBook(index);
 
             // Pre-load next batch if we are near the end (e.g., 2 items remaining)
             if (index >= _books.length - 2) {
@@ -879,43 +857,26 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
     );
   }
 
-  Future<void> _updateBgMusicForBook(int index) async {
+  void _applyBgMusicFromBook(int index) {
     if (index < 0 || index >= _books.length) return;
     final book = _books[index];
 
-    // 1. Get User Preference for this book
-    try {
-      // We can use BookRepository to get status, which includes background_music_id
-      final userId = await _authService.getCurrentUserId();
-      if (userId != null) {
-        final status = await _bookRepository.getBookStatus(userId, book.id);
-        // status['background_music_id'] might be null (default) or valid int
-        // If null, we use book.backgroundMusicId?
-        // Logic usually: UserPref ?? BookDefault ?? GlobalDefault
+    // Use pre-fetched backgroundMusicId from the book object
+    int? musicId = book.backgroundMusicId;
 
-        int? musicId = status['background_music_id'];
-        if (musicId == null) {
-          // If user hasn't set anything, use book default
-          musicId = book.backgroundMusicId;
-
-          // If book has no default, use Global Default
-          if (musicId == null && _bgMusicList.isNotEmpty) {
-            final defaultTrack = _bgMusicList.firstWhere(
-              (e) => e['isDefault'] == true,
-              orElse: () => {},
-            );
-            if (defaultTrack.isNotEmpty) {
-              musicId = defaultTrack['id'];
-            }
-          }
-        }
-
-        _selectedBgMusicId = musicId;
-        await _setBgMusicSource(musicId);
+    // If no preference/default on book, use Global Default
+    if (musicId == null && _bgMusicList.isNotEmpty) {
+      final defaultTrack = _bgMusicList.firstWhere(
+        (e) => e['isDefault'] == true,
+        orElse: () => {},
+      );
+      if (defaultTrack.isNotEmpty) {
+        musicId = defaultTrack['id'];
       }
-    } catch (e) {
-      print("Error updating BG music for book: $e");
     }
+
+    _selectedBgMusicId = musicId;
+    _setBgMusicSource(musicId); // Fire and forget (it manages its own state)
   }
 
   Future<void> _setBgMusicSource(int? musicId) async {

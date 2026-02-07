@@ -63,9 +63,60 @@ class ApiClient {
     return newHeaders;
   }
 
-  Future<http.Response> get(Uri url, {Map<String, String>? headers}) async {
-    final response = await http.get(url, headers: _addSecurityHeaders(headers));
+  // Helper to perform request with retry on 401
+  Future<http.Response> _performRequest(
+    String method,
+    Uri url, {
+    Map<String, String>? headers,
+    Object? body,
+  }) async {
+    // 1. Prepare initial request
+    final finalHeaders = _addSecurityHeaders(headers);
+
+    // Helper to execute the actual HTTP call
+    Future<http.Response> send() async {
+      switch (method) {
+        case 'GET':
+          return await http.get(url, headers: finalHeaders);
+        case 'POST':
+          return await http.post(url, headers: finalHeaders, body: body);
+        case 'PUT':
+          return await http.put(url, headers: finalHeaders, body: body);
+        case 'DELETE':
+          return await http.delete(url, headers: finalHeaders, body: body);
+        default:
+          throw Exception('Method not supported');
+      }
+    }
+
+    var response = await send();
+
+    // 2. Check for 401
+    if (response.statusCode == 401) {
+      print('[ApiClient] 401 Unauthorized. Attempting refresh...');
+      final refreshSuccess = await _authService.refreshAccessToken();
+
+      if (refreshSuccess) {
+        print('[ApiClient] Refresh successful. Retrying request...');
+        // Update Authorization header with new token
+        final newToken = await _authService.getAccessToken();
+        if (newToken != null) {
+          finalHeaders['Authorization'] = 'Bearer $newToken';
+        }
+
+        // Retry
+        response = await send();
+      } else {
+        print('[ApiClient] Refresh failed.');
+      }
+    }
+
+    // 3. Handle final response (logs out if still 401)
     return _handleResponse(response);
+  }
+
+  Future<http.Response> get(Uri url, {Map<String, String>? headers}) async {
+    return _performRequest('GET', url, headers: headers);
   }
 
   Future<http.Response> post(
@@ -73,12 +124,7 @@ class ApiClient {
     Map<String, String>? headers,
     Object? body,
   }) async {
-    final response = await http.post(
-      url,
-      headers: _addSecurityHeaders(headers),
-      body: body,
-    );
-    return _handleResponse(response);
+    return _performRequest('POST', url, headers: headers, body: body);
   }
 
   Future<http.Response> put(
@@ -86,12 +132,7 @@ class ApiClient {
     Map<String, String>? headers,
     Object? body,
   }) async {
-    final response = await http.put(
-      url,
-      headers: _addSecurityHeaders(headers),
-      body: body,
-    );
-    return _handleResponse(response);
+    return _performRequest('PUT', url, headers: headers, body: body);
   }
 
   Future<http.Response> delete(
@@ -99,11 +140,6 @@ class ApiClient {
     Map<String, String>? headers,
     Object? body,
   }) async {
-    final response = await http.delete(
-      url,
-      headers: _addSecurityHeaders(headers),
-      body: body,
-    );
-    return _handleResponse(response);
+    return _performRequest('DELETE', url, headers: headers, body: body);
   }
 }

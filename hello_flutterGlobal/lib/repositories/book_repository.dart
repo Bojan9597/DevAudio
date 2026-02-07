@@ -149,7 +149,9 @@ class BookRepository {
           'categories': categories,
         };
       } else {
-        throw Exception('Failed to load discover data');
+        throw Exception(
+          'Failed to load discover data: ${response.statusCode} - ${response.body}',
+        );
       }
     } catch (e) {
       print('Error fetching discover data: $e. Trying cache...');
@@ -285,16 +287,14 @@ class BookRepository {
 
   /// Fetches all data for the Reels screen (subscribers only).
   /// Returns a map with: isSubscribed, books (list of Book with tracks)
-  Future<Map<String, dynamic>> getReelsData({
-    int offset = 0,
-    int limit = 5,
-  }) async {
+  Future<Map<String, dynamic>> getReelsData({int limit = 5}) async {
     try {
       final userId = await _authService.getCurrentUserId();
       if (userId == null) throw Exception('User not logged in');
 
+      // STATEFUL API: No offset needed, server tracks it.
       final uri = Uri.parse(
-        '${ApiConstants.baseUrl}/reels?user_id=$userId&offset=$offset&limit=$limit',
+        '${ApiConstants.baseUrl}/reels?user_id=$userId&limit=$limit',
       );
       final headers = await _getHeaders();
       final response = await _apiClient.get(uri, headers: headers);
@@ -322,7 +322,9 @@ class BookRepository {
           'savedOffset': savedOffset,
         };
       } else {
-        throw Exception('Failed to load reels data');
+        throw Exception(
+          'Failed to load reels data: ${response.statusCode} - ${response.body}',
+        );
       }
     } catch (e) {
       print('Error fetching reels data: $e');
