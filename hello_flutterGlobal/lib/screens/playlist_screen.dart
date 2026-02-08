@@ -757,8 +757,6 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
           widget.book.isPremium, // CRITICAL: Pass premium status to player
     );
 
-    bool justFinishedLastTrack = false;
-
     // Refresh tracks when player closes to update stars
     await showModalBottomSheet(
       context: context,
@@ -780,32 +778,14 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
           });
 
           await _onTrackFinished(_tracks[completedIndex]);
-
-          // Check if it's the last track
-          if (completedIndex == _tracks.length - 1) {
-            justFinishedLastTrack = true;
-            // Do NOT pop here. PlayerScreen will pop itself when it hits end of playlist
-            // (after handling any track quiz).
-          }
         },
         trackQuizzes: _trackQuizzes, // Pass all track quizzes
         bookTitle: widget.book.title, // Pass Book Title
       ),
     );
 
-    // Check if we are going to auto-navigate
-    // If yes, we SKIP the video update in _loadTracks to avoid premature playback
-    // The video update will happen when we return from Quiz (on pop).
-    bool willAutoNav = justFinishedLastTrack && _hasQuiz;
-
-    // Reload tracks
-    await _loadTracks(skipVideoUpdate: willAutoNav);
-
-    // Auto-navigate to Final Quiz if last track finished
-    // Even if quiz is passed, user might want to see result/retake
-    if (willAutoNav) {
-      _onQuizTap();
-    }
+    // Reload tracks to update UI (stars)
+    await _loadTracks(skipVideoUpdate: false);
   }
 
   Future<void> _openPdfViewer() async {
