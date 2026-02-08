@@ -25,6 +25,7 @@ class Book {
   final bool isPremium;
   final List<dynamic> tracks;
   final int? backgroundMusicId;
+  final int? currentPlaylistItemId;
 
   /// Returns the absolute cover URL with base URL prepended if needed
   String get absoluteCoverUrl => ensureAbsoluteUrl(coverUrl);
@@ -58,6 +59,7 @@ class Book {
     this.isPremium = false,
     this.tracks = const [],
     this.backgroundMusicId,
+    this.currentPlaylistItemId,
   });
 
   /// Helper to parse premium field - handles both boolean (PostgreSQL) and int (MySQL)
@@ -122,6 +124,7 @@ class Book {
 
       tracks: json['tracks'] as List<dynamic>? ?? [],
       backgroundMusicId: json['backgroundMusicId'] as int?,
+      currentPlaylistItemId: json['currentPlaylistItemId'] as int?,
     );
   }
 
@@ -142,6 +145,7 @@ class Book {
     int? ratingCount,
     List<dynamic>? tracks,
     int? backgroundMusicId,
+    int? currentPlaylistItemId,
   }) {
     return Book(
       id: id,
@@ -167,6 +171,8 @@ class Book {
       isPremium: isPremium ?? this.isPremium,
       tracks: tracks ?? this.tracks,
       backgroundMusicId: backgroundMusicId ?? this.backgroundMusicId,
+      currentPlaylistItemId:
+          currentPlaylistItemId ?? this.currentPlaylistItemId,
     );
   }
 }

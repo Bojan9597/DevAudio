@@ -1241,7 +1241,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => PlaylistScreen(book: book)),
+      MaterialPageRoute(
+        builder: (_) => PlaylistScreen(
+          book: book,
+          resumeFromTrackId: book.currentPlaylistItemId,
+        ),
+      ),
     ).then((_) => _resetAndLoad());
   }
 

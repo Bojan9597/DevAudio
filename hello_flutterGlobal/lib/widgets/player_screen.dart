@@ -61,6 +61,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   bool _isSleepTimerActive = false;
   double _playbackSpeed = 1.0;
   double? _originalBrightness;
+  bool _isPopping = false; // Prevent double pops on completion
   // ... brightness methods ...
   Future<void> _resetBrightness() async {
     if (kIsWeb) return; // Skip on web
@@ -300,8 +301,16 @@ class _PlayerScreenState extends State<PlayerScreen>
     if (widget.playlist == null) return;
 
     if (_currentIndex >= widget.playlist!.length - 1) {
-      // End of playlist - save progress and stay on last track
+      if (_isPopping) return;
+      _isPopping = true;
+
+      // End of playlist - save progress and stop
       _saveProgressImmediately();
+
+      // Stop playback and seek to start of track to appear "reset"
+      _player.pause();
+      _player.seek(Duration.zero);
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -309,6 +318,9 @@ class _PlayerScreenState extends State<PlayerScreen>
             duration: const Duration(seconds: 2),
           ),
         );
+        // Optionally pop? The user didn't explicitly ask to close, just "stop playing".
+        // If we pop, we return to map.
+        Navigator.pop(context);
       }
       return;
     }

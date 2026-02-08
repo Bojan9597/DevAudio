@@ -20,8 +20,10 @@ import 'pdf_viewer_screen.dart';
 
 class PlaylistScreen extends StatefulWidget {
   final Book book;
+  final int? resumeFromTrackId;
 
-  const PlaylistScreen({Key? key, required this.book}) : super(key: key);
+  const PlaylistScreen({Key? key, required this.book, this.resumeFromTrackId})
+    : super(key: key);
 
   @override
   State<PlaylistScreen> createState() => _PlaylistScreenState();
@@ -48,6 +50,12 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   // bool _showCompletionOverlay = false;
   bool _isDownloading = false;
   String? _pdfUrl;
+  bool _hasAutoResumed = false; // Prevent auto-resuming multiple times
+
+  // Optimistic update state to handle stale cache
+  final Set<String> _recentlyCompletedTrackIds = {};
+  final Set<String> _recentlyPassedQuizTrackIds = {};
+  bool _recentlyPassedBookQuiz = false;
 
   void _downloadFullPlaylist() async {
     print(
@@ -219,6 +227,19 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       );
       print('[PlaylistScreen] isSubscribed: $isSubscribed');
 
+      // Optimization: If user has access via subscription or admin, grant immediately
+      // knowing that we can stream whatever we want.
+      if (isAdmin || isSubscribed) {
+        if (mounted) {
+          setState(() {
+            _isAdmin = isAdmin;
+            _hasAccess = true;
+            _isCheckingAccess = false;
+          });
+        }
+        return;
+      }
+
       // Check if downloaded locally (Verify actual files on disk, not just metadata)
       final downloadService = DownloadService();
       bool isDownloaded = false;
@@ -257,7 +278,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       // 1. Admin always has access
       // 2. Subscriber has access
       // 3. Downloaded content (verified on disk) has access
-      final hasAccess = isAdmin || isSubscribed || isDownloaded;
+      final hasAccess = isDownloaded; // isAdmin and isSubscribed handled above
 
       print(
         '[PlaylistScreen] FINAL ACCESS DECISION: isAdmin=$isAdmin, isSubscribed=$isSubscribed, isDownloaded=$isDownloaded, hasAccess=$hasAccess',
@@ -321,22 +342,29 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       final userId = await AuthService().getCurrentUserId();
       _userId = userId;
 
-      // Offline Check
-      if (ConnectivityService().isOffline) {
-        final data = await DownloadService().getPlaylistJson(
+      // 1. Try to load from offline cache FIRST for immediate speed
+      try {
+        final cachedData = await DownloadService().getPlaylistJson(
           widget.book.id,
-          userId: userId, // Try to get user-specific data if we know who we are
+          userId: userId,
         );
-        if (data != null) {
-          if (mounted)
-            _processPlaylistData(data, skipVideoUpdate: skipVideoUpdate);
-          return;
-        } else {
-          // No offline data
-          throw Exception('No offline data found. Please download book first.');
+        if (cachedData != null && mounted) {
+          print('[PlaylistScreen] Loaded playlist from cache');
+          _processPlaylistData(cachedData, skipVideoUpdate: skipVideoUpdate);
         }
+      } catch (e) {
+        print('[PlaylistScreen] Cache load error: $e');
       }
 
+      // Offline Check - if offline, we are done
+      if (ConnectivityService().isOffline) {
+        if (_tracks.isEmpty) {
+          throw Exception('No offline data found. Please download book first.');
+        }
+        return;
+      }
+
+      // 2. Fetch from server to ensure fresh data (sync progress, new tracks)
       final String url =
           '${ApiConstants.baseUrl}/playlist/${widget.book.id}' +
           (userId != null ? '?user_id=$userId' : '');
@@ -365,14 +393,26 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
           _processPlaylistData(data, skipVideoUpdate: skipVideoUpdate);
         }
       } else {
-        throw Exception('Failed to load playlist');
+        // If we have cached tracks, don't throw exception, just log error
+        if (_tracks.isNotEmpty) {
+          print(
+            'Failed to update playlist from server: ${response.statusCode}',
+          );
+        } else {
+          throw Exception('Failed to load playlist');
+        }
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _error = e.toString();
-          _isLoading = false;
-        });
+        // If we have cached tracks, just log error
+        if (_tracks.isNotEmpty) {
+          print('Error updating playlist: $e');
+        } else {
+          setState(() {
+            _error = e.toString();
+            _isLoading = false;
+          });
+        }
       }
     }
   }
@@ -385,9 +425,26 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     if (!mounted) return;
 
     setState(() {
-      _tracks = data['tracks'];
+      _tracks = (data['tracks'] as List).cast<Map<String, dynamic>>();
+
+      // Optimistic merge: Restore locally completed tracks if server is stale
+      for (var track in _tracks) {
+        if (_recentlyCompletedTrackIds.contains(track['id'].toString())) {
+          track['is_completed'] = true;
+        }
+      }
+
       _hasQuiz = data['has_quiz'] ?? false;
       _trackQuizzes = Map<String, dynamic>.from(data['track_quizzes'] ?? {});
+
+      // Optimistic merge: Restore locally passed track quizzes
+      for (var trackId in _recentlyPassedQuizTrackIds) {
+        if (_trackQuizzes.containsKey(trackId)) {
+          var qData = Map<String, dynamic>.from(_trackQuizzes[trackId]);
+          qData['is_passed'] = true;
+          _trackQuizzes[trackId] = qData;
+        }
+      }
 
       if (_tracks.isEmpty) {
         _areTracksCompleted = false;
@@ -399,6 +456,9 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
 
       // Must set _isQuizPassed BEFORE calculating _isBookCompleted
       _isQuizPassed = data['quiz_passed'] ?? false;
+      if (_recentlyPassedBookQuiz) {
+        _isQuizPassed = true;
+      }
       _pdfUrl = data['pdf_path'];
 
       if (_hasQuiz) {
@@ -413,9 +473,46 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     if (!skipVideoUpdate) {
       _updateBackgroundLoop(_isBookCompleted);
     }
+
+    // Auto-resume playback if resumeFromTrackId is set
+    if (!_hasAutoResumed &&
+        widget.resumeFromTrackId != null &&
+        _tracks.isNotEmpty &&
+        _hasAccess) {
+      _hasAutoResumed = true;
+
+      print('DEBUG: Auto-resuming from track ID: ${widget.resumeFromTrackId}');
+
+      // Find the track index matching resumeFromTrackId
+      int initialIndex = -1;
+      for (int i = 0; i < _tracks.length; i++) {
+        // Robust comparison: handle string/int mismatch
+        final trackId = _tracks[i]['id'];
+        if (trackId.toString() == widget.resumeFromTrackId.toString()) {
+          initialIndex = i;
+          print(
+            'DEBUG: Found match at index $initialIndex (trackId: $trackId)',
+          );
+          break;
+        }
+      }
+
+      if (initialIndex != -1) {
+        // Delay slightly to ensure state is fully updated before opening player
+        Future.microtask(() {
+          if (mounted) {
+            _playTrack(_tracks[initialIndex], initialIndex);
+          }
+        });
+      } else {
+        print(
+          'DEBUG: Could not find track with ID ${widget.resumeFromTrackId} in playlist',
+        );
+      }
+    }
   }
 
-  void _onQuizTap() {
+  void _onQuizTap() async {
     // Check ownership
     bool isOwner = false;
     if (_userId != null && widget.book.postedByUserId == _userId.toString()) {
@@ -432,18 +529,26 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       ).then((_) => _loadTracks()); // Reload to update hasQuiz status
     } else {
       // Navigate to Taker
-      Navigator.push(
+      final result = await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => QuizTakerScreen(bookId: widget.book.id),
         ),
-      ).then(
-        (_) => _loadTracks(),
-      ); // Reload to update status (e.g. if they passed)
+      );
+
+      if (mounted) {
+        if (result == true) {
+          setState(() {
+            _isQuizPassed = true;
+            _recentlyPassedBookQuiz = true;
+          });
+        }
+        _loadTracks(skipVideoUpdate: true);
+      }
     }
   }
 
-  void _onTrackQuizTap(int trackId) {
+  void _onTrackQuizTap(int trackId) async {
     bool isOwner =
         _userId != null && widget.book.postedByUserId == _userId.toString();
 
@@ -458,13 +563,27 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
         ),
       ).then((_) => _loadTracks());
     } else {
-      Navigator.push(
+      final result = await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) =>
               QuizTakerScreen(bookId: widget.book.id, playlistItemId: trackId),
         ),
-      ).then((_) => _loadTracks());
+      );
+
+      if (mounted) {
+        if (result == true) {
+          // Optimistic update: Mark as passed immediately
+          setState(() {
+            _trackQuizzes[trackId.toString()] = {
+              'has_quiz': true,
+              'is_passed': true,
+            };
+            _recentlyPassedQuizTrackIds.add(trackId.toString());
+          });
+        }
+        _loadTracks(skipVideoUpdate: true);
+      }
     }
   }
 
@@ -652,6 +771,14 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
         playlist: _tracks.cast<Map<String, dynamic>>(),
         initialIndex: index,
         onPlaybackComplete: (completedIndex) async {
+          // Optimistic update: Mark locally as completed immediately
+          setState(() {
+            _tracks[completedIndex]['is_completed'] = true;
+            _recentlyCompletedTrackIds.add(
+              _tracks[completedIndex]['id'].toString(),
+            );
+          });
+
           await _onTrackFinished(_tracks[completedIndex]);
 
           // Check if it's the last track

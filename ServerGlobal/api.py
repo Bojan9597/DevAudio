@@ -1673,7 +1673,8 @@ def get_discover():
                     "isFavorite": int(book_id) in favIds,
                     "percentage": percentage,
                     "lastPosition": row.get('last_position'),
-                    "backgroundMusicId": bg_music_id
+                    "backgroundMusicId": bg_music_id,
+                    "currentPlaylistItemId": row.get('current_playlist_item_id')
                 })
             return books
         
@@ -1774,6 +1775,7 @@ def get_discover():
                 SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, b.duration_seconds,
                        b.premium, b.pdf_path, c.slug as category_slug,
                        ub.last_played_position_seconds as last_position,
+                       ub.current_playlist_item_id,
                        COALESCE(pi_count.cnt, 0) as playlist_count,
                        br_stats.avg_rating as average_rating,
                        COALESCE(br_stats.rating_cnt, 0) as rating_count
@@ -2192,6 +2194,7 @@ def get_library():
                        c.slug as category_slug,
                        ub.last_played_position_seconds as last_position,
                        ub.last_accessed_at,
+                       ub.current_playlist_item_id,
                        COALESCE(pi_count.cnt, 0) as playlist_count,
                        br_stats.avg_rating as average_rating,
                        COALESCE(br_stats.rating_cnt, 0) as rating_count
@@ -2229,6 +2232,7 @@ def get_library():
                         "isFavorite": book['id'] in favIds,
                         "isPlaylist": book['playlist_count'] > 0,
                         "backgroundMusicId": book.get('background_music_id'),
+                        "currentPlaylistItemId": book.get('current_playlist_item_id'),
                     })
         
         # Get uploaded books (for admin users)

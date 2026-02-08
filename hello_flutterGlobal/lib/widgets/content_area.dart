@@ -808,7 +808,12 @@ class _ContentAreaState extends State<ContentArea> {
     // "Unified Playlist Mode": All books open as a playlist first.
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => PlaylistScreen(book: book)),
+      MaterialPageRoute(
+        builder: (_) => PlaylistScreen(
+          book: book,
+          resumeFromTrackId: book.currentPlaylistItemId,
+        ),
+      ),
     );
     // After returning, reload to update stats
     _loadBooks();

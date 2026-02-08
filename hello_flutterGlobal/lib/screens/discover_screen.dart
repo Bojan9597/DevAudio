@@ -898,7 +898,12 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   void _openPlayer(Book book) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => PlaylistScreen(book: book)),
+      MaterialPageRoute(
+        builder: (_) => PlaylistScreen(
+          book: book,
+          resumeFromTrackId: book.currentPlaylistItemId,
+        ),
+      ),
     );
   }
 }

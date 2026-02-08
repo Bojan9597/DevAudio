@@ -175,7 +175,10 @@ class _QuizTakerScreenState extends State<QuizTakerScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context); // Close dialog
-              Navigator.pop(context); // Close screen
+              Navigator.pop(
+                context,
+                percentage > 50,
+              ); // Close screen with result
             },
             child: const Text('Finish'),
           ),
