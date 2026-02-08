@@ -182,7 +182,9 @@ class LessonMapWidget extends StatelessWidget {
 
                         return Positioned(
                           left: pos.dx - 70, // Center 140px wide widget
-                          top: pos.dy - 60, // Center 120px tall island
+                          top:
+                              pos.dy -
+                              40, // Center 80px tall icon (ignoring text)
                           child: _LessonNode(
                             title: title,
                             isCompleted: isCompleted,
@@ -221,7 +223,7 @@ class LessonMapWidget extends StatelessWidget {
                       if (hasQuiz && positions.isNotEmpty)
                         Positioned(
                           left: positions.last.dx - 70,
-                          top: positions.last.dy - 60,
+                          top: positions.last.dy - 40,
                           child: _LessonNode(
                             title: "Final Quiz",
                             isCompleted: isQuizPassed,
@@ -408,12 +410,12 @@ class _LessonNode extends StatelessWidget {
           children: [
             // Icon Container
             Container(
-              width: 120,
-              height: 120,
+              width: 80,
+              height: 80,
               child: isQuiz
                   ? Icon(
                       isLocked ? Icons.lock : Icons.quiz,
-                      size: 80,
+                      size: 50,
                       color: isCompleted ? Colors.amber : Colors.grey,
                     )
                   : Stack(
@@ -424,7 +426,7 @@ class _LessonNode extends StatelessWidget {
                         // Centered star icon
                         Icon(
                           Icons.star_rounded,
-                          size: 42,
+                          size: 30,
                           color: isCompleted
                               ? Colors.amber
                               : Colors.grey.shade700,
@@ -475,12 +477,12 @@ class _IslandImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Image.asset(
-      'assets/island.png',
-      width: 120,
-      height: 120,
+      'assets/lesson_node.png',
+      width: 80,
+      height: 80,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) =>
-          Container(width: 120, height: 120, color: Colors.transparent),
+          Container(width: 80, height: 80, color: Colors.transparent),
     );
   }
 }

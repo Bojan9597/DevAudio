@@ -101,6 +101,8 @@ flutter:
     - assets/icon/
     - assets/icon/
     - assets/Background.png
+    - assets/AncientScrollBackground.jpg
+    - assets/lesson_node.png
     - assets/island.png
     - assets/homeImages/
 

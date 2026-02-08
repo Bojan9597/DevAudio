@@ -986,7 +986,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
           if (_isVideoInitialized)
             SizedBox.expand(
               child: Image.asset(
-                'assets/Background.png',
+                'assets/AncientScrollBackground.jpg',
                 fit: BoxFit.cover,
                 alignment: Alignment.center,
                 errorBuilder: (context, error, stackTrace) =>
