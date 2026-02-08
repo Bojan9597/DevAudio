@@ -1777,6 +1777,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{speed}x'**
   String speedLabel(String speed);
+
+  /// No description provided for @notifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notifications;
+
+  /// No description provided for @notificationSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification Settings'**
+  String get notificationSettings;
+
+  /// No description provided for @enableNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Notifications'**
+  String get enableNotifications;
+
+  /// No description provided for @dailyMotivation.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Motivation'**
+  String get dailyMotivation;
+
+  /// No description provided for @dailyMotivationSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Receive 5 inspiring history quotes daily'**
+  String get dailyMotivationSubtitle;
+
+  /// No description provided for @continueListeningNotification.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue Listening Reminders'**
+  String get continueListeningNotification;
+
+  /// No description provided for @continueListeningSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Get reminded to continue your audiobook'**
+  String get continueListeningSubtitle;
+
+  /// No description provided for @notificationTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification Time'**
+  String get notificationTime;
+
+  /// No description provided for @notificationTimeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'When to start sending daily notifications'**
+  String get notificationTimeSubtitle;
+
+  /// No description provided for @notificationPermissionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification permission is required to send reminders'**
+  String get notificationPermissionRequired;
 }
 
 class _AppLocalizationsDelegate

@@ -549,5 +549,16 @@
         "type": "String"
       }
     }
-  }
+  },
+
+  "notifications": "Notifications",
+  "notificationSettings": "Notification Settings",
+  "enableNotifications": "Enable Notifications",
+  "dailyMotivation": "Daily Motivation",
+  "dailyMotivationSubtitle": "Receive 5 inspiring history quotes daily",
+  "continueListeningNotification": "Continue Listening Reminders",
+  "continueListeningSubtitle": "Get reminded to continue your audiobook",
+  "notificationTime": "Notification Time",
+  "notificationTimeSubtitle": "When to start sending daily notifications",
+  "notificationPermissionRequired": "Notification permission is required to send reminders"
 }

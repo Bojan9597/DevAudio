@@ -12,6 +12,10 @@ import 'services/connectivity_service.dart';
 import 'package:audio_service/audio_service.dart';
 import 'services/audio_handler.dart';
 import 'services/audio_connector.dart';
+import 'package:workmanager/workmanager.dart';
+import 'services/notification_service.dart';
+import 'services/notification_preferences.dart';
+import 'services/notification_workmanager.dart';
 
 // Global audio handler instance (kept for backward compatibility if used directly in main)
 late MyAudioHandler audioHandler;
@@ -64,7 +68,12 @@ void main() async {
   await ConnectivityService().initialize();
   print("=== 9. ConnectivityService initialized ===");
 
-  print("=== 10. Setting screen orientation ===");
+  print("=== 10. Initializing NotificationService ===");
+  await NotificationService().initialize();
+  Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
+  print("=== 11. NotificationService initialized ===");
+
+  print("=== 12. Setting screen orientation ===");
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   print("=== 11. Screen orientation set ===");
 
@@ -136,6 +145,16 @@ class _AuthWrapperState extends State<AuthWrapper> {
       final userId = await authService.getCurrentUserId();
       if (userId != null) {
         await globalLayoutState.updateUser(userId.toString());
+
+        // Sync notification settings for background isolate and re-register tasks
+        final locale = globalLayoutState.locale?.languageCode ?? 'en';
+        await NotificationPreferences().syncForBackground(
+          userId.toString(),
+          locale,
+        );
+        await NotificationService().registerNotificationTasks(
+          userId.toString(),
+        );
       }
     } else {
       // Ensure logged out state
@@ -146,6 +165,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
       setState(() {
         _isLoggedIn = isLoggedIn;
       });
+      // Process any pending notification deep-link after UI is ready
+      if (isLoggedIn) {
+        NotificationService().processPendingPayload();
+      }
     }
   }
 

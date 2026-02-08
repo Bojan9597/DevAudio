@@ -10,3 +10,11 @@
 -keepclasseswithmembernames class * {
     native <methods>;
 }
+
+# WorkManager
+-keep class androidx.work.** { *; }
+-dontwarn androidx.work.**
+
+# Flutter Local Notifications
+-keep class com.dexterous.** { *; }
+-dontwarn com.dexterous.**

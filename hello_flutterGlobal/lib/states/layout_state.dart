@@ -84,6 +84,13 @@ class LayoutState extends ChangeNotifier {
       _getStorageKey('locale_language_code'),
       loc.languageCode,
     );
+    // Sync locale for background notification isolate
+    if (_currentUserId != null) {
+      await prefs.setString(
+        'notification_locale_$_currentUserId',
+        loc.languageCode,
+      );
+    }
   }
 
   void toggleMenu() {

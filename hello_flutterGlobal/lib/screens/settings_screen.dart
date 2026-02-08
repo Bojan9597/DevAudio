@@ -10,6 +10,9 @@ import '../states/layout_state.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../main.dart'; // For audioHandler
 import '../widgets/support_dialog.dart';
+import 'package:workmanager/workmanager.dart';
+import '../services/notification_service.dart';
+import 'notification_settings_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -58,6 +61,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       // Clear profile screen static cache
       ProfileScreenCache.clear();
+
+      // Cancel all notification tasks
+      await Workmanager().cancelAll();
+      await NotificationService().cancelAll();
 
       // Logout (clears tokens and user data)
       await _authService.logout();
@@ -198,6 +205,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ],
                         );
                       },
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.notifications),
+                  title: Text(AppLocalizations.of(context)!.notifications),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationSettingsScreen(),
+                      ),
                     );
                   },
                 ),

@@ -313,5 +313,16 @@
   "sessionExpiredMessage": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
   "ok": "OK",
   "unknown": "Unbekannt",
-  "speedLabel": "{speed}x"
+  "speedLabel": "{speed}x",
+
+  "notifications": "Benachrichtigungen",
+  "notificationSettings": "Benachrichtigungseinstellungen",
+  "enableNotifications": "Benachrichtigungen aktivieren",
+  "dailyMotivation": "Tagliche Motivation",
+  "dailyMotivationSubtitle": "Erhalten Sie taglich 5 inspirierende historische Zitate",
+  "continueListeningNotification": "Erinnerungen zum Weiterhoren",
+  "continueListeningSubtitle": "Erhalten Sie eine Erinnerung, Ihr Horbuch fortzusetzen",
+  "notificationTime": "Benachrichtigungszeit",
+  "notificationTimeSubtitle": "Wann die taglichen Benachrichtigungen gesendet werden sollen",
+  "notificationPermissionRequired": "Benachrichtigungsberechtigung ist erforderlich, um Erinnerungen zu senden"
 }

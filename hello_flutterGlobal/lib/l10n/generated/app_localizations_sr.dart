@@ -935,4 +935,38 @@ class AppLocalizationsSr extends AppLocalizations {
   String speedLabel(String speed) {
     return '${speed}x';
   }
+
+  @override
+  String get notifications => 'Obavestenja';
+
+  @override
+  String get notificationSettings => 'Podesavanja obavestenja';
+
+  @override
+  String get enableNotifications => 'Ukljuci obavestenja';
+
+  @override
+  String get dailyMotivation => 'Dnevna motivacija';
+
+  @override
+  String get dailyMotivationSubtitle =>
+      'Primajte 5 inspirativnih istorijskih citata dnevno';
+
+  @override
+  String get continueListeningNotification => 'Podsetnici za slusanje';
+
+  @override
+  String get continueListeningSubtitle =>
+      'Primite podsetnik da nastavite sa slusanjem';
+
+  @override
+  String get notificationTime => 'Vreme obavestenja';
+
+  @override
+  String get notificationTimeSubtitle =>
+      'Kada poceti slanje dnevnih obavestenja';
+
+  @override
+  String get notificationPermissionRequired =>
+      'Dozvola za obavestenja je neophodna za slanje podsetnika';
 }

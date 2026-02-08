@@ -940,4 +940,38 @@ class AppLocalizationsDe extends AppLocalizations {
   String speedLabel(String speed) {
     return '${speed}x';
   }
+
+  @override
+  String get notifications => 'Benachrichtigungen';
+
+  @override
+  String get notificationSettings => 'Benachrichtigungseinstellungen';
+
+  @override
+  String get enableNotifications => 'Benachrichtigungen aktivieren';
+
+  @override
+  String get dailyMotivation => 'Tagliche Motivation';
+
+  @override
+  String get dailyMotivationSubtitle =>
+      'Erhalten Sie taglich 5 inspirierende historische Zitate';
+
+  @override
+  String get continueListeningNotification => 'Erinnerungen zum Weiterhoren';
+
+  @override
+  String get continueListeningSubtitle =>
+      'Erhalten Sie eine Erinnerung, Ihr Horbuch fortzusetzen';
+
+  @override
+  String get notificationTime => 'Benachrichtigungszeit';
+
+  @override
+  String get notificationTimeSubtitle =>
+      'Wann die taglichen Benachrichtigungen gesendet werden sollen';
+
+  @override
+  String get notificationPermissionRequired =>
+      'Benachrichtigungsberechtigung ist erforderlich, um Erinnerungen zu senden';
 }

@@ -398,12 +398,37 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                 aspectRatio: 1.0,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: book.absoluteCoverUrlThumbnail.isNotEmpty
+                  child: book.absoluteCoverUrl.isNotEmpty
                       ? CachedNetworkImage(
-                          imageUrl: book.absoluteCoverUrlThumbnail,
+                          imageUrl: book.absoluteCoverUrl,
                           httpHeaders: ApiConstants.imageHeaders,
                           fit: BoxFit.cover,
                           width: double.infinity,
+                          placeholder: (context, url) =>
+                              book.absoluteCoverUrlThumbnail.isNotEmpty
+                              ? CachedNetworkImage(
+                                  imageUrl: book.absoluteCoverUrlThumbnail,
+                                  httpHeaders: ApiConstants.imageHeaders,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  placeholder: (context, url) => Container(
+                                    color: textColor.withOpacity(0.1),
+                                  ),
+                                  errorWidget: (context, url, error) =>
+                                      Container(
+                                        color: textColor.withOpacity(0.1),
+                                      ),
+                                )
+                              : Container(
+                                  color: textColor.withOpacity(0.1),
+                                  child: Center(
+                                    child: Icon(
+                                      Icons.book,
+                                      size: 40,
+                                      color: textColor,
+                                    ),
+                                  ),
+                                ),
                           errorWidget: (context, url, error) => Container(
                             color: textColor.withOpacity(0.1),
                             child: Icon(Icons.book, size: 40, color: textColor),
@@ -541,12 +566,35 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             aspectRatio: 1.0,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: book.absoluteCoverUrlThumbnail.isNotEmpty
+              child: book.absoluteCoverUrl.isNotEmpty
                   ? CachedNetworkImage(
-                      imageUrl: book.absoluteCoverUrlThumbnail,
+                      imageUrl: book.absoluteCoverUrl,
                       httpHeaders: ApiConstants.imageHeaders,
                       fit: BoxFit.cover,
                       width: double.infinity,
+                      placeholder: (context, url) =>
+                          book.absoluteCoverUrlThumbnail.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: book.absoluteCoverUrlThumbnail,
+                              httpHeaders: ApiConstants.imageHeaders,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              // If thumbnail fails or is loading, show simple color
+                              placeholder: (context, url) =>
+                                  Container(color: textColor.withOpacity(0.1)),
+                              errorWidget: (context, url, error) =>
+                                  Container(color: textColor.withOpacity(0.1)),
+                            )
+                          : Container(
+                              color: textColor.withOpacity(0.1),
+                              child: Center(
+                                child: Icon(
+                                  Icons.book,
+                                  size: 40,
+                                  color: textColor,
+                                ),
+                              ),
+                            ),
                       errorWidget: (context, url, error) => Container(
                         color: textColor.withOpacity(0.1),
                         child: Icon(Icons.book, size: 40, color: textColor),

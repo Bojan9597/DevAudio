@@ -313,5 +313,16 @@
   "sessionExpiredMessage": "Votre session a expiré. Veuillez vous reconnecter.",
   "ok": "OK",
   "unknown": "Inconnu",
-  "speedLabel": "{speed}x"
+  "speedLabel": "{speed}x",
+
+  "notifications": "Notifications",
+  "notificationSettings": "Parametres de notifications",
+  "enableNotifications": "Activer les notifications",
+  "dailyMotivation": "Motivation quotidienne",
+  "dailyMotivationSubtitle": "Recevez 5 citations historiques inspirantes par jour",
+  "continueListeningNotification": "Rappels d'ecoute",
+  "continueListeningSubtitle": "Recevez un rappel pour continuer votre livre audio",
+  "notificationTime": "Heure de notification",
+  "notificationTimeSubtitle": "Quand commencer a envoyer les notifications quotidiennes",
+  "notificationPermissionRequired": "L'autorisation de notification est requise pour envoyer des rappels"
 }
