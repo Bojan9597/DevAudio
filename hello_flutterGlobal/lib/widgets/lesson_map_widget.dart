@@ -187,6 +187,7 @@ class LessonMapWidget extends StatelessWidget {
                               40, // Center 80px tall icon (ignoring text)
                           child: _LessonNode(
                             title: title,
+                            index: index, // Pass index for image selection
                             isCompleted: isCompleted,
                             onTap: () => onTrackTap(index),
                             // Track Quiz Args
@@ -226,6 +227,8 @@ class LessonMapWidget extends StatelessWidget {
                           top: positions.last.dy - 40,
                           child: _LessonNode(
                             title: "Final Quiz",
+                            index:
+                                0, // Default or specific image for final quiz?
                             isCompleted: isQuizPassed,
                             isQuiz: true,
                             isLocked: !isBookCompleted,
@@ -307,6 +310,7 @@ class _MapPathPainter extends CustomPainter {
 
 class _LessonNode extends StatelessWidget {
   final String title;
+  final int index;
   final bool isCompleted;
   final VoidCallback onTap;
 
@@ -322,6 +326,7 @@ class _LessonNode extends StatelessWidget {
 
   const _LessonNode({
     required this.title,
+    required this.index,
     required this.isCompleted,
     required this.onTap,
     this.isQuiz = false,
@@ -422,7 +427,7 @@ class _LessonNode extends StatelessWidget {
                       alignment: Alignment.center,
                       children: [
                         // Island background (PNG with transparency)
-                        _IslandImage(),
+                        _IslandImage(index: index),
                         // Centered star icon
                         Icon(
                           Icons.star_rounded,
@@ -472,17 +477,22 @@ class _LessonNode extends StatelessWidget {
 
 // Island image widget - now loads from local assets
 class _IslandImage extends StatelessWidget {
-  const _IslandImage();
+  final int index;
+  const _IslandImage({required this.index});
 
   @override
   Widget build(BuildContext context) {
+    // Cycle between 1-8 based on index
+    final int imageNumber = (index % 8) + 1;
+    final String assetName = 'assets/lesson_node_$imageNumber.png';
+
     return Image.asset(
-      'assets/lesson_node.png',
+      assetName,
       width: 80,
       height: 80,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) =>
-          Container(width: 80, height: 80, color: Colors.transparent),
+          Container(width: 80, height: 80, color: Colors.white10),
     );
   }
 }
