@@ -24,6 +24,11 @@ class MyAudioHandler extends BaseAudioHandler {
   bool get bgMusicEnabled => _bgMusicEnabled;
   int? get selectedBgMusicId => _selectedBgMusicId;
 
+  // Stream to notify listeners of track completion
+  final StreamController<String> _trackCompletionController =
+      StreamController<String>.broadcast();
+  Stream<String> get trackCompletionStream => _trackCompletionController.stream;
+
   // Track the current book and playlist for mini player tap
   Book? currentBook;
   List<Map<String, dynamic>>? currentPlaylist;
@@ -99,6 +104,14 @@ class MyAudioHandler extends BaseAudioHandler {
     // Auto-advance to next track when current one is completed
     _player.processingStateStream.listen((state) {
       if (state == ProcessingState.completed) {
+        // Emit completion event for UI (e.g., LessonMap)
+        if (currentPlaylist != null &&
+            currentIndex >= 0 &&
+            currentIndex < currentPlaylist!.length) {
+          final trackId = currentPlaylist![currentIndex]['id'].toString();
+          _trackCompletionController.add(trackId);
+        }
+
         // Automatically skip to next track
         skipToNext();
       }

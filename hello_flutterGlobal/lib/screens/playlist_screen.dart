@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:async'; // For StreamSubscription
+import '../main.dart'; // Import for audioHandler
 import '../models/book.dart';
 import '../widgets/player_screen.dart';
 import '../widgets/lesson_map_widget.dart'; // Import LessonMap
@@ -56,6 +58,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   final Set<String> _recentlyCompletedTrackIds = {};
   final Set<String> _recentlyPassedQuizTrackIds = {};
   bool _recentlyPassedBookQuiz = false;
+  StreamSubscription? _trackCompletionSubscription;
 
   void _downloadFullPlaylist() async {
     print(
@@ -195,7 +198,40 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     _checkAccess();
     _loadTracks();
     _initVideoPlayer();
-    // _initCompletionVideo(); // Removed
+
+    // Listen for track completion (background playback)
+    _trackCompletionSubscription = audioHandler.trackCompletionStream.listen((
+      trackId,
+    ) {
+      if (!mounted) return;
+
+      // Find track in local list
+      int index = _tracks.indexWhere((t) => t['id'].toString() == trackId);
+      if (index != -1) {
+        // Check if already completed to avoid redundant API calls
+        bool wasCompleted = _tracks[index]['is_completed'] == true;
+
+        if (!wasCompleted) {
+          setState(() {
+            _tracks[index]['is_completed'] = true;
+            _recentlyCompletedTrackIds.add(trackId);
+
+            // Re-evaluate completion logic optimistially
+            _areTracksCompleted = _tracks.every(
+              (t) => t['is_completed'] == true,
+            );
+            if (_hasQuiz) {
+              _isBookCompleted = _areTracksCompleted && _isQuizPassed;
+            } else {
+              _isBookCompleted = _areTracksCompleted;
+            }
+          });
+
+          // Call API
+          _onTrackFinished(_tracks[index]);
+        }
+      }
+    });
   }
 
   Future<void> _checkAccess({bool forceRefresh = false}) async {
@@ -333,7 +369,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
 
   @override
   void dispose() {
-    // _completionVideoController.dispose(); // Removed
+    _trackCompletionSubscription?.cancel();
     super.dispose();
   }
 
