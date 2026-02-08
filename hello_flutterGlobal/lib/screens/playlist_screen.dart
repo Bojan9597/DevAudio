@@ -15,6 +15,7 @@ import '../services/connectivity_service.dart';
 import '../services/subscription_service.dart';
 
 import '../widgets/subscription_bottom_sheet.dart';
+import '../widgets/content_area.dart';
 import 'pdf_viewer_screen.dart';
 
 class PlaylistScreen extends StatefulWidget {
@@ -157,6 +158,9 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
           print('PDF download failed: $e');
         }
       }
+
+      // Invalidate library cache so "My Books" updates immediately
+      ContentArea.invalidateLibraryCache();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

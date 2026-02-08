@@ -352,8 +352,21 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
         // Set current book and playlist in handler to enable background progress saving (every 15s)
         AudioConnector.handler?.currentBook = book;
         if (book.tracks.isNotEmpty) {
-          AudioConnector.handler?.currentPlaylist =
-              List<Map<String, dynamic>>.from(book.tracks);
+          // Normalize track format to match PlayerScreen's expected format
+          // Reels uses 'audioUrl' but PlayerScreen expects 'file_path'
+          final normalizedPlaylist = book.tracks
+              .map((track) {
+                if (track is Map) {
+                  return {
+                    ...Map<String, dynamic>.from(track),
+                    'file_path': track['audioUrl'] ?? track['file_path'],
+                  };
+                }
+                return track;
+              })
+              .toList()
+              .cast<Map<String, dynamic>>();
+          AudioConnector.handler?.currentPlaylist = normalizedPlaylist;
           AudioConnector.handler?.currentIndex = trackIndex;
         }
 

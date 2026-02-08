@@ -22,6 +22,12 @@ import 'category_details_view.dart';
 class ContentArea extends StatefulWidget {
   const ContentArea({super.key});
 
+  /// Invalidate the library cache so "My Books" refreshes immediately
+  /// Call this after downloading a book
+  static void invalidateLibraryCache() {
+    _ContentAreaState.invalidateCache();
+  }
+
   @override
   State<ContentArea> createState() => _ContentAreaState();
 }
@@ -35,6 +41,12 @@ class _ContentAreaState extends State<ContentArea> {
   static List<Book> _cachedHistoryBooks = [];
   static List<Book> _cachedUploadedBooks = [];
   static bool _cachedIsSubscribed = false;
+
+  /// Invalidate the library cache so it refreshes on next view
+  /// Call this after downloading a book so "My Books" updates immediately
+  static void invalidateCache() {
+    _lastFetchTime = null;
+  }
 
   List<Book> _allBooks = [];
   List<String> _purchasedIds = [];
@@ -637,6 +649,7 @@ class _ContentAreaState extends State<ContentArea> {
                   userId: _userId,
                   bookId: book.id,
                 );
+
             if (isFullyDownloaded) return book;
           }
         }
@@ -647,6 +660,7 @@ class _ContentAreaState extends State<ContentArea> {
           userId: _userId,
           bookId: book.id,
         );
+
         if (isBookDownloaded) return book;
 
         return null;
