@@ -1,93 +1,109 @@
 [
     {
-        "id": "operating_systems",
-        "title": "Operating Systems",
+        "id": "ancient_medieval_history",
+        "title": "Ancient & Medieval History",
         "hasBooks": false,
         "children": [
             {
-                "id": "linux",
-                "title": "Linux",
+                "id": "ancient_civilizations",
+                "title": "Ancient Civilizations",
                 "children": [
                     {
-                        "id": "linux_networking",
-                        "title": "Networking",
+                        "id": "mesopotamia",
+                        "title": "Mesopotamia",
                         "children": []
                     },
                     {
-                        "id": "linux_filesystems",
-                        "title": "File Systems",
+                        "id": "ancient_egypt",
+                        "title": "Ancient Egypt",
                         "children": []
                     },
                     {
-                        "id": "linux_security",
-                        "title": "Security",
+                        "id": "ancient_greece",
+                        "title": "Ancient Greece",
                         "children": []
                     },
                     {
-                        "id": "linux_shell_scripting",
-                        "title": "Shell Scripting",
-                        "children": []
-                    },
-                    {
-                        "id": "linux_system_admin",
-                        "title": "System Administration",
+                        "id": "ancient_rome",
+                        "title": "Ancient Rome",
                         "children": []
                     }
                 ]
             },
             {
-                "id": "windows",
-                "title": "Windows",
+                "id": "early_middle_ages",
+                "title": "Early Middle Ages",
                 "children": [
                     {
-                        "id": "windows_internals",
-                        "title": "Internals",
+                        "id": "fall_of_rome",
+                        "title": "Fall of Rome",
                         "children": []
                     },
                     {
-                        "id": "windows_powershell",
-                        "title": "PowerShell",
+                        "id": "byzantine_empire",
+                        "title": "Byzantine Empire",
                         "children": []
                     },
                     {
-                        "id": "windows_networking",
-                        "title": "Networking",
+                        "id": "islamic_caliphates",
+                        "title": "Islamic Caliphates",
                         "children": []
                     },
                     {
-                        "id": "windows_security",
-                        "title": "Security",
-                        "children": []
-                    },
-                    {
-                        "id": "windows_administration",
-                        "title": "System Administration",
+                        "id": "viking_age",
+                        "title": "Viking Age",
                         "children": []
                     }
                 ]
             },
             {
-                "id": "macos",
-                "title": "macOS",
+                "id": "high_middle_ages",
+                "title": "High Middle Ages",
                 "children": [
                     {
-                        "id": "macos_networking",
-                        "title": "Networking",
+                        "id": "feudalism",
+                        "title": "Feudalism",
                         "children": []
                     },
                     {
-                        "id": "macos_filesystems",
-                        "title": "File Systems",
+                        "id": "crusades",
+                        "title": "Crusades",
                         "children": []
                     },
                     {
-                        "id": "macos_security",
-                        "title": "Security",
+                        "id": "holy_roman_empire",
+                        "title": "Holy Roman Empire",
                         "children": []
                     },
                     {
-                        "id": "macos_shell",
-                        "title": "Shell & Scripting",
+                        "id": "medieval_society",
+                        "title": "Medieval Society",
+                        "children": []
+                    }
+                ]
+            },
+            {
+                "id": "late_middle_ages",
+                "title": "Late Middle Ages",
+                "children": [
+                    {
+                        "id": "hundred_years_war",
+                        "title": "Hundred Years' War",
+                        "children": []
+                    },
+                    {
+                        "id": "black_death",
+                        "title": "Black Death",
+                        "children": []
+                    },
+                    {
+                        "id": "rise_of_nations",
+                        "title": "Rise of Nation States",
+                        "children": []
+                    },
+                    {
+                        "id": "medieval_culture",
+                        "title": "Culture & Religion",
                         "children": []
                     }
                 ]
@@ -95,120 +111,110 @@
         ]
     },
     {
-        "id": "programming_languages",
-        "title": "Programming Languages",
+        "id": "modern_contemporary_history",
+        "title": "Modern & Contemporary History",
         "hasBooks": false,
         "children": [
             {
-                "id": "python",
-                "title": "Python",
+                "id": "renaissance_enlightenment",
+                "title": "Renaissance & Enlightenment",
                 "children": [
                     {
-                        "id": "python_basics",
-                        "title": "Basics",
+                        "id": "renaissance",
+                        "title": "Renaissance",
                         "children": []
                     },
                     {
-                        "id": "python_advanced",
-                        "title": "Advanced Topics",
+                        "id": "humanism",
+                        "title": "Humanism",
                         "children": []
                     },
                     {
-                        "id": "python_web",
-                        "title": "Web Development",
+                        "id": "scientific_revolution",
+                        "title": "Scientific Revolution",
                         "children": []
                     },
                     {
-                        "id": "python_data_science",
-                        "title": "Data Science",
-                        "children": []
-                    },
-                    {
-                        "id": "python_scripting",
-                        "title": "Scripting & Automation",
+                        "id": "enlightenment",
+                        "title": "Enlightenment",
                         "children": []
                     }
                 ]
             },
             {
-                "id": "c_cpp",
-                "title": "C / C++",
+                "id": "industrial_age",
+                "title": "Industrial Age",
                 "children": [
                     {
-                        "id": "c_basics",
-                        "title": "C Basics",
+                        "id": "industrial_revolution",
+                        "title": "Industrial Revolution",
                         "children": []
                     },
                     {
-                        "id": "cpp_basics",
-                        "title": "C++ Basics",
+                        "id": "technological_progress",
+                        "title": "Technological Progress",
                         "children": []
                     },
                     {
-                        "id": "cpp_advanced",
-                        "title": "C++ Advanced",
+                        "id": "urbanization",
+                        "title": "Urbanization",
                         "children": []
                     },
                     {
-                        "id": "cpp_stl",
-                        "title": "STL",
-                        "children": []
-                    },
-                    {
-                        "id": "cpp_system_programming",
-                        "title": "System Programming",
+                        "id": "social_changes",
+                        "title": "Social Changes",
                         "children": []
                     }
                 ]
             },
             {
-                "id": "java",
-                "title": "Java",
+                "id": "world_wars",
+                "title": "World Wars",
                 "children": [
                     {
-                        "id": "java_basics",
-                        "title": "Basics",
+                        "id": "world_war_1",
+                        "title": "World War I",
                         "children": []
                     },
                     {
-                        "id": "java_oop",
-                        "title": "Object-Oriented Programming",
+                        "id": "interwar_period",
+                        "title": "Interwar Period",
                         "children": []
                     },
                     {
-                        "id": "java_web",
-                        "title": "Web Development",
+                        "id": "world_war_2",
+                        "title": "World War II",
                         "children": []
                     },
                     {
-                        "id": "java_concurrency",
-                        "title": "Concurrency & Threads",
+                        "id": "postwar_world",
+                        "title": "Postwar World",
                         "children": []
                     }
                 ]
             },
             {
-                "id": "javascript",
-                "title": "JavaScript",
+                "id": "cold_war_modern_world",
+                "title": "Cold War & Modern World",
                 "children": [
                     {
-                        "id": "js_basics",
-                        "title": "Basics",
+                        "id": "cold_war",
+                        "title": "Cold War",
                         "children": []
                     },
                     {
-                        "id": "js_browser",
-                        "title": "Browser & DOM",
+                        "id": "fall_of_ussr",
+                        "title": "Fall of USSR",
                         "children": []
                     },
                     {
-                        "id": "js_node",
-                        "title": "Node.js",
+                        "id": "globalization",
+                        "title": "Globalization",
                         "children": []
                     },
                     {
-                        "id": "js_frameworks",
-                        "title": "Frameworks (React, Vue, Angular)",
+                        "id": "modern_conflicts",
+                        "title": "Modern Conflicts",
                         "children": []
                     }
                 ]
