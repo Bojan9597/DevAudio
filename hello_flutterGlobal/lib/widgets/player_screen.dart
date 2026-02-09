@@ -681,9 +681,8 @@ class _PlayerScreenState extends State<PlayerScreen>
         await audioHandler.loadAudio(cleanUrl, mediaItem);
       }
 
-      // Don't auto-play - let user manually start playback
-      // This prevents audio from playing when returning to the same book
-      // await audioHandler.play();
+      // Auto-play when player screen is opened
+      await audioHandler.play();
 
       // Clear any previous error since we succeeded
       _lastError = null;
@@ -1466,9 +1465,11 @@ class _PlayerScreenState extends State<PlayerScreen>
                                   ),
                                 ),
                                 child: Slider(
-                                  value: _isDraggingSlider
-                                      ? _dragSliderValue
-                                      : sliderValue,
+                                  value:
+                                      (_isDraggingSlider
+                                              ? _dragSliderValue
+                                              : sliderValue)
+                                          .clamp(0.0, maxDuration),
                                   min: 0.0,
                                   max: maxDuration,
                                   onChangeStart: (v) {
