@@ -11,6 +11,27 @@ const String kDailyMotivationTask = 'com.velorus.echoHistory.dailyMotivation';
 const String kContinueListeningTask =
     'com.velorus.echoHistory.continueListening';
 
+// Localized strings for Continue Listening notification
+const Map<String, Map<String, String>> continueListeningStrings = {
+  'en': {'title': 'Continue Listening', 'body': 'Pick up where you left off: '},
+  'es': {
+    'title': 'Continuar escuchando',
+    'body': 'Continúa donde lo dejaste: ',
+  },
+  'sr': {
+    'title': 'Nastavite slušanje',
+    'body': 'Nastavite tamo gde ste stali: ',
+  },
+  'fr': {
+    'title': 'Reprendre l\'écoute',
+    'body': 'Reprenez là où vous vous êtes arrêté : ',
+  },
+  'de': {
+    'title': 'Weiterhören',
+    'body': 'Mache dort weiter, wo du aufgehört hast: ',
+  },
+};
+
 /// Top-level WorkManager callback. Runs in a background isolate.
 @pragma('vm:entry-point')
 void callbackDispatcher() {
@@ -202,10 +223,17 @@ Future<bool> _handleContinueListening(
   final bookId = firstBook['id']?.toString() ?? '';
   final resumeFromTrackId = firstBook['currentPlaylistItemId'] as int?;
 
+  // Get localized strings
+  final locale = prefs.getString('notification_locale_$userId') ?? 'en';
+  final strings =
+      continueListeningStrings[locale] ?? continueListeningStrings['en']!;
+  final title = strings['title']!;
+  final bodyPrefix = strings['body']!;
+
   await plugin.show(
     NotificationService.continueListeningId,
-    'Continue Listening',
-    'Pick up where you left off: $bookTitle',
+    title,
+    '$bodyPrefix$bookTitle',
     const NotificationDetails(
       android: AndroidNotificationDetails(
         NotificationService.continueListeningChannelId,

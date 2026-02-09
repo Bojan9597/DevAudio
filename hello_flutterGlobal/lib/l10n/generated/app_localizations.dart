@@ -1805,7 +1805,7 @@ abstract class AppLocalizations {
   /// No description provided for @dailyMotivationSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Receive 5 inspiring history quotes daily'**
+  /// **'Get an inspirational history quote daily'**
   String get dailyMotivationSubtitle;
 
   /// No description provided for @continueListeningNotification.

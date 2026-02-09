@@ -950,7 +950,7 @@ class AppLocalizationsSr extends AppLocalizations {
 
   @override
   String get dailyMotivationSubtitle =>
-      'Primajte 5 inspirativnih istorijskih citata dnevno';
+      'Primajte inspirativni istorijski citat dnevno';
 
   @override
   String get continueListeningNotification => 'Podsetnici za slusanje';

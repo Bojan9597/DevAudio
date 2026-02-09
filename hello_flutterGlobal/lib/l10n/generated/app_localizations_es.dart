@@ -955,7 +955,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get dailyMotivationSubtitle =>
-      'Recibe 5 citas historicas inspiradoras al dia';
+      'Recibe una cita histórica inspiradora al día';
 
   @override
   String get continueListeningNotification => 'Recordatorios de Escucha';
