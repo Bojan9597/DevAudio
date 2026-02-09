@@ -10,7 +10,6 @@ import '../states/layout_state.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../main.dart'; // For audioHandler
 import '../widgets/support_dialog.dart';
-import 'package:workmanager/workmanager.dart';
 import '../services/notification_service.dart';
 import 'notification_settings_screen.dart';
 
@@ -63,8 +62,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ProfileScreenCache.clear();
 
       // Cancel all notification tasks
-      await Workmanager().cancelAll();
-      await NotificationService().cancelAll();
+      await NotificationService().cancelAllTasks();
 
       // Logout (clears tokens and user data)
       await _authService.logout();

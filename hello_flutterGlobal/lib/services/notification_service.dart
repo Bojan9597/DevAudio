@@ -9,6 +9,15 @@ import '../screens/playlist_screen.dart';
 import 'notification_preferences.dart';
 import 'notification_workmanager.dart';
 
+/// Top-level handler for notification taps when the app is dead (cold start).
+/// Must be a top-level or static function — runs in its own isolate.
+@pragma('vm:entry-point')
+void _onBackgroundNotificationResponse(NotificationResponse response) {
+  // Nothing to do here — the payload is captured via
+  // getNotificationAppLaunchDetails() when the app cold-starts.
+  // This handler just needs to exist so Flutter doesn't drop the tap.
+}
+
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
@@ -30,19 +39,23 @@ class NotificationService {
   static const int continueListeningId = 2000;
 
   Future<void> initialize() async {
-    const androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const initSettings = InitializationSettings(android: androidSettings);
 
     await _plugin.initialize(
       initSettings,
       onDidReceiveNotificationResponse: _onNotificationTap,
+      onDidReceiveBackgroundNotificationResponse:
+          _onBackgroundNotificationResponse,
     );
 
     // Create notification channels
-    final androidPlugin =
-        _plugin.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+    final androidPlugin = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
 
     if (androidPlugin != null) {
       await androidPlugin.createNotificationChannel(
@@ -64,8 +77,7 @@ class NotificationService {
     }
 
     // Check for cold-start deep-link
-    final launchDetails =
-        await _plugin.getNotificationAppLaunchDetails();
+    final launchDetails = await _plugin.getNotificationAppLaunchDetails();
     if (launchDetails?.didNotificationLaunchApp ?? false) {
       _pendingPayload = launchDetails!.notificationResponse?.payload;
     }
@@ -92,7 +104,12 @@ class NotificationService {
   static void _handlePayload(String payload) async {
     try {
       final data = jsonDecode(payload) as Map<String, dynamic>;
+      print('[NotificationService] Notification tapped with payload: $data');
+
       if (data['type'] == 'continue_listening') {
+        // Disabled deep linking to prevent black screen issues on cold start.
+        // Tapping the notification will just open the app to the home screen.
+        /*
         final bookId = data['bookId'] as String?;
         final trackId = data['resumeFromTrackId'] as int?;
         if (bookId == null) return;
@@ -126,6 +143,7 @@ class NotificationService {
             ),
           ),
         );
+        */
       }
     } catch (e) {
       print('[NotificationService] Error handling payload: $e');
@@ -184,50 +202,62 @@ class NotificationService {
     await _plugin.cancelAll();
   }
 
-  /// Register WorkManager periodic tasks based on user preferences.
-  Future<void> registerNotificationTasks(String userId) async {
-    // Cancel all existing tasks first
-    await Workmanager().cancelAll();
+  /// Compute delay from now until the next occurrence of [hour]:[minute].
+  /// If that time already passed today, targets tomorrow.
+  static Duration _computeDelay(int hour, int minute) {
+    final now = DateTime.now();
+    var target = DateTime(now.year, now.month, now.day, hour, minute);
+    if (target.isBefore(now) || target.isAtSameMomentAs(now)) {
+      target = target.add(const Duration(days: 1));
+    }
+    return target.difference(now);
+  }
 
+  /// Register WorkManager tasks based on user preferences.
+  /// Uses OneOff tasks with REPLACE policy. The worker reschedules itself
+  /// for the next day after firing.
+  Future<void> registerNotificationTasks(String userId) async {
     final prefs = NotificationPreferences();
     if (!await prefs.isEnabled(userId)) return;
 
-    final time = await prefs.getNotificationTime(userId);
-    final now = DateTime.now();
-    var scheduledTime = DateTime(
-      now.year,
-      now.month,
-      now.day,
-      time.hour,
-      time.minute,
-    );
-    if (scheduledTime.isBefore(now)) {
-      scheduledTime = scheduledTime.add(const Duration(days: 1));
-    }
-    final initialDelay = scheduledTime.difference(now);
-
-    // Daily motivation periodic task
+    // Daily motivation – its own scheduled time
     if (await prefs.isMotivationEnabled(userId)) {
-      await Workmanager().registerPeriodicTask(
+      final mTime = await prefs.getMotivationTime(userId);
+      final mDelay = _computeDelay(mTime.hour, mTime.minute);
+      await Workmanager().registerOneOffTask(
         kDailyMotivationTask,
         kDailyMotivationTask,
-        frequency: const Duration(hours: 24),
-        initialDelay: initialDelay,
+        initialDelay: mDelay,
         constraints: Constraints(networkType: NetworkType.notRequired),
-        existingWorkPolicy: ExistingPeriodicWorkPolicy.replace,
+        existingWorkPolicy: ExistingWorkPolicy.replace,
       );
     }
 
-    // Continue listening periodic task (offset by 30 min)
+    // Continue listening – its own scheduled time
     if (await prefs.isContinueListeningEnabled(userId)) {
-      await Workmanager().registerPeriodicTask(
+      final clTime = await prefs.getContinueListeningTime(userId);
+      final clDelay = _computeDelay(clTime.hour, clTime.minute);
+      await Workmanager().registerOneOffTask(
         kContinueListeningTask,
         kContinueListeningTask,
-        frequency: const Duration(hours: 24),
-        initialDelay: initialDelay + const Duration(minutes: 30),
+        initialDelay: clDelay,
         constraints: Constraints(networkType: NetworkType.notRequired),
-        existingWorkPolicy: ExistingPeriodicWorkPolicy.replace,
+        existingWorkPolicy: ExistingWorkPolicy.replace,
       );
     }
+  }
+
+  /// Cancel all WorkManager tasks and local notifications.
+  /// Call on logout or when user disables notifications entirely.
+  Future<void> cancelAllTasks() async {
+    await Workmanager().cancelAll();
+    await _plugin.cancelAll();
+  }
+
+  /// Re-schedule tasks after user changes time or toggles.
+  /// Cancels existing work first, then registers fresh.
+  Future<void> rescheduleNotificationTasks(String userId) async {
+    await Workmanager().cancelAll();
+    await registerNotificationTasks(userId);
   }
 }

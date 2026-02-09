@@ -23,8 +23,9 @@ class _NotificationSettingsScreenState
 
   bool _masterEnabled = false;
   bool _motivationEnabled = true;
-  bool _continueListeningEnabled = true;
-  TimeOfDay _notificationTime = const TimeOfDay(hour: 9, minute: 0);
+  bool _continueListeningEnabled = false;
+  TimeOfDay _motivationTime = const TimeOfDay(hour: 9, minute: 0);
+  TimeOfDay _continueListeningTime = const TimeOfDay(hour: 18, minute: 0);
 
   @override
   void initState() {
@@ -43,7 +44,8 @@ class _NotificationSettingsScreenState
     final masterEnabled = await _prefs.isEnabled(uid);
     final motivationEnabled = await _prefs.isMotivationEnabled(uid);
     final clEnabled = await _prefs.isContinueListeningEnabled(uid);
-    final time = await _prefs.getNotificationTime(uid);
+    final mTime = await _prefs.getMotivationTime(uid);
+    final clTime = await _prefs.getContinueListeningTime(uid);
 
     if (mounted) {
       setState(() {
@@ -51,7 +53,8 @@ class _NotificationSettingsScreenState
         _masterEnabled = masterEnabled;
         _motivationEnabled = motivationEnabled;
         _continueListeningEnabled = clEnabled;
-        _notificationTime = time;
+        _motivationTime = mTime;
+        _continueListeningTime = clTime;
         _isLoading = false;
       });
     }
@@ -61,7 +64,6 @@ class _NotificationSettingsScreenState
     if (_userId == null) return;
 
     if (value) {
-      // Request notification permission on Android 13+
       final status = await Permission.notification.request();
       if (status.isDenied || status.isPermanentlyDenied) {
         if (mounted) {
@@ -81,45 +83,53 @@ class _NotificationSettingsScreenState
     await _prefs.setEnabled(_userId!, value);
 
     if (value) {
-      await NotificationService().registerNotificationTasks(_userId!);
+      await NotificationService().rescheduleNotificationTasks(_userId!);
     } else {
-      await NotificationService().cancelAll();
-      await _cancelAllTasks();
+      await NotificationService().cancelAllTasks();
     }
-  }
-
-  Future<void> _cancelAllTasks() async {
-    // Workmanager is cancelled inside registerNotificationTasks when disabled,
-    // but also cancel explicitly here for immediate effect
-    await NotificationService().registerNotificationTasks(_userId!);
   }
 
   Future<void> _onMotivationToggle(bool value) async {
     if (_userId == null) return;
     setState(() => _motivationEnabled = value);
     await _prefs.setMotivationEnabled(_userId!, value);
-    await NotificationService().registerNotificationTasks(_userId!);
+    await NotificationService().rescheduleNotificationTasks(_userId!);
   }
 
   Future<void> _onContinueListeningToggle(bool value) async {
     if (_userId == null) return;
     setState(() => _continueListeningEnabled = value);
     await _prefs.setContinueListeningEnabled(_userId!, value);
-    await NotificationService().registerNotificationTasks(_userId!);
+    await NotificationService().rescheduleNotificationTasks(_userId!);
   }
 
-  Future<void> _onTimeTap() async {
+  Future<void> _onMotivationTimeTap() async {
     final picked = await showTimePicker(
       context: context,
-      initialTime: _notificationTime,
+      initialTime: _motivationTime,
     );
     if (picked == null || _userId == null) return;
 
-    setState(() => _notificationTime = picked);
-    await _prefs.setNotificationTime(_userId!, picked);
+    setState(() => _motivationTime = picked);
+    await _prefs.setMotivationTime(_userId!, picked);
 
-    if (_masterEnabled) {
-      await NotificationService().registerNotificationTasks(_userId!);
+    if (_masterEnabled && _motivationEnabled) {
+      await NotificationService().rescheduleNotificationTasks(_userId!);
+    }
+  }
+
+  Future<void> _onContinueListeningTimeTap() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _continueListeningTime,
+    );
+    if (picked == null || _userId == null) return;
+
+    setState(() => _continueListeningTime = picked);
+    await _prefs.setContinueListeningTime(_userId!, picked);
+
+    if (_masterEnabled && _continueListeningEnabled) {
+      await NotificationService().rescheduleNotificationTasks(_userId!);
     }
   }
 
@@ -155,6 +165,7 @@ class _NotificationSettingsScreenState
                 ),
                 if (_masterEnabled) ...[
                   const Divider(),
+                  // --- Daily Motivation section ---
                   SwitchListTile(
                     secondary: const Icon(Icons.format_quote),
                     title: Text(l10n.dailyMotivation),
@@ -162,6 +173,18 @@ class _NotificationSettingsScreenState
                     value: _motivationEnabled,
                     onChanged: _onMotivationToggle,
                   ),
+                  if (_motivationEnabled)
+                    ListTile(
+                      leading: const SizedBox(width: 24),
+                      title: Text(l10n.notificationTime),
+                      trailing: Text(
+                        _formatTime(_motivationTime),
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                      onTap: _onMotivationTimeTap,
+                    ),
+                  const Divider(),
+                  // --- Continue Listening section ---
                   SwitchListTile(
                     secondary: const Icon(Icons.headphones),
                     title: Text(l10n.continueListeningNotification),
@@ -169,17 +192,16 @@ class _NotificationSettingsScreenState
                     value: _continueListeningEnabled,
                     onChanged: _onContinueListeningToggle,
                   ),
-                  const Divider(),
-                  ListTile(
-                    leading: const Icon(Icons.access_time),
-                    title: Text(l10n.notificationTime),
-                    subtitle: Text(l10n.notificationTimeSubtitle),
-                    trailing: Text(
-                      _formatTime(_notificationTime),
-                      style: Theme.of(context).textTheme.bodyLarge,
+                  if (_continueListeningEnabled)
+                    ListTile(
+                      leading: const SizedBox(width: 24),
+                      title: Text(l10n.notificationTime),
+                      trailing: Text(
+                        _formatTime(_continueListeningTime),
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                      onTap: _onContinueListeningTimeTap,
                     ),
-                    onTap: _onTimeTap,
-                  ),
                 ],
               ],
             ),

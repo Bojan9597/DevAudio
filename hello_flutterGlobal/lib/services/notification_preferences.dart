@@ -6,7 +6,7 @@ class NotificationPreferences {
   // Master toggle
   Future<bool> isEnabled(String userId) async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool('notifications_enabled_$userId') ?? false;
+    return prefs.getBool('notifications_enabled_$userId') ?? true;
   }
 
   Future<void> setEnabled(String userId, bool enabled) async {
@@ -28,7 +28,7 @@ class NotificationPreferences {
   // Continue Listening sub-toggle
   Future<bool> isContinueListeningEnabled(String userId) async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool('continue_listening_enabled_$userId') ?? true;
+    return prefs.getBool('continue_listening_enabled_$userId') ?? false;
   }
 
   Future<void> setContinueListeningEnabled(String userId, bool enabled) async {
@@ -36,18 +36,32 @@ class NotificationPreferences {
     await prefs.setBool('continue_listening_enabled_$userId', enabled);
   }
 
-  // Notification time (defaults to 9:00 AM)
-  Future<TimeOfDay> getNotificationTime(String userId) async {
+  // Motivation time (defaults to 9:00 AM)
+  Future<TimeOfDay> getMotivationTime(String userId) async {
     final prefs = await SharedPreferences.getInstance();
     final hour = prefs.getInt('notification_time_hour_$userId') ?? 9;
     final minute = prefs.getInt('notification_time_minute_$userId') ?? 0;
     return TimeOfDay(hour: hour, minute: minute);
   }
 
-  Future<void> setNotificationTime(String userId, TimeOfDay time) async {
+  Future<void> setMotivationTime(String userId, TimeOfDay time) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('notification_time_hour_$userId', time.hour);
     await prefs.setInt('notification_time_minute_$userId', time.minute);
+  }
+
+  // Continue Listening time (defaults to 6:00 PM)
+  Future<TimeOfDay> getContinueListeningTime(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final hour = prefs.getInt('cl_time_hour_$userId') ?? 18;
+    final minute = prefs.getInt('cl_time_minute_$userId') ?? 0;
+    return TimeOfDay(hour: hour, minute: minute);
+  }
+
+  Future<void> setContinueListeningTime(String userId, TimeOfDay time) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('cl_time_hour_$userId', time.hour);
+    await prefs.setInt('cl_time_minute_$userId', time.minute);
   }
 
   /// Sync data needed by background isolate (userId and locale).

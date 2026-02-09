@@ -17,7 +17,7 @@ import 'services/notification_service.dart';
 import 'services/notification_preferences.dart';
 import 'services/notification_workmanager.dart';
 
-// Global audio handler instance (kept for backward compatibility if used directly in main)
+// Global audio handler instance - Late initialization required
 late MyAudioHandler audioHandler;
 
 // Global RouteObserver for navigation awareness
@@ -25,59 +25,9 @@ final RouteObserver<ModalRoute<void>> routeObserver =
     RouteObserver<ModalRoute<void>>();
 
 void main() async {
-  print("=== 1. APP STARTING ===");
+  // Move SystemChrome to AuthWrapper to ensure main() is strictly non-blocking
+  // await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
-  try {
-    print("=== 2. Initializing Flutter binding ===");
-    WidgetsFlutterBinding.ensureInitialized();
-    print("=== 3. Flutter binding initialized ===");
-
-    print("=== 4. Starting AudioService initialization ===");
-    audioHandler = await AudioService.init(
-      builder: () {
-        print("=== 5. Creating MyAudioHandler instance ===");
-        final handler = MyAudioHandler();
-        print("=== 6. MyAudioHandler created ===");
-        return handler;
-      },
-      config: const AudioServiceConfig(
-        androidNotificationChannelId: 'com.example.dev_audio.channel.audio',
-        androidNotificationChannelName: 'Audio playback',
-        androidNotificationOngoing: true,
-      ),
-    );
-    // Register the handler with the connector
-    AudioConnector.setHandler(audioHandler);
-
-    print("=== 7. AudioService initialized successfully! ===");
-  } catch (e, stackTrace) {
-    print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-    print("!!! FATAL ERROR DURING INITIALIZATION !!!");
-    print("!!! Error: $e");
-    print("!!! Stack trace:");
-    print(stackTrace);
-    print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-    // Create a fallback handler without the service
-    print("=== Creating fallback handler without AudioService ===");
-    audioHandler = MyAudioHandler();
-    AudioConnector.setHandler(audioHandler);
-    print("=== Fallback handler created ===");
-  }
-
-  print("=== 8. Initializing ConnectivityService ===");
-  await ConnectivityService().initialize();
-  print("=== 9. ConnectivityService initialized ===");
-
-  print("=== 10. Initializing NotificationService ===");
-  await NotificationService().initialize();
-  Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
-  print("=== 11. NotificationService initialized ===");
-
-  print("=== 12. Setting screen orientation ===");
-  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-  print("=== 11. Screen orientation set ===");
-
-  print("=== 12. Running app ===");
   runApp(const MyApp());
 }
 
@@ -113,7 +63,7 @@ class MyApp extends StatelessWidget {
             Locale('fr'), // French
             Locale('de'), // German
           ],
-          navigatorObservers: [routeObserver], // Register RouteObserver
+          navigatorObservers: [routeObserver],
           home: const AuthWrapper(),
         );
       },
@@ -134,7 +84,80 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   void initState() {
     super.initState();
-    _checkAuth();
+    // Render first frame immediately, THEN init everything
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initAndCheckAuth();
+    });
+  }
+
+  Future<void> _initAndCheckAuth() async {
+    // 0. Initialize AudioHandler (Main Thread, but post-frame)
+    // This creates the players. If it hangs, at least the spinner is already visible.
+    try {
+      audioHandler = MyAudioHandler();
+      AudioConnector.setHandler(audioHandler);
+    } catch (e) {
+      print('[AuthWrapper] Failed to create MyAudioHandler: $e');
+    }
+
+    // 1. Init NotificationService (awaited, with timeout)
+    await _safeInit(
+      () => NotificationService().initialize().timeout(
+        const Duration(milliseconds: 1000),
+        onTimeout: () => print('[AuthWrapper] Notification init timed out'),
+      ),
+    );
+
+    // 2. Init Workmanager (awaited, with timeout)
+    await _safeInit(
+      () => Workmanager()
+          .initialize(callbackDispatcher, isInDebugMode: false)
+          .timeout(
+            const Duration(milliseconds: 1000),
+            onTimeout: () => print('[AuthWrapper] Workmanager init timed out'),
+          ),
+    );
+
+    // 3. Init AudioService (fire-and-forget, slow)
+    _initAudioService();
+
+    // 4. Init Connectivity & Orientation (fire-and-forget)
+    _safeInit(() => ConnectivityService().initialize());
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
+    // 5. Check Auth
+    await _checkAuth();
+  }
+
+  Future<void> _safeInit(Future<void> Function() init) async {
+    try {
+      await init();
+    } catch (e) {
+      print('[AuthWrapper] Service init failed: $e');
+    }
+  }
+
+  void _initAudioService() {
+    AudioService.init(
+          builder: () =>
+              MyAudioHandler(), // Used for background isolation if needed
+          config: const AudioServiceConfig(
+            androidNotificationChannelId: 'com.example.dev_audio.channel.audio',
+            androidNotificationChannelName: 'Audio playback',
+            androidNotificationOngoing: true,
+          ),
+        )
+        .timeout(const Duration(seconds: 8))
+        .then((handler) {
+          // Note: In this aggressive fix, we already created audioHandler locally.
+          // The service returns a proxy or the same handler.
+          // We update the reference to ensure we have the service-connected one.
+          audioHandler = handler as MyAudioHandler;
+          AudioConnector.setHandler(handler);
+        })
+        .catchError((e) {
+          print('[AuthWrapper] AudioService.init failed or timed out: $e');
+        });
   }
 
   Future<void> _checkAuth() async {
@@ -146,7 +169,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
       if (userId != null) {
         await globalLayoutState.updateUser(userId.toString());
 
-        // Sync notification settings for background isolate and re-register tasks
         final locale = globalLayoutState.locale?.languageCode ?? 'en';
         await NotificationPreferences().syncForBackground(
           userId.toString(),
@@ -157,7 +179,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
         );
       }
     } else {
-      // Ensure logged out state
       await globalLayoutState.updateUser(null);
     }
 
@@ -165,7 +186,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
       setState(() {
         _isLoggedIn = isLoggedIn;
       });
-      // Process any pending notification deep-link after UI is ready
       if (isLoggedIn) {
         NotificationService().processPendingPayload();
       }
@@ -176,8 +196,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Widget build(BuildContext context) {
     if (_isLoggedIn == null) {
       return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator()),
+        backgroundColor:
+            Colors.blueGrey, // Changed to debugging color (was Black)
+        body: Center(child: CircularProgressIndicator(color: Colors.white)),
       );
     }
     if (_isLoggedIn!) {
