@@ -469,4 +469,9 @@ class MyAudioHandler extends BaseAudioHandler {
 
     await play();
   }
+
+  @override
+  Future<void> onTaskRemoved() async {
+    await stop();
+  }
 }
