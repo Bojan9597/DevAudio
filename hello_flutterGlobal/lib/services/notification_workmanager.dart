@@ -169,8 +169,7 @@ Future<bool> _handleContinueListening(
   String userId,
 ) async {
   // Check sub-toggle
-  final clEnabled =
-      prefs.getBool('continue_listening_enabled_$userId') ?? false;
+  final clEnabled = prefs.getBool('continue_listening_enabled_$userId') ?? true;
   if (!clEnabled) return true;
 
   // Read cached discover data

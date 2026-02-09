@@ -28,7 +28,7 @@ class NotificationPreferences {
   // Continue Listening sub-toggle
   Future<bool> isContinueListeningEnabled(String userId) async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool('continue_listening_enabled_$userId') ?? false;
+    return prefs.getBool('continue_listening_enabled_$userId') ?? true;
   }
 
   Future<void> setContinueListeningEnabled(String userId, bool enabled) async {

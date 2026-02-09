@@ -196,9 +196,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Widget build(BuildContext context) {
     if (_isLoggedIn == null) {
       return const Scaffold(
-        backgroundColor:
-            Colors.blueGrey, // Changed to debugging color (was Black)
-        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+        backgroundColor: Colors.black,
+        body: Center(child: CircularProgressIndicator()),
       );
     }
     if (_isLoggedIn!) {
