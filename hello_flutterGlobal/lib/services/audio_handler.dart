@@ -263,6 +263,17 @@ class MyAudioHandler extends BaseAudioHandler {
     _selectedBgMusicId = null;
   }
 
+  /// Force-sync background music with main player.
+  /// Call after all initialization is complete to ensure bg music is playing.
+  void syncBgMusic() {
+    if (_bgMusicLoaded && _bgMusicEnabled && _player.playing) {
+      if (!_bgPlayer.playing) {
+        _bgPlayer.play();
+        print('[AudioHandler] BG music force-synced');
+      }
+    }
+  }
+
   /// Toggle background music enabled state
   void toggleBgMusicEnabled(bool enabled) {
     _bgMusicEnabled = enabled;

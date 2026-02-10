@@ -186,11 +186,8 @@ class _PlayerScreenState extends State<PlayerScreen>
         // Don't block player init if bg music fails
       }
 
-      // Now initialize player
+      // Now initialize player (bg music is started inside _initPlayer right after play())
       await _init();
-
-      // Initialize background music AFTER player is ready to avoid race conditions
-      if (mounted) await _initBgMusic();
     } catch (e) {
       debugPrint("[PlayerScreen] Fatal error in _initializeAll: $e");
       if (mounted) {
@@ -667,6 +664,8 @@ class _PlayerScreenState extends State<PlayerScreen>
         print(
           "[DEBUG][PlayerScreen] Same track already loaded, skipping reload",
         );
+        // Still ensure bg music is synced (fire and forget)
+        _initBgMusic();
         _isInitializingPlayer = false;
         return;
       }
@@ -728,6 +727,10 @@ class _PlayerScreenState extends State<PlayerScreen>
         await audioHandler.loadAudio(cleanUrl, mediaItem);
       }
 
+      // Load background music BEFORE auto-play to ensure proper sync
+      // This ensures background music is ready when main player starts
+      await _initBgMusic();
+
       // Auto-play when player screen is opened
       await audioHandler.play();
 
@@ -748,11 +751,15 @@ class _PlayerScreenState extends State<PlayerScreen>
 
         final savedPosition = status['position_seconds'] as int? ?? 0;
 
-        // Store user preference for _initBgMusic to use later
+        // If user has a saved bg music preference, switch to it
         if (status.containsKey('background_music_id')) {
           final rawId = status['background_music_id'];
           if (rawId is int) {
             _userPreferredBgMusicId = rawId;
+            // Update bg music if user preference differs from what was loaded
+            if (rawId != audioHandler.selectedBgMusicId) {
+              _updateBgMusicSource(rawId);
+            }
           }
         }
 
@@ -760,6 +767,13 @@ class _PlayerScreenState extends State<PlayerScreen>
           await _player.seek(Duration(seconds: savedPosition));
         }
       }
+
+      // Safety net: after all async ops (load, play, seek) settle,
+      // force-sync bg music in case the retry loop in setBgMusicSource
+      // was beaten by a concurrent state change (e.g., seek buffering).
+      Future.delayed(const Duration(milliseconds: 800), () {
+        if (mounted) audioHandler.syncBgMusic();
+      });
     } catch (e) {
       final errorMsg = e.toString();
       debugPrint("[DEBUG][PlayerScreen] Error loading audio: $errorMsg");

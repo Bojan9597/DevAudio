@@ -14,6 +14,7 @@ class MiniPlayer extends StatefulWidget {
 
 class _MiniPlayerState extends State<MiniPlayer> {
   bool _isHidden = false;
+  bool _isExpanded = true; // Start expanded by default
   String? _lastMediaId;
   bool _isDraggingSlider = false;
   double _dragSliderValue = 0.0;
@@ -41,7 +42,9 @@ class _MiniPlayerState extends State<MiniPlayer> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-    final miniPlayerHeight = screenHeight * 0.16; // 16% of screen height
+    final miniPlayerHeight = _isExpanded
+        ? screenHeight * 0.16  // 16% when expanded
+        : 70.0;                 // Fixed compact height when collapsed
 
     return StreamBuilder<MediaItem?>(
       stream: audioHandler.mediaItem,
@@ -109,7 +112,10 @@ class _MiniPlayerState extends State<MiniPlayer> {
                     );
                   }
                 },
-                child: Container(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  height: miniPlayerHeight,
                   color: Colors.grey[900], // Fallback background
                   child: Stack(
                     children: [
@@ -144,17 +150,155 @@ class _MiniPlayerState extends State<MiniPlayer> {
                       // Content overlay
                       Container(
                         height: miniPlayerHeight,
-                        padding: const EdgeInsets.only(
+                        padding: EdgeInsets.only(
                           left: 12,
                           right: 12,
-                          top: 8,
-                          bottom: 4,
+                          top: _isExpanded ? 8 : 12,
+                          bottom: _isExpanded ? 4 : 12,
                         ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            // Title and Artist Row (at top)
-                            Row(
+                        child: _isExpanded
+                            ? _buildExpandedLayout(
+                                mediaItem,
+                                playing,
+                              )
+                            : _buildCollapsedLayout(
+                                mediaItem,
+                                playing,
+                              ),
+                      ),
+
+                      // Collapse/Expand Button (replaces close X)
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _isExpanded = !_isExpanded;
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.3),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              _isExpanded
+                                  ? Icons.keyboard_arrow_down
+                                  : Icons.keyboard_arrow_up,
+                              color: Colors.white70,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  // Collapsed layout - compact version
+  Widget _buildCollapsedLayout(MediaItem mediaItem, bool playing) {
+    return Row(
+      children: [
+        // Album Art Thumbnail
+        if (mediaItem.artUri != null)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: Image.network(
+              mediaItem.artUri.toString(),
+              headers: ApiConstants.imageHeaders,
+              width: 46,
+              height: 46,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: 46,
+                  height: 46,
+                  color: Colors.grey[800],
+                  child: const Icon(
+                    Icons.music_note,
+                    color: Colors.white54,
+                    size: 24,
+                  ),
+                );
+              },
+            ),
+          ),
+        const SizedBox(width: 12),
+
+        // Title and Artist
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                mediaItem.title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                mediaItem.artist ?? '',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.7),
+                  fontSize: 12,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(width: 12),
+
+        // Play/Pause Button (large)
+        IconButton(
+          icon: Icon(
+            playing ? Icons.pause_circle_filled : Icons.play_circle_filled,
+            color: Colors.white,
+            size: 44,
+          ),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(
+            minWidth: 44,
+            minHeight: 44,
+          ),
+          onPressed: () {
+            if (playing) {
+              audioHandler.pause();
+            } else {
+              audioHandler.play();
+            }
+          },
+        ),
+
+        const SizedBox(width: 8),
+      ],
+    );
+  }
+
+  // Expanded layout - full controls
+  Widget _buildExpandedLayout(MediaItem mediaItem, bool playing) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        // Title and Artist Row (at top)
+        Row(
                               children: [
                                 // Album Art Thumbnail
                                 if (mediaItem.artUri != null)
@@ -428,42 +572,7 @@ class _MiniPlayerState extends State<MiniPlayer> {
                                 ),
                               ],
                             ),
-                          ],
-                        ),
-                      ),
-
-                      // Close Button (Small X on top right)
-                      Positioned(
-                        top: 4,
-                        right: 4,
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _isHidden = true;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.3),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.close,
-                              color: Colors.white70,
-                              size: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        );
-      },
+      ],
     );
   }
 }
