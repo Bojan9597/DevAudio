@@ -199,8 +199,6 @@ def trigger_emails_cli():
         return
 
     try:
-        force_mode = len(sys.argv) > 1 and sys.argv[1] == '--force'
-        
         # Fetch users FIRST
         query = """
             SELECT id, email, name, email_notification_time, 
@@ -210,25 +208,21 @@ def trigger_emails_cli():
         """
         users = db.execute_query(query)
         
-        print(f"[{datetime.now()}] DEBUG: ServerTime(UTC)={utc_now.strftime('%H:%M')} | UserTime(CET)={current_time} | FORCE={force_mode}")
+        # print(f"[{datetime.now()}] DEBUG: ServerTime(UTC)={utc_now.strftime('%H:%M')} | UserTime(CET)={current_time}")
 
         users_to_alert = []
         if users:
-            print(f"[{datetime.now()}] DEBUG: Found {len(users)} enabled users. Checking times...")
+            # print(f"[{datetime.now()}] DEBUG: Found {len(users)} enabled users. Checking times...")
             for user in users:
                 user_time = str(user.get('email_notification_time', '09:00')).strip()
-                # Loose matching: compare first 5 chars OR Force Mode
-                if force_mode or user_time[:5] == current_time[:5]:
+                # Loose matching: compare first 5 chars
+                if user_time[:5] == current_time[:5]:
                     users_to_alert.append(user)
-                    print(f"   -> MATCH: {user['email']} at {user_time} (Forced={force_mode})")
-                else:
-                    # Optional: Print non-matches for debugging (maybe comment out if too noisy)
-                    # print(f"   -> Skip: {user['email']} at {user_time}")
-                    pass
+                    print(f"[{datetime.now()}] MATCH: {user['email']} at {user_time}")
 
         # Only generate content if we actually have recipients (lazy loading)
         if not users_to_alert:
-            print(f"[{datetime.now()}] No users scheduled for {current_time}. Exiting.")
+            # print(f"[{datetime.now()}] No users scheduled for {current_time}. Exiting.")
             return
 
         print(f"[{datetime.now()}] Found {len(users_to_alert)} users to alert. Generating content...")
