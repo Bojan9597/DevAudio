@@ -102,26 +102,20 @@ def get_new_releases_html(db):
         ]
 
         for i, book in enumerate(books):
+            # Resolve URL - this will return the public Cloudflare URL
             img_url = resolve_url(book['cover_image_path'], base_url=BASE_URL)
             title = book.get('title', 'Unknown Title')
             author = book.get('author', 'Unknown Author')
             
-            # Fetch Image for Embedding
-            cid = f"newrelease_{i}"
-            img_data, ctype = fetch_cover_image(img_url)
+            # Fallback
+            if not img_url:
+                img_url = "https://via.placeholder.com/80x120?text=No+Cover"
             
-            if img_data:
-                img_src = f"cid:{cid}"
-                images.append((cid, img_data, ctype))
-            elif img_url:
-                img_src = img_url # Fallback to URL
-            else:
-                img_src = "https://via.placeholder.com/80x120?text=No+Cover"
-
+            # Use DIRECT LINK
             html_parts.append(f"""
                 <tr>
                     <td style="padding: 10px; width: 100px; vertical-align: top;">
-                        <img src="{img_src}" alt="{title}" style="width: 80px; height: auto; border-radius: 4px; display: block;">
+                        <img src="{img_url}" alt="{title}" style="width: 80px; height: auto; border-radius: 4px; display: block;">
                     </td>
                     <td style="padding: 10px; vertical-align: top;">
                         <p style="margin: 0; font-weight: bold; font-size: 16px;">{title}</p>
@@ -131,7 +125,7 @@ def get_new_releases_html(db):
             """)
         
         html_parts.append('</table></div>')
-        return "".join(html_parts), images
+        return "".join(html_parts), [] # Empty images list
     except Exception as e:
         print(f"Error fetching new releases: {e}")
         return None, []
@@ -163,26 +157,20 @@ def get_trending_books_html(db):
         ]
 
         for i, book in enumerate(books):
+            # Resolve URL - this will return the public Cloudflare URL
             img_url = resolve_url(book['cover_image_path'], base_url=BASE_URL)
             title = book.get('title', 'Unknown')
             author = book.get('author', 'Unknown')
-
-            # Fetch Image for Embedding
-            cid = f"trending_{i}"
-            img_data, ctype = fetch_cover_image(img_url)
             
-            if img_data:
-                img_src = f"cid:{cid}"
-                images.append((cid, img_data, ctype))
-            elif img_url:
-                img_src = img_url
-            else:
-                img_src = "https://via.placeholder.com/80x120?text=No+Cover"
+            # Fallback
+            if not img_url:
+                img_url = "https://via.placeholder.com/80x120?text=No+Cover"
 
+            # Use DIRECT LINK - Zero bandwidth from our server
             html_parts.append(f"""
                 <tr>
                     <td style="padding: 10px; width: 100px; vertical-align: top;">
-                        <img src="{img_src}" alt="{title}" style="width: 80px; height: auto; border-radius: 4px; display: block;">
+                        <img src="{img_url}" alt="{title}" style="width: 80px; height: auto; border-radius: 4px; display: block;">
                     </td>
                     <td style="padding: 10px; vertical-align: top;">
                         <p style="margin: 0; font-weight: bold; font-size: 16px;">{title}</p>
@@ -192,7 +180,7 @@ def get_trending_books_html(db):
             """)
         
         html_parts.append('</table></div>')
-        return "".join(html_parts), images
+        return "".join(html_parts), [] # Empty list for images (we are not embedding)
     except Exception as e:
         print(f"Error fetching trending: {e}")
         return None, []
