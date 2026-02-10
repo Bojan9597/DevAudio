@@ -4391,3 +4391,147 @@ def update_user_bg_music():
         return jsonify({"error": str(e)}), 500
     finally:
         db.disconnect()
+
+# ==================== EMAIL SETTINGS & NOTIFICATIONS ====================
+
+@app.route('/debug/migrate_email_settings', methods=['GET'])
+def debug_migrate_email_settings():
+    """Temporary route to add email settings columns to users table."""
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        # Add columns if they don't exist
+        columns = [
+            ("email_notifications_enabled", "SMALLINT DEFAULT 0"), # 0=False, 1=True
+            ("email_notification_time", "VARCHAR(10) DEFAULT '09:00'"),
+            ("email_content_new_releases", "SMALLINT DEFAULT 0"),
+            ("email_content_top_picks", "SMALLINT DEFAULT 0")
+        ]
+        
+        cursor = db.connection.cursor()
+        for col_name, col_def in columns:
+            try:
+                alter_query = f"ALTER TABLE users ADD COLUMN {col_name} {col_def}"
+                cursor.execute(alter_query)
+                db.connection.commit()
+            except Exception as e:
+                db.connection.rollback()
+                # Store error but continue (column likely exists)
+                print(f"Column {col_name} might already exist: {e}")
+                
+        cursor.close()
+        return jsonify({"message": "Email settings migration executed"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
+
+@app.route('/user/email-settings', methods=['GET', 'POST'])
+@jwt_required
+def user_email_settings():
+    """Get or Update user email notification settings."""
+    user_id = getattr(request, 'user_id', None)
+    if not user_id:
+        return jsonify({"error": "Authentication required"}), 401
+
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        if request.method == 'GET':
+            query = """
+                SELECT email_notifications_enabled, email_notification_time,
+                       email_content_new_releases, email_content_top_picks
+                FROM users WHERE id = %s
+            """
+            result = db.execute_query(query, (user_id,))
+            
+            if result:
+                row = result[0]
+                return jsonify({
+                    "enabled": bool(row['email_notifications_enabled']),
+                    "time": row['email_notification_time'] or "09:00",
+                    "newReleases": bool(row['email_content_new_releases']),
+                    "topPicks": bool(row['email_content_top_picks'])
+                }), 200
+            else:
+                return jsonify({"error": "User not found"}), 404
+
+        elif request.method == 'POST':
+            data = request.get_json()
+            enabled = 1 if data.get('enabled', False) else 0
+            time_val = data.get('time', '09:00')
+            new_releases = 1 if data.get('newReleases', False) else 0
+            top_picks = 1 if data.get('topPicks', False) else 0
+            
+            update_query = """
+                UPDATE users SET
+                    email_notifications_enabled = %s,
+                    email_notification_time = %s,
+                    email_content_new_releases = %s,
+                    email_content_top_picks = %s
+                WHERE id = %s
+            """
+            cursor = db.connection.cursor()
+            cursor.execute(update_query, (enabled, time_val, new_releases, top_picks, user_id))
+            db.connection.commit()
+            cursor.close()
+            
+            return jsonify({"message": "Settings saved successfully"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
+
+@app.route('/admin/trigger-daily-emails', methods=['POST'])
+@jwt_required
+def trigger_daily_emails():
+    """
+    Simulate triggering daily emails.
+    In production, this would be called by a cron job or scheduler.
+    This endpoint iterates users who have notifications enabled and 'scheduled' for now (simulated).
+    """
+    user_id = getattr(request, 'user_id', None)
+    
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        if not is_admin_user(user_id, db):
+             return jsonify({"error": "Admin access required"}), 403
+
+        # Select users with notifications enabled
+        query = """
+            SELECT id, email, name, email_notification_time, 
+                   email_content_new_releases, email_content_top_picks
+            FROM users 
+            WHERE email_notifications_enabled = 1
+        """
+        users = db.execute_query(query)
+        
+        sent_count = 0
+        if users:
+            # Mock sending process
+            for user in users:
+                # In a real scenario, check time vs current time
+                # For demo/trigger, we just "send" to everyone enabled
+                print(f"Sending daily email to {user['email']} (Time: {user['email_notification_time']}) "
+                      f"Content: NewReleases={user['email_content_new_releases']}, TopPicks={user['email_content_top_picks']}")
+                
+                # Here we would call send_email(...)
+                sent_count += 1
+                
+        return jsonify({
+            "message": f"Triggered daily emails process. Sent (simulated) to {sent_count} users.",
+            "sent_count": sent_count
+        }), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()

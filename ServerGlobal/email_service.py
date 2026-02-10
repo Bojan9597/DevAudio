@@ -143,6 +143,36 @@ def test_email_connection():
         return False, f"Connection failed: {str(e)}"
 
 
+def send_user_email(to_email, subject, html_content, text_content=None):
+    """
+    Send an email to a specific user.
+    """
+    import os
+    password = os.getenv('EMAIL_PASSWORD') or SENDER_PASSWORD
+    if not password:
+        return False, "Email password not configured"
+
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = SENDER_EMAIL
+        msg['To'] = to_email
+
+        if text_content:
+            msg.attach(MIMEText(text_content, 'plain'))
+        
+        if html_content:
+            msg.attach(MIMEText(html_content, 'html'))
+
+        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
+            server.login(SENDER_EMAIL, password)
+            server.send_message(msg)
+        
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+
 if __name__ == "__main__":
     # Test the email service
     print("Testing email configuration...")

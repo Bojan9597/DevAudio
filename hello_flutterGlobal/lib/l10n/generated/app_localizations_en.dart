@@ -1062,4 +1062,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get expiresIn2Minutes => 'Expires in 2 minutes';
+
+  @override
+  String get appSettings => 'App Settings';
+
+  @override
+  String get membership => 'Membership';
+
+  @override
+  String get customerSupport => 'Customer Support';
+
+  @override
+  String get emailNotifications => 'Email Notifications';
+
+  @override
+  String get getNotifications => 'Get Notifications';
+
+  @override
+  String get seeWhatIsTrending => 'See what is trending today';
+
+  @override
+  String get seeWhatIsNew => 'See what is new';
+
+  @override
+  String get trendingToday => 'Trending Today';
+
+  @override
+  String get emailSettingsSaved => 'Settings saved';
+
+  @override
+  String get listeningNotifications => 'Listening Notifications';
 }

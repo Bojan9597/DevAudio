@@ -355,5 +355,15 @@
   "savePercent": "Ahorra {percent}%",
   "answerToLifeUniverseEverything": "Respuesta a la vida, el universo y todo lo demás",
   "legalDisclaimer": "Al registrarse, acepta nuestras Condiciones de uso. Consulte nuestro Aviso de privacidad.",
-  "expiresIn2Minutes": "Expira en 2 minutos"
+  "expiresIn2Minutes": "Caduca en 2 minutos",
+  "appSettings": "Configuración de la aplicación",
+  "membership": "Membresía",
+  "customerSupport": "Atención al cliente",
+  "emailNotifications": "Notificaciones por correo",
+  "getNotifications": "Recibir notificaciones",
+  "seeWhatIsTrending": "Mira qué es tendencia hoy",
+  "seeWhatIsNew": "Mira las novedades",
+  "trendingToday": "Tendencias de hoy",
+  "emailSettingsSaved": "Configuración guardada",
+  "listeningNotifications": "Notificaciones de escucha"
 }

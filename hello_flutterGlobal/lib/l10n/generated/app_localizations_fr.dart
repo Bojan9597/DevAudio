@@ -1074,4 +1074,34 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get expiresIn2Minutes => 'Expire dans 2 minutes';
+
+  @override
+  String get appSettings => 'Paramètres de l\'application';
+
+  @override
+  String get membership => 'Abonnement';
+
+  @override
+  String get customerSupport => 'Service client';
+
+  @override
+  String get emailNotifications => 'Notifications par e-mail';
+
+  @override
+  String get getNotifications => 'Recevoir des notifications';
+
+  @override
+  String get seeWhatIsTrending => 'Découvrez les tendances d\'aujourd\'hui';
+
+  @override
+  String get seeWhatIsNew => 'Découvrez les nouveautés';
+
+  @override
+  String get trendingToday => 'Tendances d\'aujourd\'hui';
+
+  @override
+  String get emailSettingsSaved => 'Paramètres enregistrés';
+
+  @override
+  String get listeningNotifications => 'Notifications d\'écoute';
 }

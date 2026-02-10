@@ -1071,5 +1071,35 @@ class AppLocalizationsEs extends AppLocalizations {
       'Al registrarse, acepta nuestras Condiciones de uso. Consulte nuestro Aviso de privacidad.';
 
   @override
-  String get expiresIn2Minutes => 'Expira en 2 minutos';
+  String get expiresIn2Minutes => 'Caduca en 2 minutos';
+
+  @override
+  String get appSettings => 'Configuración de la aplicación';
+
+  @override
+  String get membership => 'Membresía';
+
+  @override
+  String get customerSupport => 'Atención al cliente';
+
+  @override
+  String get emailNotifications => 'Notificaciones por correo';
+
+  @override
+  String get getNotifications => 'Recibir notificaciones';
+
+  @override
+  String get seeWhatIsTrending => 'Mira qué es tendencia hoy';
+
+  @override
+  String get seeWhatIsNew => 'Mira las novedades';
+
+  @override
+  String get trendingToday => 'Tendencias de hoy';
+
+  @override
+  String get emailSettingsSaved => 'Configuración guardada';
+
+  @override
+  String get listeningNotifications => 'Notificaciones de escucha';
 }

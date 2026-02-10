@@ -14,6 +14,7 @@ import '../services/notification_service.dart';
 import 'notification_settings_screen.dart';
 import 'player_settings_screen.dart';
 import 'manage_subscription_screen.dart';
+import 'email_notification_settings_screen.dart';
 import 'privacy_policy_screen.dart';
 import 'conditions_of_use_screen.dart';
 
@@ -87,9 +88,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.settings),
+        title: Text(l10n.settings),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
@@ -99,10 +102,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               children: [
-                const SizedBox(height: 20),
+                _buildSectionHeader(l10n.appSettings),
                 ListTile(
                   leading: const Icon(Icons.language),
-                  title: Text(AppLocalizations.of(context)!.language),
+                  title: Text(l10n.language),
                   trailing: Text(
                     _getLanguageName(globalLayoutState.locale?.languageCode),
                   ),
@@ -111,52 +114,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       context: context,
                       builder: (context) {
                         return SimpleDialog(
-                          title: Text(AppLocalizations.of(context)!.language),
+                          title: Text(l10n.language),
                           children: [
                             SimpleDialogOption(
                               onPressed: () {
                                 globalLayoutState.setLocale(const Locale('en'));
                                 Navigator.pop(context);
                               },
-                              child: Text(
-                                AppLocalizations.of(context)!.languageEnglish,
-                              ),
+                              child: Text(l10n.languageEnglish),
                             ),
                             SimpleDialogOption(
                               onPressed: () {
                                 globalLayoutState.setLocale(const Locale('es'));
                                 Navigator.pop(context);
                               },
-                              child: Text(
-                                AppLocalizations.of(context)!.languageSpanish,
-                              ),
+                              child: Text(l10n.languageSpanish),
                             ),
                             SimpleDialogOption(
                               onPressed: () {
                                 globalLayoutState.setLocale(const Locale('sr'));
                                 Navigator.pop(context);
                               },
-                              child: Text(
-                                AppLocalizations.of(context)!.languageSerbian,
-                              ),
+                              child: Text(l10n.languageSerbian),
                             ),
                             SimpleDialogOption(
                               onPressed: () {
                                 globalLayoutState.setLocale(const Locale('fr'));
                                 Navigator.pop(context);
                               },
-                              child: Text(
-                                AppLocalizations.of(context)!.languageFrench,
-                              ),
+                              child: Text(l10n.languageFrench),
                             ),
                             SimpleDialogOption(
                               onPressed: () {
                                 globalLayoutState.setLocale(const Locale('de'));
                                 Navigator.pop(context);
                               },
-                              child: Text(
-                                AppLocalizations.of(context)!.languageGerman,
-                              ),
+                              child: Text(l10n.languageGerman),
                             ),
                           ],
                         );
@@ -166,14 +159,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.brightness_6),
-                  title: Text(AppLocalizations.of(context)!.theme),
+                  title: Text(l10n.theme),
                   trailing: Text(_getThemeName(globalLayoutState.themeMode)),
                   onTap: () {
                     showDialog(
                       context: context,
                       builder: (context) {
                         return SimpleDialog(
-                          title: Text(AppLocalizations.of(context)!.theme),
+                          title: Text(l10n.theme),
                           children: [
                             SimpleDialogOption(
                               onPressed: () {
@@ -182,44 +175,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 );
                                 Navigator.pop(context);
                               },
-                              child: Text(
-                                AppLocalizations.of(context)!.themeSystem,
-                              ),
+                              child: Text(l10n.themeSystem),
                             ),
                             SimpleDialogOption(
                               onPressed: () {
                                 globalLayoutState.setThemeMode(ThemeMode.light);
                                 Navigator.pop(context);
                               },
-                              child: Text(
-                                AppLocalizations.of(context)!.themeLight,
-                              ),
+                              child: Text(l10n.themeLight),
                             ),
                             SimpleDialogOption(
                               onPressed: () {
                                 globalLayoutState.setThemeMode(ThemeMode.dark);
                                 Navigator.pop(context);
                               },
-                              child: Text(
-                                AppLocalizations.of(context)!.themeDark,
-                              ),
+                              child: Text(l10n.themeDark),
                             ),
                           ],
                         );
                       },
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.notifications),
-                  title: Text(AppLocalizations.of(context)!.notifications),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const NotificationSettingsScreen(),
-                      ),
                     );
                   },
                 ),
@@ -236,9 +210,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     );
                   },
                 ),
+                const Divider(),
+
+                _buildSectionHeader(l10n.notifications),
+                ListTile(
+                  leading: const Icon(Icons.email_outlined),
+                  title: Text(l10n.emailNotifications),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const EmailNotificationSettingsScreen(),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.notifications_active_outlined),
+                  title: Text(l10n.listeningNotifications),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationSettingsScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(),
+
+                _buildSectionHeader(l10n.membership),
                 ListTile(
                   leading: const Icon(Icons.card_membership),
-                  title: Text(AppLocalizations.of(context)!.manageSubscription),
+                  title: Text(l10n.manageSubscription),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
                     Navigator.push(
@@ -249,12 +255,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     );
                   },
                 ),
-                const Divider(),
-                // Only show upload option for admin user
-                if (_isAdmin)
+
+                // Only show upload option for admin user (keeping it separate or under membership/admin?)
+                // Keeping it as is or maybe under a hidden section?
+                // I'll put it at the bottom of membership or just conditionally
+                if (_isAdmin) ...[
+                  const Divider(),
                   ListTile(
                     leading: const Icon(Icons.cloud_upload),
-                    title: Text(AppLocalizations.of(context)!.uploadAudioBook),
+                    title: Text(l10n.uploadAudioBook),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                     onTap: () async {
                       final result = await Navigator.push(
@@ -269,17 +278,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         await Future.delayed(const Duration(milliseconds: 500));
                         // Trigger app-wide refresh
                         globalLayoutState.triggerRefresh();
-                        // Optional: Navigate to My Uploads?
-                        // globalLayoutState.setCategoryId('library');
                       }
                     },
                   ),
+                ],
 
-                // Contact Support - Available for all users
+                const Divider(),
+
+                _buildSectionHeader(l10n.customerSupport),
                 ListTile(
                   leading: const Icon(Icons.support_agent, color: Colors.blue),
-                  title: Text(AppLocalizations.of(context)!.contactSupport),
-                  subtitle: Text(AppLocalizations.of(context)!.sendUsAMessage),
+                  title: Text(l10n.contactSupport),
+                  subtitle: Text(l10n.sendUsAMessage),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
                     showDialog(
@@ -290,29 +300,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
 
                 const Divider(),
-                const SizedBox(height: 40),
+
+                _buildSectionHeader(l10n.legal),
                 ListTile(
-                  leading: const Icon(Icons.logout, color: Colors.red),
-                  title: Text(
-                    AppLocalizations.of(context)!.logout,
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                  onTap: _logout,
-                ),
-                const Divider(),
-                const SizedBox(height: 20),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Text(
-                    AppLocalizations.of(context)!.legal,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: Colors.grey,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                ListTile(
-                  title: Text(AppLocalizations.of(context)!.privacyPolicy),
+                  title: Text(l10n.privacyPolicy),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
                     Navigator.push(
@@ -324,7 +315,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   },
                 ),
                 ListTile(
-                  title: Text(AppLocalizations.of(context)!.conditionsOfUse),
+                  title: Text(l10n.conditionsOfUse),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
                     Navigator.push(
@@ -335,9 +326,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     );
                   },
                 ),
+
+                const Divider(),
+                const SizedBox(height: 20),
+                ListTile(
+                  leading: const Icon(Icons.logout, color: Colors.red),
+                  title: Text(
+                    l10n.logout,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                  onTap: _logout,
+                ),
                 const SizedBox(height: 40),
               ],
             ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Text(
+        title.toUpperCase(),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: Theme.of(context).colorScheme.primary,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.2,
+        ),
+      ),
     );
   }
 

@@ -612,5 +612,15 @@
   },
   "answerToLifeUniverseEverything": "Answer to Life, Universe and Everything",
   "legalDisclaimer": "By signing up, you agree to our Conditions of Use. Please see our Privacy Notice.",
-  "expiresIn2Minutes": "Expires in 2 minutes"
+  "expiresIn2Minutes": "Expires in 2 minutes",
+  "appSettings": "App Settings",
+  "membership": "Membership",
+  "customerSupport": "Customer Support",
+  "emailNotifications": "Email Notifications",
+  "getNotifications": "Get Notifications",
+  "seeWhatIsTrending": "See what is trending today",
+  "seeWhatIsNew": "See what is new",
+  "trendingToday": "Trending Today",
+  "emailSettingsSaved": "Settings saved",
+  "listeningNotifications": "Listening Notifications"
 }

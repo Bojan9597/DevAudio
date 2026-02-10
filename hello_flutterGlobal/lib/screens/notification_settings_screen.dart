@@ -146,7 +146,7 @@ class _NotificationSettingsScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.notificationSettings),
+        title: Text(l10n.listeningNotifications),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),

@@ -355,5 +355,15 @@
   "savePercent": "Uštedi {percent}%",
   "answerToLifeUniverseEverything": "Odgovor na život, univerzum i sve ostalo",
   "legalDisclaimer": "Prijavljivanjem pristajete na naše Uslove korišćenja. Molimo pogledajte naša Pravila privatnosti.",
-  "expiresIn2Minutes": "Ističe za 2 minuta"
+  "expiresIn2Minutes": "Ističe za 2 minuta",
+  "appSettings": "Podešavanja aplikacije",
+  "membership": "Članstvo",
+  "customerSupport": "Korisnička podrška",
+  "emailNotifications": "Email obaveštenja",
+  "getNotifications": "Primaj obaveštenja",
+  "seeWhatIsTrending": "Pogledajte šta je popularno danas",
+  "seeWhatIsNew": "Pogledajte šta je novo",
+  "trendingToday": "Popularno danas",
+  "emailSettingsSaved": "Podešavanja sačuvana",
+  "listeningNotifications": "Obaveštenja za slušanje"
 }

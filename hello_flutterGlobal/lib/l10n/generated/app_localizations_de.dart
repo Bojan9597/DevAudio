@@ -1072,4 +1072,34 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get expiresIn2Minutes => 'Läuft in 2 Minuten ab';
+
+  @override
+  String get appSettings => 'App-Einstellungen';
+
+  @override
+  String get membership => 'Mitgliedschaft';
+
+  @override
+  String get customerSupport => 'Kundensupport';
+
+  @override
+  String get emailNotifications => 'E-Mail-Benachrichtigungen';
+
+  @override
+  String get getNotifications => 'Benachrichtigungen erhalten';
+
+  @override
+  String get seeWhatIsTrending => 'Sehen Sie, was heute im Trend liegt';
+
+  @override
+  String get seeWhatIsNew => 'Sehen Sie, was neu ist';
+
+  @override
+  String get trendingToday => 'Heute im Trend';
+
+  @override
+  String get emailSettingsSaved => 'Einstellungen gespeichert';
+
+  @override
+  String get listeningNotifications => 'Hörbenachrichtigungen';
 }

@@ -2011,6 +2011,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Expires in 2 minutes'**
   String get expiresIn2Minutes;
+
+  /// No description provided for @appSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'App Settings'**
+  String get appSettings;
+
+  /// No description provided for @membership.
+  ///
+  /// In en, this message translates to:
+  /// **'Membership'**
+  String get membership;
+
+  /// No description provided for @customerSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer Support'**
+  String get customerSupport;
+
+  /// No description provided for @emailNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Email Notifications'**
+  String get emailNotifications;
+
+  /// No description provided for @getNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Get Notifications'**
+  String get getNotifications;
+
+  /// No description provided for @seeWhatIsTrending.
+  ///
+  /// In en, this message translates to:
+  /// **'See what is trending today'**
+  String get seeWhatIsTrending;
+
+  /// No description provided for @seeWhatIsNew.
+  ///
+  /// In en, this message translates to:
+  /// **'See what is new'**
+  String get seeWhatIsNew;
+
+  /// No description provided for @trendingToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Trending Today'**
+  String get trendingToday;
+
+  /// No description provided for @emailSettingsSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings saved'**
+  String get emailSettingsSaved;
+
+  /// No description provided for @listeningNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening Notifications'**
+  String get listeningNotifications;
 }
 
 class _AppLocalizationsDelegate

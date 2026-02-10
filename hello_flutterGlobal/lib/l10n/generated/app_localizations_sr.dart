@@ -1067,4 +1067,34 @@ class AppLocalizationsSr extends AppLocalizations {
 
   @override
   String get expiresIn2Minutes => 'Ističe za 2 minuta';
+
+  @override
+  String get appSettings => 'Podešavanja aplikacije';
+
+  @override
+  String get membership => 'Članstvo';
+
+  @override
+  String get customerSupport => 'Korisnička podrška';
+
+  @override
+  String get emailNotifications => 'Email obaveštenja';
+
+  @override
+  String get getNotifications => 'Primaj obaveštenja';
+
+  @override
+  String get seeWhatIsTrending => 'Pogledajte šta je popularno danas';
+
+  @override
+  String get seeWhatIsNew => 'Pogledajte šta je novo';
+
+  @override
+  String get trendingToday => 'Popularno danas';
+
+  @override
+  String get emailSettingsSaved => 'Podešavanja sačuvana';
+
+  @override
+  String get listeningNotifications => 'Obaveštenja za slušanje';
 }
