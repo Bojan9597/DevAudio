@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:audio_service/audio_service.dart';
 import '../main.dart';
 import '../utils/api_constants.dart';
+import '../services/player_preferences.dart';
 import 'player_screen.dart';
 
 class MiniPlayer extends StatefulWidget {
@@ -16,6 +17,26 @@ class _MiniPlayerState extends State<MiniPlayer> {
   String? _lastMediaId;
   bool _isDraggingSlider = false;
   double _dragSliderValue = 0.0;
+  int _skipBackwardSeconds = PlayerPreferences.defaultSkipBackward;
+  int _skipForwardSeconds = PlayerPreferences.defaultSkipForward;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlayerPreferences();
+  }
+
+  Future<void> _loadPlayerPreferences() async {
+    final prefs = PlayerPreferences();
+    final backward = await prefs.getSkipBackward();
+    final forward = await prefs.getSkipForward();
+    if (mounted) {
+      setState(() {
+        _skipBackwardSeconds = backward;
+        _skipForwardSeconds = forward;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -260,12 +281,24 @@ class _MiniPlayerState extends State<MiniPlayer> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               children: [
-                                // Skip back 10s
+                                // Skip back
                                 IconButton(
-                                  icon: const Icon(
-                                    Icons.replay_10,
-                                    color: Colors.white,
-                                    size: 20,
+                                  icon: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      const Icon(Icons.replay, size: 20),
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 1),
+                                        child: Text(
+                                          '$_skipBackwardSeconds',
+                                          style: const TextStyle(
+                                            fontSize: 7,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(
@@ -277,7 +310,7 @@ class _MiniPlayerState extends State<MiniPlayer> {
                                         audioHandler.player.position;
                                     final newPosition =
                                         currentPosition -
-                                        const Duration(seconds: 10);
+                                        Duration(seconds: _skipBackwardSeconds);
                                     await audioHandler.seek(
                                       newPosition < Duration.zero
                                           ? Duration.zero
@@ -343,12 +376,28 @@ class _MiniPlayerState extends State<MiniPlayer> {
                                   },
                                 ),
 
-                                // Skip forward 30s
+                                // Skip forward
                                 IconButton(
-                                  icon: const Icon(
-                                    Icons.forward_30,
-                                    color: Colors.white,
-                                    size: 20,
+                                  icon: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      Transform(
+                                        alignment: Alignment.center,
+                                        transform: Matrix4.rotationY(3.14159),
+                                        child: const Icon(Icons.replay, size: 20),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 1),
+                                        child: Text(
+                                          '$_skipForwardSeconds',
+                                          style: const TextStyle(
+                                            fontSize: 7,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(
@@ -363,7 +412,7 @@ class _MiniPlayerState extends State<MiniPlayer> {
                                         Duration.zero;
                                     final newPosition =
                                         currentPosition +
-                                        const Duration(seconds: 30);
+                                        Duration(seconds: _skipForwardSeconds);
                                     await audioHandler.seek(
                                       newPosition > duration
                                           ? duration

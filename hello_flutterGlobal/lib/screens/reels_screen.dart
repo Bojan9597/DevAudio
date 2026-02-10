@@ -10,6 +10,7 @@ import '../services/audio_connector.dart';
 import '../main.dart'; // Access to routeObserver
 import '../utils/api_constants.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../services/player_preferences.dart';
 // We need access to the global audio player state if we want to sync with MiniPlayer
 // But user said "It should look like that audio player with profile picture and everything"
 // This implies a FULL SCREEN EXPERIENCE.
@@ -1105,10 +1106,12 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                   return ChoiceChip(
                     label: Text('${speed}x'),
                     selected: isSelected,
-                    onSelected: (selected) {
+                    onSelected: (selected) async {
                       if (selected) {
-                        AudioConnector.handler?.setSpeed(speed);
-                        Navigator.pop(context);
+                        await AudioConnector.handler?.setSpeed(speed);
+                        // Sync to preferences
+                        await PlayerPreferences().setDefaultSpeed(speed);
+                        if (mounted) Navigator.pop(context);
                       }
                     },
                     selectedColor: Colors.amber,

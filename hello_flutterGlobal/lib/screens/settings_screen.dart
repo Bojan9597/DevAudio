@@ -12,6 +12,7 @@ import '../main.dart'; // For audioHandler
 import '../widgets/support_dialog.dart';
 import '../services/notification_service.dart';
 import 'notification_settings_screen.dart';
+import 'player_settings_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -215,6 +216,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       context,
                       MaterialPageRoute(
                         builder: (_) => const NotificationSettingsScreen(),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.play_circle_outline),
+                  title: const Text("Player"), // TODO: Localize
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const PlayerSettingsScreen(),
                       ),
                     );
                   },

@@ -6,6 +6,7 @@ import '../models/book.dart';
 import '../utils/api_constants.dart';
 import '../repositories/book_repository.dart';
 import 'download_service.dart';
+import 'player_preferences.dart';
 
 class MyAudioHandler extends BaseAudioHandler {
   final AudioPlayer _player = AudioPlayer();
@@ -344,9 +345,35 @@ class MyAudioHandler extends BaseAudioHandler {
     await super.stop();
   }
 
-  // Seek to position
   @override
   Future<void> seek(Duration position) => _player.seek(position);
+
+  @override
+  Future<void> seekForward(bool begin) async {
+    final prefs = PlayerPreferences();
+    final interval = await prefs.getSkipForward();
+    final newPos = _player.position + Duration(seconds: interval);
+    // Clamp to duration
+    final duration = _player.duration;
+    if (duration != null && newPos > duration) {
+      _player.seek(duration);
+    } else {
+      _player.seek(newPos);
+    }
+  }
+
+  @override
+  Future<void> seekBackward(bool begin) async {
+    final prefs = PlayerPreferences();
+    final interval = await prefs.getSkipBackward();
+    final newPos = _player.position - Duration(seconds: interval);
+    // Clamp to 0
+    if (newPos < Duration.zero) {
+      _player.seek(Duration.zero);
+    } else {
+      _player.seek(newPos);
+    }
+  }
 
   @override
   Future<void> skipToNext() => playNextTrack();

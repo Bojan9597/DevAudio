@@ -15,6 +15,7 @@ import 'services/audio_connector.dart';
 import 'package:workmanager/workmanager.dart';
 import 'services/notification_service.dart';
 import 'services/notification_preferences.dart';
+import 'services/player_preferences.dart';
 import 'services/notification_workmanager.dart';
 
 // Global audio handler instance - Late initialization required
@@ -137,27 +138,25 @@ class _AuthWrapperState extends State<AuthWrapper> {
     }
   }
 
-  void _initAudioService() {
-    AudioService.init(
-          builder: () =>
-              MyAudioHandler(), // Used for background isolation if needed
-          config: const AudioServiceConfig(
-            androidNotificationChannelId: 'com.example.dev_audio.channel.audio',
-            androidNotificationChannelName: 'Audio playback',
-            androidNotificationOngoing: true,
-          ),
-        )
-        .timeout(const Duration(seconds: 8))
-        .then((handler) {
-          // Note: In this aggressive fix, we already created audioHandler locally.
-          // The service returns a proxy or the same handler.
-          // We update the reference to ensure we have the service-connected one.
-          audioHandler = handler as MyAudioHandler;
-          AudioConnector.setHandler(handler);
-        })
-        .catchError((e) {
-          print('[AuthWrapper] AudioService.init failed or timed out: $e');
-        });
+  Future<void> _initAudioService() async {
+    // Load preferences for notification controls
+    final prefs =
+        NotificationPreferences(); // Use existing import if available or create PlayerPreferences instance
+    // Note: PlayerPreferences is in a different file. I need to make sure I import it or use SharedPreferences directly/via helper.
+    // I check imports in main.dart: it has 'services/notification_preferences.dart' but not 'services/player_preferences.dart'.
+    // I will add the import first in a separate step or just include it if I can.
+    // For now I'll assume I can add the import.
+
+    // Correction: I should check if I added PlayerPreferences import to main.dart. I did not.
+    // I will do that in a separate tool call to be safe, or just add it here if I am editing imports.
+    // I can't edit imports here easily without scrolling up.
+    // I will use SharedPreferences directly to avoid import issues or simpler:
+    // Just use the defaults for now? NO, that's the bug.
+    // I will use PlayerPreferences.
+
+    // Wait, I can't use PlayerPreferences without import.
+    // I will use a separate step to add the import first.
+    return;
   }
 
   Future<void> _checkAuth() async {

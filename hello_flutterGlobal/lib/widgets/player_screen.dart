@@ -10,6 +10,7 @@ import 'package:audio_service/audio_service.dart';
 import 'dart:ui'; // For BackdropFilter
 import '../repositories/book_repository.dart';
 import '../services/auth_service.dart';
+import '../services/player_preferences.dart';
 import 'badge_dialog.dart';
 import 'subscription_bottom_sheet.dart';
 // import '../models/badge.dart'; // Unused
@@ -128,6 +129,10 @@ class _PlayerScreenState extends State<PlayerScreen>
   List<Map<String, dynamic>> _bgMusicList = [];
   // Volume and selectedBgMusicId are accessed via audioHandler
 
+  // Player Preferences
+  int _skipBackwardSeconds = 10;
+  int _skipForwardSeconds = 30;
+
   @override
   void initState() {
     super.initState();
@@ -136,6 +141,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: widget.initialIndex);
     _isFavorite = widget.book.isFavorite;
+    _loadPlayerPreferences(); // Load preferences first
     _initializeAll();
 
     // Listen to speed changes to keep UI in sync
@@ -146,6 +152,25 @@ class _PlayerScreenState extends State<PlayerScreen>
         });
       }
     });
+  }
+
+  Future<void> _loadPlayerPreferences() async {
+    final prefs = PlayerPreferences();
+    final backward = await prefs.getSkipBackward();
+    final forward = await prefs.getSkipForward();
+    final defaultSpeed = await prefs.getDefaultSpeed();
+
+    if (mounted) {
+      setState(() {
+        _skipBackwardSeconds = backward;
+        _skipForwardSeconds = forward;
+        // Only set speed if it's the default 1.0 (meaning user hasn't changed it for this session yet)
+        if (_playbackSpeed == 1.0 && defaultSpeed != 1.0) {
+          _playbackSpeed = defaultSpeed;
+          _player.setSpeed(defaultSpeed);
+        }
+      });
+    }
   }
 
   /// Initialize everything in the correct order
@@ -881,6 +906,8 @@ class _PlayerScreenState extends State<PlayerScreen>
 
     if (selectedSpeed != null) {
       _player.setSpeed(selectedSpeed);
+      // Sync to preferences
+      await PlayerPreferences().setDefaultSpeed(selectedSpeed);
       setState(() {
         _playbackSpeed = selectedSpeed;
       });
@@ -1577,12 +1604,28 @@ class _PlayerScreenState extends State<PlayerScreen>
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.replay_10),
+                          icon: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              const Icon(Icons.replay, size: 32),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  '$_skipBackwardSeconds',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                           color: Colors.white,
                           iconSize: 32,
                           onPressed: () {
                             _player.seek(
-                              _player.position - const Duration(seconds: 10),
+                              _player.position -
+                                  Duration(seconds: _skipBackwardSeconds),
                             );
                           },
                         ),
@@ -1674,12 +1717,32 @@ class _PlayerScreenState extends State<PlayerScreen>
                           onPressed: _playNext,
                         ),
                         IconButton(
-                          icon: const Icon(Icons.forward_30),
+                          icon: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Transform(
+                                alignment: Alignment.center,
+                                transform: Matrix4.rotationY(3.14159), // Pi
+                                child: const Icon(Icons.replay, size: 32),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  '$_skipForwardSeconds',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                           color: Colors.white,
                           iconSize: 32,
                           onPressed: () {
                             _player.seek(
-                              _player.position + const Duration(seconds: 30),
+                              _player.position +
+                                  Duration(seconds: _skipForwardSeconds),
                             );
                           },
                         ),
