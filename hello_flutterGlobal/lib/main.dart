@@ -94,8 +94,19 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Future<void> _initAndCheckAuth() async {
     // 0. Initialize AudioHandler (Main Thread, but post-frame)
     // This creates the players. If it hangs, at least the spinner is already visible.
+    // 0. Initialize AudioHandler (Main Thread, but post-frame)
+    // This creates the players. If it hangs, at least the spinner is already visible.
     try {
-      audioHandler = MyAudioHandler();
+      // PROPER INITIALIZATION: Use AudioService.init to start the background service
+      audioHandler = await AudioService.init(
+        builder: () => MyAudioHandler(),
+        config: const AudioServiceConfig(
+          androidNotificationChannelId: 'com.velorus.echoeshistory.audio',
+          androidNotificationChannelName: 'Audio Playback',
+          androidNotificationOngoing: true,
+          notificationColor: Color(0xFF000000), // Optional: match app theme
+        ),
+      );
       AudioConnector.setHandler(audioHandler);
     } catch (e) {
       print('[AuthWrapper] Failed to create MyAudioHandler: $e');

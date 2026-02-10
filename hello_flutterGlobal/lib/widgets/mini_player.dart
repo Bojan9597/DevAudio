@@ -48,25 +48,28 @@ class _MiniPlayerState extends State<MiniPlayer> {
       builder: (context, snapshot) {
         final mediaItem = snapshot.data;
 
-        // Reset visibility if media item changes
-        if (mediaItem?.id != _lastMediaId) {
+        // Reset visibility if media item changes (ID OR launchId)
+        // Check launchId to force show even for same track
+        final currentLaunchId = mediaItem?.extras?['launchId'];
+        final prevLaunchId = _lastMediaId?.split('|').length == 2
+            ? _lastMediaId?.split('|')[1]
+            : null;
+
+        if (mediaItem?.id != _lastMediaId?.split('|')[0] ||
+            currentLaunchId != prevLaunchId) {
           if (mounted && _isHidden && mediaItem != null) {
-            // Use addPostFrameCallback to avoid setState during build if needed,
-            // but since we are in builder, simple assignment or deferred set is safe?
-            // Actually, modifying state during build is bad.
-            // But _isHidden is local state.
-            // Safe pattern:
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {
                 setState(() {
                   _isHidden = false;
-                  _lastMediaId = mediaItem?.id;
+                  // Store composite ID to detect re-launch of same track
+                  _lastMediaId = '${mediaItem.id}|$currentLaunchId';
                 });
               }
             });
           } else {
             // First load or already visible
-            _lastMediaId = mediaItem?.id;
+            _lastMediaId = '${mediaItem?.id}|$currentLaunchId';
           }
         }
 
@@ -384,7 +387,10 @@ class _MiniPlayerState extends State<MiniPlayer> {
                                       Transform(
                                         alignment: Alignment.center,
                                         transform: Matrix4.rotationY(3.14159),
-                                        child: const Icon(Icons.replay, size: 20),
+                                        child: const Icon(
+                                          Icons.replay,
+                                          size: 20,
+                                        ),
                                       ),
                                       Padding(
                                         padding: const EdgeInsets.only(top: 1),

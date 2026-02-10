@@ -210,29 +210,36 @@ class MyAudioHandler extends BaseAudioHandler {
 
       // After loading, check current main player state and sync
       // Use longer delay with retry to handle buffering scenarios
-      for (int attempt = 0; attempt < 3; attempt++) {
-        await Future.delayed(const Duration(milliseconds: 300));
+      // Retry for up to 5 seconds (10 checks * 500ms)
+      for (int attempt = 0; attempt < 10; attempt++) {
+        // Check IMMEDIATELY on first attempt, then wait
+        if (attempt > 0)
+          await Future.delayed(const Duration(milliseconds: 500));
 
-        final isMainPlayerPlaying =
-            _player.playing &&
-            _player.processingState != ProcessingState.completed &&
-            _player.processingState != ProcessingState.idle;
+        final isMainPlayerPlaying = _player.playing;
+        // RELAXED CONDITION: Allow sync even if processingState is buffering.
+        // The main player handles its own UI (we just fixed that), so bg music
+        // should try to start if the intent is to play.
 
         if (isMainPlayerPlaying && _bgMusicEnabled) {
           if (!_bgPlayer.playing) {
-            await _bgPlayer.seek(Duration.zero);
+            // Seek to 0 only if not already playing (to avoid stutter on re-sync)
+            // But if it's a fresh load, position is 0 anyway.
+            // await _bgPlayer.seek(Duration.zero);
             _bgPlayer.play();
             print(
               '[AudioHandler] BG music started (post-load sync, attempt ${attempt + 1})',
             );
           }
           break; // Successfully started, exit retry loop
-        } else if (attempt < 2) {
-          print(
-            '[AudioHandler] BG sync retry ${attempt + 1}: main player not ready yet',
-          );
         } else {
-          _bgPlayer.pause();
+          print(
+            '[AudioHandler] BG sync retry ${attempt + 1}: main player not playing yet (state: ${_player.processingState})',
+          );
+          // If we've tried for 2 seconds and still nothing, maybe pause BG just in case
+          if (attempt >= 4 && _bgPlayer.playing) {
+            _bgPlayer.pause();
+          }
         }
       }
 

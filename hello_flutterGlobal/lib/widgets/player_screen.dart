@@ -131,7 +131,9 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   // Player Preferences
   int _skipBackwardSeconds = 10;
+
   int _skipForwardSeconds = 30;
+  int? _userPreferredBgMusicId; // Store user preference from server
 
   @override
   void initState() {
@@ -175,16 +177,35 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   /// Initialize everything in the correct order
   Future<void> _initializeAll() async {
-    // First, load the background music list - needed by both _initBgMusic and _initPlayer
-    _bgMusicList = await BookRepository().getBackgroundMusicList();
+    try {
+      // First, load the background music list - needed by both _initBgMusic and _initPlayer
+      try {
+        _bgMusicList = await BookRepository().getBackgroundMusicList();
+      } catch (e) {
+        debugPrint("[PlayerScreen] Failed to load background music list: $e");
+        // Don't block player init if bg music fails
+      }
 
-    // Now initialize player
-    // _initBgMusic(); // REMOVED: _initPlayer handles this now to avoid race conditions
-    _init();
+      // Now initialize player
+      await _init();
+
+      // Initialize background music AFTER player is ready to avoid race conditions
+      if (mounted) await _initBgMusic();
+    } catch (e) {
+      debugPrint("[PlayerScreen] Fatal error in _initializeAll: $e");
+      if (mounted) {
+        setState(() {
+          _isInitializingPlayer = false; // Ensure spinner disappears
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error initializing player: $e")),
+        );
+      }
+    }
   }
 
   Future<void> _init() async {
-    _initPlayer();
+    await _initPlayer();
     _checkOwnership();
 
     // Listen for completion
@@ -661,6 +682,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                 widget.book.absoluteCoverUrl!.isNotEmpty)
             ? Uri.parse(widget.book.absoluteCoverUrl!)
             : null,
+        extras: {'launchId': DateTime.now().millisecondsSinceEpoch.toString()},
       );
 
       // Store context in audioHandler for mini player
@@ -726,38 +748,12 @@ class _PlayerScreenState extends State<PlayerScreen>
 
         final savedPosition = status['position_seconds'] as int? ?? 0;
 
-        // Update Background Music Preference
-        // Robust fallback: Server (User/Book) -> Client Book -> Global Default
-        int? bgId;
-
-        // 1. Server Response (User Preference OR Book Default from DB)
+        // Store user preference for _initBgMusic to use later
         if (status.containsKey('background_music_id')) {
           final rawId = status['background_music_id'];
           if (rawId is int) {
-            bgId = rawId;
+            _userPreferredBgMusicId = rawId;
           }
-        }
-
-        // 2. Client Book Default (Fallback if server returned null)
-        if (bgId == null) {
-          bgId = widget.book.backgroundMusicId;
-        }
-
-        // 3. Global Default (Fallback if still null)
-        if (bgId == null && _bgMusicList.isNotEmpty) {
-          final defaultTrack = _bgMusicList.firstWhere(
-            (e) => e['isDefault'] == true,
-            orElse: () => {},
-          );
-          if (defaultTrack.isNotEmpty) {
-            bgId = defaultTrack['id'];
-          }
-        }
-
-        // Apply background music (or stop if bgId is null)
-        if (mounted) {
-          await audioHandler.setBgMusicSource(bgId, _bgMusicList);
-          setState(() {}); // Refresh UI
         }
 
         if (savedPosition > 0) {
@@ -1647,8 +1643,14 @@ class _PlayerScreenState extends State<PlayerScreen>
                                 playerState?.processingState;
                             final playing = playerState?.playing;
 
-                            if (processingState == ProcessingState.loading ||
-                                processingState == ProcessingState.buffering) {
+                            // Only show spinner if we are loading/buffering AND NOT playing.
+                            // If we are playing but buffering (e.g. slow network), we still want to show Pause button
+                            // to allow user to stop it.
+                            bool isBuffering =
+                                processingState == ProcessingState.loading ||
+                                processingState == ProcessingState.buffering;
+
+                            if (isBuffering && playing != true) {
                               return Container(
                                 width: 70,
                                 height: 70,
@@ -1921,8 +1923,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                 ],
               ),
             ),
-          if (_isLoadingOwnership)
-            const Center(child: CircularProgressIndicator(color: Colors.white)),
+          // if (_isLoadingOwnership)
+          //   const Center(child: CircularProgressIndicator(color: Colors.white)),
         ],
       ),
     );
@@ -1963,10 +1965,10 @@ class _PlayerScreenState extends State<PlayerScreen>
         _bgMusicList = await BookRepository().getBackgroundMusicList();
       }
 
-      // Always prioritize the book's default (or global default) when entering PlayerScreen.
+      // Always prioritize User Preference -> Book Default -> Global Default
       // We do NOT use audioHandler.selectedBgMusicId here because it might be holding
       // the music from the *previous* screen (e.g. Reels), which we want to override.
-      int? bgMusicId = widget.book.backgroundMusicId;
+      int? bgMusicId = _userPreferredBgMusicId ?? widget.book.backgroundMusicId;
 
       // If no default on book, use Global Default
       if (bgMusicId == null && _bgMusicList.isNotEmpty) {
