@@ -976,4 +976,102 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get notificationPermissionRequired =>
       'L\'autorisation de notification est requise pour envoyer des rappels';
+
+  @override
+  String get manageSubscription => 'Gérer l\'abonnement';
+
+  @override
+  String get currentMembership => 'Adhésion actuelle';
+
+  @override
+  String get youAreNotAMember => 'Vous n\'êtes pas membre actuellement';
+
+  @override
+  String get getTheMostOut => 'Profitez au maximum d\'Echoes of History';
+
+  @override
+  String get cancelAnytime => 'Annulez à tout moment.';
+
+  @override
+  String get advanced => 'Avancé';
+
+  @override
+  String get autoRenewal => 'Renouvellement auto';
+
+  @override
+  String renewsOn(String date) {
+    return 'Se renouvelle le $date';
+  }
+
+  @override
+  String expiresOn(String date) {
+    return 'Expire le $date';
+  }
+
+  @override
+  String get alreadyMember => 'Vous êtes déjà membre';
+
+  @override
+  String get cancelCurrentMembershipFirst =>
+      'Annulez cette adhésion pour en obtenir une autre.';
+
+  @override
+  String get getAMembership => 'Obtenir une adhésion';
+
+  @override
+  String get turnOffAutoRenewQuestion => 'Désactiver le renouvellement auto?';
+
+  @override
+  String get keepSubscription => 'Garder l\'abonnement';
+
+  @override
+  String get benefits => 'Avantages';
+
+  @override
+  String get subscriptionCanceled => 'Abonnement annulé';
+
+  @override
+  String get managedSubscriptionUpdate => 'Abonnement mis à jour';
+
+  @override
+  String get privacyPolicy => 'Politique de confidentialité';
+
+  @override
+  String get conditionsOfUse => 'Conditions d\'utilisation';
+
+  @override
+  String get privacyPolicyText =>
+      'Nous respectons votre vie privée. Nous collectons un minimum de données nécessaires pour fournir nos services. Nous ne vendons pas vos données personnelles à des tiers.';
+
+  @override
+  String get conditionsOfUseText =>
+      'En utilisant cette application, vous acceptez nos conditions. Le contenu est destiné à un usage personnel uniquement. La distribution non autorisée est interdite.';
+
+  @override
+  String get legal => 'Légal';
+
+  @override
+  String get subscribeMonthly => 'S\'abonner mensuellement';
+
+  @override
+  String get subscribeYearly => 'S\'abonner annuellement';
+
+  @override
+  String get getLifetimeAccess => 'Obtenir un accès à vie';
+
+  @override
+  String savePercent(int percent) {
+    return 'Économisez $percent%';
+  }
+
+  @override
+  String get answerToLifeUniverseEverything =>
+      'Réponse à la vie, à l\'univers et à tout le reste';
+
+  @override
+  String get legalDisclaimer =>
+      'En vous inscrivant, vous acceptez nos conditions d\'utilisation. Veuillez consulter notre avis de confidentialité.';
+
+  @override
+  String get expiresIn2Minutes => 'Expire dans 2 minutes';
 }

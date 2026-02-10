@@ -560,5 +560,57 @@
   "continueListeningSubtitle": "Get reminded to continue your audiobook",
   "notificationTime": "Notification Time",
   "notificationTimeSubtitle": "When to start sending daily notifications",
-  "notificationPermissionRequired": "Notification permission is required to send reminders"
+  "notificationPermissionRequired": "Notification permission is required to send reminders",
+
+  "manageSubscription": "Manage Subscription",
+  "currentMembership": "Current Membership",
+  "youAreNotAMember": "You are not currently a member",
+  "getTheMostOut": "Get the most out of Echoes of History",
+  "cancelAnytime": "Cancel anytime.",
+  "advanced": "Advanced",
+  "cancelAutoRenewal": "Cancel Auto-Renewal",
+  "autoRenewal": "Auto-Renewal",
+  "renewsOn": "Renews on {date}",
+  "@renewsOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "expiresOn": "Expires on {date}",
+  "@expiresOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "alreadyMember": "You are already a member",
+  "cancelCurrentMembershipFirst": "Cancel this membership to get another.",
+  "getAMembership": "Get a Membership",
+  "turnOffAutoRenewQuestion": "Turn off auto-renew?",
+  "keepSubscription": "Keep Subscription",
+  "benefits": "Benefits",
+  "subscriptionCanceled": "Subscription canceled",
+  "managedSubscriptionUpdate": "Subscription updated",
+  "privacyPolicy": "Privacy Policy",
+  "conditionsOfUse": "Conditions of Use",
+  "privacyPolicyText": "We value your privacy. We collect minimal data necessary to provide our services. We do not sell your personal data to third parties.",
+  "conditionsOfUseText": "By using this app, you agree to our terms. Content is for personal use only. Unauthorized distribution is prohibited.",
+  "legal": "Legal",
+  "subscribeMonthly": "Subscribe Monthly",
+  "subscribeYearly": "Subscribe Yearly",
+  "getLifetimeAccess": "Get Lifetime Access",
+  "savePercent": "Save {percent}%",
+  "@savePercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "answerToLifeUniverseEverything": "Answer to Life, Universe and Everything",
+  "legalDisclaimer": "By signing up, you agree to our Conditions of Use. Please see our Privacy Notice.",
+  "expiresIn2Minutes": "Expires in 2 minutes"
 }

@@ -974,4 +974,102 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get notificationPermissionRequired =>
       'Se requiere permiso de notificacion para enviar recordatorios';
+
+  @override
+  String get manageSubscription => 'Gestionar suscripción';
+
+  @override
+  String get currentMembership => 'Membresía actual';
+
+  @override
+  String get youAreNotAMember => 'No eres miembro actualmente';
+
+  @override
+  String get getTheMostOut => 'Saca el máximo provecho de Echoes of History';
+
+  @override
+  String get cancelAnytime => 'Cancela en cualquier momento.';
+
+  @override
+  String get advanced => 'Avanzado';
+
+  @override
+  String get autoRenewal => 'Renovación automática';
+
+  @override
+  String renewsOn(String date) {
+    return 'Se renueva el $date';
+  }
+
+  @override
+  String expiresOn(String date) {
+    return 'Expira el $date';
+  }
+
+  @override
+  String get alreadyMember => 'Ya eres miembro';
+
+  @override
+  String get cancelCurrentMembershipFirst =>
+      'Cancela esta membresía para obtener otra.';
+
+  @override
+  String get getAMembership => 'Obtener membresía';
+
+  @override
+  String get turnOffAutoRenewQuestion => '¿Desactivar renovación automática?';
+
+  @override
+  String get keepSubscription => 'Mantener suscripción';
+
+  @override
+  String get benefits => 'Beneficios';
+
+  @override
+  String get subscriptionCanceled => 'Suscripción cancelada';
+
+  @override
+  String get managedSubscriptionUpdate => 'Suscripción actualizada';
+
+  @override
+  String get privacyPolicy => 'Política de privacidad';
+
+  @override
+  String get conditionsOfUse => 'Condiciones de uso';
+
+  @override
+  String get privacyPolicyText =>
+      'Valoramos su privacidad. Recopilamos los datos mínimos necesarios para proporcionar nuestros servicios. No vendemos sus datos personales a terceros.';
+
+  @override
+  String get conditionsOfUseText =>
+      'Al usar esta aplicación, acepta nuestros términos. El contenido es solo para uso personal. Se prohíbe la distribución no autorizada.';
+
+  @override
+  String get legal => 'Legal';
+
+  @override
+  String get subscribeMonthly => 'Suscribirse mensualmente';
+
+  @override
+  String get subscribeYearly => 'Suscribirse anualmente';
+
+  @override
+  String get getLifetimeAccess => 'Obtener acceso de por vida';
+
+  @override
+  String savePercent(int percent) {
+    return 'Ahorra $percent%';
+  }
+
+  @override
+  String get answerToLifeUniverseEverything =>
+      'Respuesta a la vida, el universo y todo lo demás';
+
+  @override
+  String get legalDisclaimer =>
+      'Al registrarse, acepta nuestras Condiciones de uso. Consulte nuestro Aviso de privacidad.';
+
+  @override
+  String get expiresIn2Minutes => 'Expira en 2 minutos';
 }

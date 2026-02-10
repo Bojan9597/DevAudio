@@ -410,23 +410,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                 const SizedBox(height: 24),
 
-                if (sub.isActive && sub.autoRenew)
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context); // Close dialog
-                        _confirmCancelSubscription();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red.shade100,
-                        foregroundColor: Colors.red,
-                      ),
-                      child: Text(
-                        AppLocalizations.of(context)!.cancelAutoRenewal,
-                      ),
-                    ),
-                  ),
+                // Button removed as per request
               ],
             ),
           ),
@@ -486,57 +470,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
     // Fallback to server name
     return badge.name;
-  }
-
-  void _confirmCancelSubscription() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(AppLocalizations.of(context)!.turnOffAutoRenewal),
-        content: Text(
-          AppLocalizations.of(context)!.subscriptionWillRemainActive,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(AppLocalizations.of(context)!.keepOn),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await _cancelSubscription();
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: Text(AppLocalizations.of(context)!.turnOff),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _cancelSubscription() async {
-    setState(() => _isLoading = true);
-    try {
-      final result = await SubscriptionService().cancelSubscription();
-      if (result['success']) {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(result['message'])));
-          _loadSubscription(); // Refresh to see cancelled status
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(result['error'] ?? 'Failed to cancel')),
-          );
-        }
-      }
-    } catch (e) {
-      print('Error cancelling: $e');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
   }
 
   String _getProfilePictureUrl(String path) {

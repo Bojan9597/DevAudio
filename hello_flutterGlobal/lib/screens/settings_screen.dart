@@ -13,6 +13,9 @@ import '../widgets/support_dialog.dart';
 import '../services/notification_service.dart';
 import 'notification_settings_screen.dart';
 import 'player_settings_screen.dart';
+import 'manage_subscription_screen.dart';
+import 'privacy_policy_screen.dart';
+import 'conditions_of_use_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -233,6 +236,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     );
                   },
                 ),
+                ListTile(
+                  leading: const Icon(Icons.card_membership),
+                  title: Text(AppLocalizations.of(context)!.manageSubscription),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ManageSubscriptionScreen(),
+                      ),
+                    );
+                  },
+                ),
                 const Divider(),
                 // Only show upload option for admin user
                 if (_isAdmin)
@@ -279,13 +295,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   leading: const Icon(Icons.logout, color: Colors.red),
                   title: Text(
                     AppLocalizations.of(context)!.logout,
-                    style: const TextStyle(
-                      color: Colors.red,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: const TextStyle(color: Colors.red),
                   ),
                   onTap: _logout,
                 ),
+                const Divider(),
+                const SizedBox(height: 20),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Text(
+                    AppLocalizations.of(context)!.legal,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: Colors.grey,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                ListTile(
+                  title: Text(AppLocalizations.of(context)!.privacyPolicy),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const PrivacyPolicyScreen(),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  title: Text(AppLocalizations.of(context)!.conditionsOfUse),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ConditionsOfUseScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 40),
               ],
             ),
     );

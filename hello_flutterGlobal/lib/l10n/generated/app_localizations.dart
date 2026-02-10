@@ -1837,6 +1837,180 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Notification permission is required to send reminders'**
   String get notificationPermissionRequired;
+
+  /// No description provided for @manageSubscription.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Subscription'**
+  String get manageSubscription;
+
+  /// No description provided for @currentMembership.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Membership'**
+  String get currentMembership;
+
+  /// No description provided for @youAreNotAMember.
+  ///
+  /// In en, this message translates to:
+  /// **'You are not currently a member'**
+  String get youAreNotAMember;
+
+  /// No description provided for @getTheMostOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Get the most out of Echoes of History'**
+  String get getTheMostOut;
+
+  /// No description provided for @cancelAnytime.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel anytime.'**
+  String get cancelAnytime;
+
+  /// No description provided for @advanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced'**
+  String get advanced;
+
+  /// No description provided for @autoRenewal.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-Renewal'**
+  String get autoRenewal;
+
+  /// No description provided for @renewsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Renews on {date}'**
+  String renewsOn(String date);
+
+  /// No description provided for @expiresOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Expires on {date}'**
+  String expiresOn(String date);
+
+  /// No description provided for @alreadyMember.
+  ///
+  /// In en, this message translates to:
+  /// **'You are already a member'**
+  String get alreadyMember;
+
+  /// No description provided for @cancelCurrentMembershipFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel this membership to get another.'**
+  String get cancelCurrentMembershipFirst;
+
+  /// No description provided for @getAMembership.
+  ///
+  /// In en, this message translates to:
+  /// **'Get a Membership'**
+  String get getAMembership;
+
+  /// No description provided for @turnOffAutoRenewQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn off auto-renew?'**
+  String get turnOffAutoRenewQuestion;
+
+  /// No description provided for @keepSubscription.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep Subscription'**
+  String get keepSubscription;
+
+  /// No description provided for @benefits.
+  ///
+  /// In en, this message translates to:
+  /// **'Benefits'**
+  String get benefits;
+
+  /// No description provided for @subscriptionCanceled.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription canceled'**
+  String get subscriptionCanceled;
+
+  /// No description provided for @managedSubscriptionUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription updated'**
+  String get managedSubscriptionUpdate;
+
+  /// No description provided for @privacyPolicy.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy Policy'**
+  String get privacyPolicy;
+
+  /// No description provided for @conditionsOfUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Conditions of Use'**
+  String get conditionsOfUse;
+
+  /// No description provided for @privacyPolicyText.
+  ///
+  /// In en, this message translates to:
+  /// **'We value your privacy. We collect minimal data necessary to provide our services. We do not sell your personal data to third parties.'**
+  String get privacyPolicyText;
+
+  /// No description provided for @conditionsOfUseText.
+  ///
+  /// In en, this message translates to:
+  /// **'By using this app, you agree to our terms. Content is for personal use only. Unauthorized distribution is prohibited.'**
+  String get conditionsOfUseText;
+
+  /// No description provided for @legal.
+  ///
+  /// In en, this message translates to:
+  /// **'Legal'**
+  String get legal;
+
+  /// No description provided for @subscribeMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscribe Monthly'**
+  String get subscribeMonthly;
+
+  /// No description provided for @subscribeYearly.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscribe Yearly'**
+  String get subscribeYearly;
+
+  /// No description provided for @getLifetimeAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Get Lifetime Access'**
+  String get getLifetimeAccess;
+
+  /// No description provided for @savePercent.
+  ///
+  /// In en, this message translates to:
+  /// **'Save {percent}%'**
+  String savePercent(int percent);
+
+  /// No description provided for @answerToLifeUniverseEverything.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer to Life, Universe and Everything'**
+  String get answerToLifeUniverseEverything;
+
+  /// No description provided for @legalDisclaimer.
+  ///
+  /// In en, this message translates to:
+  /// **'By signing up, you agree to our Conditions of Use. Please see our Privacy Notice.'**
+  String get legalDisclaimer;
+
+  /// No description provided for @expiresIn2Minutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Expires in 2 minutes'**
+  String get expiresIn2Minutes;
 }
 
 class _AppLocalizationsDelegate

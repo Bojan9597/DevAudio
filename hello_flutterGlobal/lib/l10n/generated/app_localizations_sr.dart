@@ -969,4 +969,102 @@ class AppLocalizationsSr extends AppLocalizations {
   @override
   String get notificationPermissionRequired =>
       'Dozvola za obavestenja je neophodna za slanje podsetnika';
+
+  @override
+  String get manageSubscription => 'Upravljanje pretplatom';
+
+  @override
+  String get currentMembership => 'Trenutno članstvo';
+
+  @override
+  String get youAreNotAMember => 'Trenutno niste član';
+
+  @override
+  String get getTheMostOut => 'Iskoristite maksimum od Echoes of History';
+
+  @override
+  String get cancelAnytime => 'Otkažite bilo kada.';
+
+  @override
+  String get advanced => 'Napredno';
+
+  @override
+  String get autoRenewal => 'Auto-obnova';
+
+  @override
+  String renewsOn(String date) {
+    return 'Obnavlja se $date';
+  }
+
+  @override
+  String expiresOn(String date) {
+    return 'Ističe $date';
+  }
+
+  @override
+  String get alreadyMember => 'Već ste član';
+
+  @override
+  String get cancelCurrentMembershipFirst =>
+      'Otkažite ovo članstvo da biste uzeli drugo.';
+
+  @override
+  String get getAMembership => 'Uzmi članstvo';
+
+  @override
+  String get turnOffAutoRenewQuestion => 'Isključi auto-obnovu?';
+
+  @override
+  String get keepSubscription => 'Zadrži pretplatu';
+
+  @override
+  String get benefits => 'Pogodnosti';
+
+  @override
+  String get subscriptionCanceled => 'Pretplata otkazana';
+
+  @override
+  String get managedSubscriptionUpdate => 'Pretplata ažurirana';
+
+  @override
+  String get privacyPolicy => 'Politika privatnosti';
+
+  @override
+  String get conditionsOfUse => 'Uslovi korišćenja';
+
+  @override
+  String get privacyPolicyText =>
+      'Cenimo vašu privatnost. Prikupljamo minimalne podatke neophodne za pružanje naših usluga. Ne prodajemo vaše lične podatke trećim licima.';
+
+  @override
+  String get conditionsOfUseText =>
+      'Korišćenjem ove aplikacije pristajete na naše uslove. Sadržaj je samo za ličnu upotrebu. Neovlašćena distribucija je zabranjena.';
+
+  @override
+  String get legal => 'Pravno';
+
+  @override
+  String get subscribeMonthly => 'Pretplati se mesečno';
+
+  @override
+  String get subscribeYearly => 'Pretplati se godišnje';
+
+  @override
+  String get getLifetimeAccess => 'Dobij doživotni pristup';
+
+  @override
+  String savePercent(int percent) {
+    return 'Uštedi $percent%';
+  }
+
+  @override
+  String get answerToLifeUniverseEverything =>
+      'Odgovor na život, univerzum i sve ostalo';
+
+  @override
+  String get legalDisclaimer =>
+      'Prijavljivanjem pristajete na naše Uslove korišćenja. Molimo pogledajte naša Pravila privatnosti.';
+
+  @override
+  String get expiresIn2Minutes => 'Ističe za 2 minuta';
 }

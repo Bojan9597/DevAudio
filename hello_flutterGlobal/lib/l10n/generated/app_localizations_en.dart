@@ -964,4 +964,102 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get notificationPermissionRequired =>
       'Notification permission is required to send reminders';
+
+  @override
+  String get manageSubscription => 'Manage Subscription';
+
+  @override
+  String get currentMembership => 'Current Membership';
+
+  @override
+  String get youAreNotAMember => 'You are not currently a member';
+
+  @override
+  String get getTheMostOut => 'Get the most out of Echoes of History';
+
+  @override
+  String get cancelAnytime => 'Cancel anytime.';
+
+  @override
+  String get advanced => 'Advanced';
+
+  @override
+  String get autoRenewal => 'Auto-Renewal';
+
+  @override
+  String renewsOn(String date) {
+    return 'Renews on $date';
+  }
+
+  @override
+  String expiresOn(String date) {
+    return 'Expires on $date';
+  }
+
+  @override
+  String get alreadyMember => 'You are already a member';
+
+  @override
+  String get cancelCurrentMembershipFirst =>
+      'Cancel this membership to get another.';
+
+  @override
+  String get getAMembership => 'Get a Membership';
+
+  @override
+  String get turnOffAutoRenewQuestion => 'Turn off auto-renew?';
+
+  @override
+  String get keepSubscription => 'Keep Subscription';
+
+  @override
+  String get benefits => 'Benefits';
+
+  @override
+  String get subscriptionCanceled => 'Subscription canceled';
+
+  @override
+  String get managedSubscriptionUpdate => 'Subscription updated';
+
+  @override
+  String get privacyPolicy => 'Privacy Policy';
+
+  @override
+  String get conditionsOfUse => 'Conditions of Use';
+
+  @override
+  String get privacyPolicyText =>
+      'We value your privacy. We collect minimal data necessary to provide our services. We do not sell your personal data to third parties.';
+
+  @override
+  String get conditionsOfUseText =>
+      'By using this app, you agree to our terms. Content is for personal use only. Unauthorized distribution is prohibited.';
+
+  @override
+  String get legal => 'Legal';
+
+  @override
+  String get subscribeMonthly => 'Subscribe Monthly';
+
+  @override
+  String get subscribeYearly => 'Subscribe Yearly';
+
+  @override
+  String get getLifetimeAccess => 'Get Lifetime Access';
+
+  @override
+  String savePercent(int percent) {
+    return 'Save $percent%';
+  }
+
+  @override
+  String get answerToLifeUniverseEverything =>
+      'Answer to Life, Universe and Everything';
+
+  @override
+  String get legalDisclaimer =>
+      'By signing up, you agree to our Conditions of Use. Please see our Privacy Notice.';
+
+  @override
+  String get expiresIn2Minutes => 'Expires in 2 minutes';
 }

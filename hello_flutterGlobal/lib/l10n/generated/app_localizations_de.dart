@@ -974,4 +974,102 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get notificationPermissionRequired =>
       'Benachrichtigungsberechtigung ist erforderlich, um Erinnerungen zu senden';
+
+  @override
+  String get manageSubscription => 'Abonnement verwalten';
+
+  @override
+  String get currentMembership => 'Aktuelle Mitgliedschaft';
+
+  @override
+  String get youAreNotAMember => 'Du bist derzeit kein Mitglied';
+
+  @override
+  String get getTheMostOut => 'Hole das Beste aus Echoes of History heraus';
+
+  @override
+  String get cancelAnytime => 'Jederzeit kündbar.';
+
+  @override
+  String get advanced => 'Erweitert';
+
+  @override
+  String get autoRenewal => 'Auto-Verlängerung';
+
+  @override
+  String renewsOn(String date) {
+    return 'Verlängert sich am $date';
+  }
+
+  @override
+  String expiresOn(String date) {
+    return 'Läuft ab am $date';
+  }
+
+  @override
+  String get alreadyMember => 'Du bist bereits Mitglied';
+
+  @override
+  String get cancelCurrentMembershipFirst =>
+      'Kündige diese Mitgliedschaft, um eine andere zu erhalten.';
+
+  @override
+  String get getAMembership => 'Mitgliedschaft erhalten';
+
+  @override
+  String get turnOffAutoRenewQuestion => 'Auto-Verlängerung ausschalten?';
+
+  @override
+  String get keepSubscription => 'Abonnement behalten';
+
+  @override
+  String get benefits => 'Vorteile';
+
+  @override
+  String get subscriptionCanceled => 'Abonnement gekündigt';
+
+  @override
+  String get managedSubscriptionUpdate => 'Abonnement aktualisiert';
+
+  @override
+  String get privacyPolicy => 'Datenschutzerklärung';
+
+  @override
+  String get conditionsOfUse => 'Nutzungsbedingungen';
+
+  @override
+  String get privacyPolicyText =>
+      'Wir schätzen Ihre Privatsphäre. Wir sammeln nur minimale Daten, die für die Bereitstellung unserer Dienste erforderlich sind. Wir verkaufen Ihre persönlichen Daten nicht an Dritte.';
+
+  @override
+  String get conditionsOfUseText =>
+      'Durch die Nutzung dieser App stimmen Sie unseren Bedingungen zu. Der Inhalt ist nur für den persönlichen Gebrauch bestimmt. Unbefugte Verbreitung ist untersagt.';
+
+  @override
+  String get legal => 'Rechtliches';
+
+  @override
+  String get subscribeMonthly => 'Monatlich abonnieren';
+
+  @override
+  String get subscribeYearly => 'Jährlich abonnieren';
+
+  @override
+  String get getLifetimeAccess => 'Lebenslangen Zugang erhalten';
+
+  @override
+  String savePercent(int percent) {
+    return '$percent% sparen';
+  }
+
+  @override
+  String get answerToLifeUniverseEverything =>
+      'Antwort auf das Leben, das Universum und den ganzen Rest';
+
+  @override
+  String get legalDisclaimer =>
+      'Mit der Anmeldung stimmen Sie unseren Nutzungsbedingungen zu. Bitte lesen Sie unsere Datenschutzerklärung.';
+
+  @override
+  String get expiresIn2Minutes => 'Läuft in 2 Minuten ab';
 }
