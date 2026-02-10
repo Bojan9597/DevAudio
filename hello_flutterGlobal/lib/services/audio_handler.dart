@@ -141,8 +141,13 @@ class MyAudioHandler extends BaseAudioHandler {
   ) async {
     // Avoid reloading if same source
     if (_selectedBgMusicId == bgMusicId && _bgMusicLoaded) {
-      if (_bgMusicEnabled && _player.playing) {
-        if (!_bgPlayer.playing) {
+      // Check if we need to sync play state (e.g. if main player is playing but bg is not)
+      if (_bgMusicEnabled) {
+        final mainPlaying =
+            _player.playing ||
+            _player.processingState == ProcessingState.loading ||
+            _player.processingState == ProcessingState.buffering;
+        if (mainPlaying && !_bgPlayer.playing) {
           _bgPlayer.play();
         }
       }

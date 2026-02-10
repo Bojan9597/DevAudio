@@ -178,9 +178,9 @@ class _PlayerScreenState extends State<PlayerScreen>
     // First, load the background music list - needed by both _initBgMusic and _initPlayer
     _bgMusicList = await BookRepository().getBackgroundMusicList();
 
-    // Now initialize player and background music (they can run in parallel)
+    // Now initialize player
+    // _initBgMusic(); // REMOVED: _initPlayer handles this now to avoid race conditions
     _init();
-    _initBgMusic(); // This will now have _bgMusicList already populated
   }
 
   Future<void> _init() async {
@@ -726,36 +726,38 @@ class _PlayerScreenState extends State<PlayerScreen>
 
         final savedPosition = status['position_seconds'] as int? ?? 0;
 
-        // Update Background Music Preference if available
+        // Update Background Music Preference
+        // Robust fallback: Server (User/Book) -> Client Book -> Global Default
+        int? bgId;
+
+        // 1. Server Response (User Preference OR Book Default from DB)
         if (status.containsKey('background_music_id')) {
-          final bgId = status['background_music_id'];
-          // Only update if explicit preference exists (bgId != null)
-          // If bgId is null, it means no preference -> stick to what _initBgMusic found (Default or None)
-          // OR does it mean "User turned it off"?
-          // If user set "None", DB should probably store NULL?
-          // The API returns NULL if no entry in user_books.
-          // If entry exists but value is NULL, it returns NULL.
-          // To distinguish "Not Set" vs "Set to None", we need distinct values?
-          // Currently: user_books entry created with default NULL music_id if not specified.
-          // If user selects "None", we set it to NULL.
-          // So we can't distinguish "User wants silence" vs "User hasn't chosen".
-          // However, widget.book.backgroundMusicId (from Library) handled the "Default if not set" logic via COALESCE.
-          // API uses: COALESCE(ub.bg_id, b.bg_id).
-          // So if user never set it, ub.bg_id is NULL -> returns b.bg_id (Default).
-          // IF user set "None" (explicitly), how do we store it?
-          // We probably store NULL. COALESCE will then return Default.
-          // So "None" is tricky if a Default exists.
-          // For now, let's trust the API result. The API `get_book_status` implementation just returns raw `user_books.background_music_id`.
-          // It does NOT do the COALESCE logic that `get_library` does.
-          // WE SHOULD UPDATE `get_book_status` to do COALESCE?
-          // Actually, `PlayerScreen` logic (line 1653) handled the Default fallback.
-          // if bgId from status is NOT NULL, use it.
-          if (bgId != null && bgId is int) {
-            if (mounted) {
-              await audioHandler.setBgMusicSource(bgId, _bgMusicList);
-              setState(() {}); // Refresh UI
-            }
+          final rawId = status['background_music_id'];
+          if (rawId is int) {
+            bgId = rawId;
           }
+        }
+
+        // 2. Client Book Default (Fallback if server returned null)
+        if (bgId == null) {
+          bgId = widget.book.backgroundMusicId;
+        }
+
+        // 3. Global Default (Fallback if still null)
+        if (bgId == null && _bgMusicList.isNotEmpty) {
+          final defaultTrack = _bgMusicList.firstWhere(
+            (e) => e['isDefault'] == true,
+            orElse: () => {},
+          );
+          if (defaultTrack.isNotEmpty) {
+            bgId = defaultTrack['id'];
+          }
+        }
+
+        // Apply background music (or stop if bgId is null)
+        if (mounted) {
+          await audioHandler.setBgMusicSource(bgId, _bgMusicList);
+          setState(() {}); // Refresh UI
         }
 
         if (savedPosition > 0) {
