@@ -6,6 +6,7 @@ import os
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.image import MIMEImage
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -143,9 +144,13 @@ def test_email_connection():
         return False, f"Connection failed: {str(e)}"
 
 
-def send_user_email(to_email, subject, html_content, text_content=None):
+def send_user_email(to_email, subject, html_content, text_content=None, inline_images=None):
     """
     Send an email to a specific user.
+
+    Args:
+        inline_images: list of (cid, image_data, content_type) tuples for CID-attached images.
+                       HTML should reference them as src="cid:<cid>"
     """
     import os
     password = os.getenv('EMAIL_PASSWORD') or SENDER_PASSWORD
@@ -153,21 +158,37 @@ def send_user_email(to_email, subject, html_content, text_content=None):
         return False, "Email password not configured"
 
     try:
-        msg = MIMEMultipart('alternative')
+        # Use 'related' when we have inline images so CID references work
+        if inline_images:
+            msg = MIMEMultipart('related')
+            alt_part = MIMEMultipart('alternative')
+            if text_content:
+                alt_part.attach(MIMEText(text_content, 'plain'))
+            if html_content:
+                alt_part.attach(MIMEText(html_content, 'html'))
+            msg.attach(alt_part)
+
+            for cid, img_data, ctype in inline_images:
+                maintype, subtype = ctype.split('/', 1) if '/' in ctype else ('image', 'jpeg')
+                img = MIMEImage(img_data, _subtype=subtype)
+                img.add_header('Content-ID', f'<{cid}>')
+                img.add_header('Content-Disposition', 'inline', filename=f'{cid}.{subtype}')
+                msg.attach(img)
+        else:
+            msg = MIMEMultipart('alternative')
+            if text_content:
+                msg.attach(MIMEText(text_content, 'plain'))
+            if html_content:
+                msg.attach(MIMEText(html_content, 'html'))
+
         msg['Subject'] = subject
         msg['From'] = SENDER_EMAIL
         msg['To'] = to_email
 
-        if text_content:
-            msg.attach(MIMEText(text_content, 'plain'))
-        
-        if html_content:
-            msg.attach(MIMEText(html_content, 'html'))
-
         with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
             server.login(SENDER_EMAIL, password)
             server.send_message(msg)
-        
+
         return True, None
     except Exception as e:
         return False, str(e)

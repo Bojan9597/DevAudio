@@ -54,7 +54,7 @@ def get_r2_client():
         endpoint_url=R2_ENDPOINT_URL,
         aws_access_key_id=R2_ACCESS_KEY_ID,
         aws_secret_access_key=R2_SECRET_ACCESS_KEY,
-        region_name='auto',
+        region_name='us-east-1', # R2 requires us-east-1 for signature compatibility
         config=Config(
             signature_version='s3v4',
             connect_timeout=10,              # 10s connection timeout
