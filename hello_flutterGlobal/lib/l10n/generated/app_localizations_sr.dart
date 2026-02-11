@@ -1097,4 +1097,35 @@ class AppLocalizationsSr extends AppLocalizations {
 
   @override
   String get listeningNotifications => 'Obaveštenja za slušanje';
+
+  @override
+  String get listeningActivity => 'Listening Activity';
+
+  @override
+  String get weeklyProgress => 'Weekly Progress';
+
+  @override
+  String get topGenres => 'Top Genres';
+
+  @override
+  String get knowledgeMastery => 'Knowledge Mastery';
+
+  @override
+  String get booksRead => 'Books Read';
+
+  @override
+  String get quizzesPassed => 'Quizzes Passed';
+
+  @override
+  String get minutes => 'minutes';
+
+  @override
+  String get less => 'Less';
+
+  @override
+  String get more => 'More';
+
+  @override
+  String get noStatsData =>
+      'No statistics data available yet. Start listening to see your progress!';
 }

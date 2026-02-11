@@ -4542,6 +4542,132 @@ def trigger_daily_emails():
         db.disconnect()
 
 
+@app.route('/user/stats', methods=['GET'])
+@jwt_required
+def user_stats():
+    """
+    Returns aggregated statistics for the user profile:
+    1. Listening Heatmap (last 365 days)
+    2. Genre Distribution
+    3. Weekly Activity (last 7 days)
+    4. Mastery (Books Read / Quizzes Passed)
+    """
+    user_id = request.args.get('user_id')
+
+    if not user_id:
+        return jsonify({"error": "Missing user_id"}), 400
+
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        stats = {}
+        
+        # 1. Listening Heatmap (Last 365 days)
+        try:
+            heatmap_query = """
+                SELECT DATE(start_time) as day, SUM(played_seconds) as total_seconds
+                FROM playback_history
+                WHERE user_id = %s 
+                  AND start_time > NOW() - INTERVAL '365 days'
+                GROUP BY day
+                ORDER BY day
+            """
+            heatmap_rows = db.execute_query(heatmap_query, (user_id,))
+            if heatmap_rows:
+                stats['heatmap'] = {
+                    str(row['day']): round(row['total_seconds'] / 60) 
+                    for row in heatmap_rows
+                }
+            else:
+                 stats['heatmap'] = {}
+        except Exception as e:
+            print(f"Error fetching heatmap: {e}")
+            stats['heatmap'] = {}
+
+        # 2. Genre Distribution
+        try:
+            genre_query = """
+                SELECT c.slug, c.name, COUNT(DISTINCT ub.book_id) as count
+                FROM user_books ub
+                JOIN book_categories bc ON ub.book_id = bc.book_id
+                JOIN categories c ON bc.category_id = c.id
+                WHERE ub.user_id = %s
+                GROUP BY c.slug, c.name
+                ORDER BY count DESC
+                LIMIT 8
+            """
+            genre_rows = db.execute_query(genre_query, (user_id,))
+            if genre_rows:
+                stats['genres'] = [
+                    {"slug": row['slug'], "name": row['name'], "count": row['count']}
+                    for row in genre_rows
+                ]
+            else:
+                stats['genres'] = []
+        except Exception as e:
+            print(f"Error fetching genres: {e}")
+            stats['genres'] = []
+
+        # 3. Weekly Activity (Last 7 days)
+        try:
+            weekly_query = """
+                SELECT DATE(start_time) as day, SUM(played_seconds) as total_seconds, EXTRACT(DOW FROM start_time) as dow
+                FROM playback_history
+                WHERE user_id = %s
+                  AND start_time > NOW() - INTERVAL '7 days'
+                GROUP BY day, dow
+                ORDER BY day
+            """
+            weekly_rows = db.execute_query(weekly_query, (user_id,))
+            if weekly_rows:
+                stats['weekly'] = [
+                    {
+                        "date": str(row['day']), 
+                        "minutes": round(row['total_seconds'] / 60),
+                        "dow": int(row['dow']) 
+                    }
+                    for row in weekly_rows
+                ]
+            else:
+                stats['weekly'] = []
+        except Exception as e:
+            print(f"Error fetching weekly stats: {e}")
+            stats['weekly'] = []
+
+        # 4. Mastery
+        try:
+            books_read_query = "SELECT COUNT(*) as count FROM user_books WHERE user_id = %s AND is_read = 1"
+            books_read_res = db.execute_query(books_read_query, (user_id,))
+            books_read = books_read_res[0]['count'] if books_read_res else 0
+            
+            quizzes_passed_query = "SELECT COUNT(DISTINCT quiz_id) as count FROM user_quiz_results WHERE user_id = %s AND is_passed = 1"
+            quizzes_passed_res = db.execute_query(quizzes_passed_query, (user_id,))
+            quizzes_passed = quizzes_passed_res[0]['count'] if quizzes_passed_res else 0
+            
+            total_books_query = "SELECT COUNT(*) as count FROM books"
+            total_books_res = db.execute_query(total_books_query)
+            total_books = total_books_res[0]['count'] if total_books_res else 0
+
+            stats['mastery'] = {
+                "books_read": books_read,
+                "books_total": total_books,
+                "quizzes_passed": quizzes_passed
+            }
+        except Exception as e:
+            print(f"Error fetching mastery stats: {e}")
+            stats['mastery'] = {"books_read": 0, "books_total": 0, "quizzes_passed": 0}
+
+        return jsonify(stats)
+
+    except Exception as e:
+        print(f"Error serving user stats: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
+
+
 if __name__ == '__main__':
     # ... existing main block ...
     pass

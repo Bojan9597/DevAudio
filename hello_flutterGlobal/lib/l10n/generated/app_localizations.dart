@@ -545,7 +545,7 @@ abstract class AppLocalizations {
   /// No description provided for @stats.
   ///
   /// In en, this message translates to:
-  /// **'Stats'**
+  /// **'Statistics'**
   String get stats;
 
   /// No description provided for @badges.
@@ -2071,6 +2071,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Listening Notifications'**
   String get listeningNotifications;
+
+  /// No description provided for @listeningActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening Activity'**
+  String get listeningActivity;
+
+  /// No description provided for @weeklyProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly Progress'**
+  String get weeklyProgress;
+
+  /// No description provided for @topGenres.
+  ///
+  /// In en, this message translates to:
+  /// **'Top Genres'**
+  String get topGenres;
+
+  /// No description provided for @knowledgeMastery.
+  ///
+  /// In en, this message translates to:
+  /// **'Knowledge Mastery'**
+  String get knowledgeMastery;
+
+  /// No description provided for @booksRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Books Read'**
+  String get booksRead;
+
+  /// No description provided for @quizzesPassed.
+  ///
+  /// In en, this message translates to:
+  /// **'Quizzes Passed'**
+  String get quizzesPassed;
+
+  /// No description provided for @minutes.
+  ///
+  /// In en, this message translates to:
+  /// **'minutes'**
+  String get minutes;
+
+  /// No description provided for @less.
+  ///
+  /// In en, this message translates to:
+  /// **'Less'**
+  String get less;
+
+  /// No description provided for @more.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get more;
+
+  /// No description provided for @noStatsData.
+  ///
+  /// In en, this message translates to:
+  /// **'No statistics data available yet. Start listening to see your progress!'**
+  String get noStatsData;
 }
 
 class _AppLocalizationsDelegate

@@ -622,5 +622,16 @@
   "seeWhatIsNew": "See what is new",
   "trendingToday": "Trending Today",
   "emailSettingsSaved": "Settings saved",
-  "listeningNotifications": "Listening Notifications"
+  "listeningNotifications": "Listening Notifications",
+  "stats": "Statistics",
+  "listeningActivity": "Listening Activity",
+  "weeklyProgress": "Weekly Progress",
+  "topGenres": "Top Genres",
+  "knowledgeMastery": "Knowledge Mastery",
+  "booksRead": "Books Read",
+  "quizzesPassed": "Quizzes Passed",
+  "minutes": "minutes",
+  "less": "Less",
+  "more": "More",
+  "noStatsData": "No statistics data available yet. Start listening to see your progress!"
 }

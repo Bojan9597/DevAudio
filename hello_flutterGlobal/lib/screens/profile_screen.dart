@@ -12,6 +12,7 @@ import '../screens/playlist_screen.dart';
 import '../widgets/subscription_bottom_sheet.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../utils/api_constants.dart';
+import 'stats_tab.dart';
 
 /// Public class for managing ProfileScreen cache from outside (e.g., logout)
 class ProfileScreenCache {
@@ -859,44 +860,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildStatsTab() {
-    final totalSeconds = _stats['total_listening_time_seconds'] as int? ?? 0;
-    final totalBooks = _stats['books_completed'] as int? ?? 0;
-
-    return RefreshIndicator(
-      onRefresh: _loadStats,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: [
-          SizedBox(
-            height: MediaQuery.of(context).size.height * 0.5,
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.bar_chart, size: 80, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  Text(
-                    AppLocalizations.of(context)!.listeningStats,
-                    style: const TextStyle(fontSize: 20, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    AppLocalizations.of(
-                      context,
-                    )!.totalTime(_formatDuration(totalSeconds)),
-                    style: const TextStyle(fontSize: 18),
-                  ),
-                  Text(
-                    AppLocalizations.of(context)!.booksCompleted(totalBooks),
-                    style: const TextStyle(fontSize: 18),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    return const StatsTab();
   }
 
   Widget _buildAchievementsTab() {
