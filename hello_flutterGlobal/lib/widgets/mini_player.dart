@@ -69,8 +69,8 @@ class _MiniPlayerState extends State<MiniPlayer> {
 
   @override
   Widget build(BuildContext context) {
-    // 60 for collapsed, 150 for expanded
-    final double miniPlayerHeight = _isExpanded ? 150.0 : 60.0;
+    // 65 for collapsed, 150 for expanded
+    final double miniPlayerHeight = _isExpanded ? 150.0 : 65.0;
 
     return StreamBuilder<MediaItem?>(
       stream: audioHandler.mediaItem,
@@ -178,22 +178,26 @@ class _MiniPlayerState extends State<MiniPlayer> {
                               ? _buildExpandedLayout(mediaItem, playing)
                               : _buildCollapsedLayout(mediaItem, playing),
 
-                          // Toggle Button (Chevron) - Strictly Top-Right Corner
+                          // Toggle Button (Chevron) - Above 'Next' button
                           Positioned(
-                            top: 0,
-                            right: 0,
-                            child: IconButton(
-                              padding: EdgeInsets.zero,
-                              visualDensity: VisualDensity.compact,
-                              constraints: const BoxConstraints(),
-                              icon: Icon(
-                                _isExpanded
-                                    ? Icons.keyboard_arrow_down
-                                    : Icons.keyboard_arrow_up,
-                                color: Colors.white70,
-                                size: 24,
+                            top: 2,
+                            right: 12, // Align with the controls padding
+                            child: SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: IconButton(
+                                padding: EdgeInsets.zero,
+                                visualDensity: VisualDensity.compact,
+                                iconSize: 20,
+                                constraints: const BoxConstraints(),
+                                icon: Icon(
+                                  _isExpanded
+                                      ? Icons.keyboard_arrow_down
+                                      : Icons.keyboard_arrow_up,
+                                  color: Colors.white54,
+                                ),
+                                onPressed: _toggleExpanded,
                               ),
-                              onPressed: _toggleExpanded,
                             ),
                           ),
                         ],
@@ -218,8 +222,8 @@ class _MiniPlayerState extends State<MiniPlayer> {
           // Cover Photo (Fixed small size)
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 12),
-            height: 40,
-            width: 40,
+            height: 44, // Slightly increased from 40
+            width: 44,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(6),
               boxShadow: [
