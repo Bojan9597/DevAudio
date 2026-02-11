@@ -633,5 +633,15 @@
   "minutes": "minutes",
   "less": "Less",
   "more": "More",
-  "noStatsData": "No statistics data available yet. Start listening to see your progress!"
+  "noStatsData": "No statistics data available yet. Start listening to see your progress!",
+
+  "recommendToFriend": "Recommend to Friend",
+  "friendEmail": "Friend's Email",
+  "personalMessage": "Personal Message (Optional)",
+  "personalMessageHint": "Write something nice...",
+  "sendRecommendation": "Send Recommendation",
+  "shareSuccess": "Chapter shared successfully! Your friend will receive an email.",
+  "shareError": "Failed to share chapter. Please try again.",
+  "emailRequired": "Email is required",
+  "invalidEmail": "Please enter a valid email address"
 }

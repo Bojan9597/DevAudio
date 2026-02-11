@@ -11,6 +11,7 @@ import '../main.dart'; // Access to routeObserver
 import '../utils/api_constants.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../services/player_preferences.dart';
+import '../widgets/share_chapter_dialog.dart';
 // We need access to the global audio player state if we want to sync with MiniPlayer
 // But user said "It should look like that audio player with profile picture and everything"
 // This implies a FULL SCREEN EXPERIENCE.
@@ -885,6 +886,44 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                                   ),
                                 ),
                               ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        // Share / Recommend
+                        GestureDetector(
+                          onTap: () {
+                            final track = book.tracks[trackIndex];
+                            final trackId = (track is Map) ? track['id'] : null;
+                            final trackTitle = (track is Map)
+                                ? track['title']
+                                : book.title;
+                            if (trackId != null) {
+                              showDialog(
+                                context: context,
+                                builder: (_) => ShareChapterDialog(
+                                  playlistItemId: trackId is int
+                                      ? trackId
+                                      : int.tryParse(trackId.toString()) ?? 0,
+                                  bookId: int.tryParse(book.id) ?? 0,
+                                  trackTitle: trackTitle ?? 'Chapter',
+                                  bookTitle: book.title,
+                                ),
+                              );
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? Colors.white.withOpacity(0.1)
+                                  : Colors.black.withOpacity(0.06),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Icon(
+                              Icons.share,
+                              color: iconColor,
+                              size: 20,
                             ),
                           ),
                         ),

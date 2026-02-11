@@ -1133,4 +1133,32 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get noStatsData =>
       'No statistics data available yet. Start listening to see your progress!';
+
+  @override
+  String get recommendToFriend => 'Recommend to Friend';
+
+  @override
+  String get friendEmail => 'Friend\'s Email';
+
+  @override
+  String get personalMessage => 'Personal Message (Optional)';
+
+  @override
+  String get personalMessageHint => 'Write something nice...';
+
+  @override
+  String get sendRecommendation => 'Send Recommendation';
+
+  @override
+  String get shareSuccess =>
+      'Chapter shared successfully! Your friend will receive an email.';
+
+  @override
+  String get shareError => 'Failed to share chapter. Please try again.';
+
+  @override
+  String get emailRequired => 'Email is required';
+
+  @override
+  String get invalidEmail => 'Please enter a valid email address';
 }

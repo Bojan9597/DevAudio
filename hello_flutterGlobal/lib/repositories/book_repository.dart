@@ -1057,4 +1057,38 @@ class BookRepository {
       rethrow;
     }
   }
+
+  /// Share a chapter with a friend via email
+  Future<Map<String, dynamic>> shareChapter({
+    required int playlistItemId,
+    required int bookId,
+    required String friendEmail,
+    String message = '',
+  }) async {
+    try {
+      final headers = await _getHeaders();
+      final userId = await AuthService().getCurrentUserId();
+
+      final response = await _apiClient.post(
+        Uri.parse('${ApiConstants.baseUrl}/share-chapter'),
+        headers: {...headers, 'Content-Type': 'application/json'},
+        body: json.encode({
+          'playlist_item_id': playlistItemId,
+          'book_id': bookId,
+          'friend_email': friendEmail,
+          'message': message,
+          'user_id': userId,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+      final error = json.decode(response.body);
+      throw Exception(error['error'] ?? 'Failed to share chapter');
+    } catch (e) {
+      print('Error sharing chapter: $e');
+      rethrow;
+    }
+  }
 }

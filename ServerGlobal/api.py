@@ -43,6 +43,7 @@ import wave
 import re
 import datetime
 import uuid
+import secrets
 import jwt as pyjwt
 from jwt_config import generate_access_token, generate_refresh_token
 from jwt_middleware import jwt_required, blacklist_token
@@ -115,6 +116,10 @@ def check_app_source():
         
     # Skip check for public static files if served via Flask (though Nginx usually handles them)
     if request.path.startswith('/static/'):
+        return
+
+    # Skip check for shared chapter web player (public links)
+    if request.path.startswith('/shared/'):
         return
 
     # Enforce Secret Header
@@ -4765,6 +4770,395 @@ def user_stats():
         return jsonify({"error": str(e)}), 500
     finally:
         db.disconnect()
+
+
+# ─── Share Chapter with Friend ───────────────────────────────────────────────
+
+@app.route('/share-chapter', methods=['POST'])
+@jwt_required
+def share_chapter():
+    """Create a shareable link for a playlist item and email it to a friend."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Missing JSON body"}), 400
+
+    playlist_item_id = data.get('playlist_item_id')
+    book_id = data.get('book_id')
+    friend_email = data.get('friend_email', '').strip()
+    message = data.get('message', '').strip()
+    user_id = data.get('user_id')
+
+    if not playlist_item_id or not book_id or not friend_email:
+        return jsonify({"error": "playlist_item_id, book_id, and friend_email are required"}), 400
+
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+    try:
+        # Ensure shared_chapters table exists
+        db.execute_query("""
+            CREATE TABLE IF NOT EXISTS shared_chapters (
+                id SERIAL PRIMARY KEY,
+                token VARCHAR(64) UNIQUE NOT NULL,
+                sharer_user_id INT NOT NULL,
+                playlist_item_id INT NOT NULL,
+                book_id INT NOT NULL,
+                friend_email VARCHAR(255) NOT NULL,
+                message TEXT,
+                created_at TIMESTAMP DEFAULT NOW(),
+                expires_at TIMESTAMP NOT NULL,
+                listen_count INT DEFAULT 0
+            )
+        """)
+
+        # Generate token
+        token = secrets.token_urlsafe(32)
+        expires_at = datetime.datetime.utcnow() + datetime.timedelta(days=7)
+
+        # Insert share record
+        insert_query = """
+            INSERT INTO shared_chapters (token, sharer_user_id, playlist_item_id, book_id, friend_email, message, expires_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """
+        db.execute_query(insert_query, (token, user_id, playlist_item_id, book_id, friend_email, message, expires_at))
+
+        # Fetch track + book info for email
+        track_info = db.execute_query(
+            "SELECT title FROM playlist_items WHERE id = %s", (playlist_item_id,)
+        )
+        book_info = db.execute_query(
+            "SELECT title, author FROM books WHERE id = %s", (book_id,)
+        )
+        track_title = track_info[0]['title'] if track_info else 'a chapter'
+        book_title = book_info[0]['title'] if book_info else 'an audiobook'
+        book_author = book_info[0]['author'] if book_info else ''
+
+        # Fetch sharer name
+        sharer_info = db.execute_query(
+            "SELECT name FROM users WHERE id = %s", (user_id,)
+        )
+        sharer_name = sharer_info[0]['name'] if sharer_info else 'A friend'
+
+        # Build share URL
+        share_url = f"{BASE_URL}shared/{token}"
+
+        # Build email HTML
+        import html
+        message_html = html.escape(message).replace('\n', '<br>') if message else ''
+        sharer_name_safe = html.escape(sharer_name)
+        track_title_safe = html.escape(track_title)
+        book_title_safe = html.escape(book_title)
+
+        email_html = f"""
+        <html>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #1a1a2e; color: #e0e0e0; padding: 40px 20px;">
+          <div style="max-width: 520px; margin: 0 auto; background: #16213e; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.3);">
+            <div style="background: linear-gradient(135deg, #e2b714, #f5c518); padding: 24px 28px;">
+              <h1 style="margin: 0; color: #1a1a2e; font-size: 22px;">🎧 {sharer_name_safe} shared a chapter with you!</h1>
+            </div>
+            <div style="padding: 28px;">
+              <p style="font-size: 16px; line-height: 1.5; color: #b0b0b0;">Check out <strong style="color: #fff;">"{track_title_safe}"</strong> from <strong style="color: #e2b714;">{book_title_safe}</strong></p>
+              {f'<div style="background: rgba(255,255,255,0.05); border-left: 3px solid #e2b714; padding: 12px 16px; margin: 16px 0; border-radius: 0 8px 8px 0;"><em style="color: #ccc;">"{message_html}"</em></div>' if message_html else ''}
+              <a href="{share_url}" style="display: inline-block; margin-top: 20px; padding: 14px 32px; background: linear-gradient(135deg, #e2b714, #f5c518); color: #1a1a2e; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px;">▶ Listen Now</a>
+              <p style="margin-top: 20px; font-size: 12px; color: #666;">This link expires in 7 days.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+        """
+
+        email_text = f"{sharer_name} shared \"{track_title}\" from \"{book_title}\" with you!\n\n{message}\n\nListen here: {share_url}\n\nThis link expires in 7 days."
+
+        from email_service import send_user_email
+        success, err = send_user_email(friend_email, f"🎧 {sharer_name} shared a chapter with you!", email_html, email_text)
+
+        if not success:
+            print(f"Failed to send share email: {err}")
+            return jsonify({"error": "Failed to send email", "details": err}), 500
+
+        return jsonify({"message": "Chapter shared successfully", "token": token, "share_url": share_url}), 200
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
+
+
+
+
+
+@app.route('/shared/<token>', methods=['GET'])
+def shared_web_player(token):
+    """Public web player for a shared chapter. No auth required."""
+    db = Database()
+    if not db.connect():
+        return _shared_error_page("Service temporarily unavailable. Please try again later.")
+    try:
+        # Look up share
+        share = db.execute_query(
+            "SELECT * FROM shared_chapters WHERE token = %s", (token,)
+        )
+        if not share:
+            return _shared_error_page("This link is invalid or has been removed.")
+
+        share = share[0]
+
+        # Check expiry
+        if share['expires_at'] and share['expires_at'] < datetime.datetime.utcnow():
+            return _shared_error_page("This link has expired. Ask your friend to share again!")
+
+        # Fetch track info
+        track = None
+        pid = share['playlist_item_id']
+        print(f"[SHARE] Looking up playlist_item_id={pid} for token={token}")
+
+        if pid and pid > 0:
+            track_result = db.execute_query(
+                "SELECT id, title, file_path, duration_seconds FROM playlist_items WHERE id = %s",
+                (pid,)
+            )
+            if track_result:
+                track = track_result[0]
+
+        # Fallback: if no playlist item found, use the book's own audio
+        if not track:
+            print(f"[SHARE] No playlist item found, falling back to book audio for book_id={share['book_id']}")
+            book_fallback = db.execute_query(
+                "SELECT id, title, audio_path as file_path, duration_seconds FROM books WHERE id = %s",
+                (share['book_id'],)
+            )
+            if book_fallback:
+                track = book_fallback[0]
+
+        if not track:
+            return _shared_error_page("The shared chapter could not be found.")
+
+        # Fetch book info
+        book = db.execute_query(
+            "SELECT title, author, cover_image_path FROM books WHERE id = %s",
+            (share['book_id'],)
+        )
+        book_title = book[0]['title'] if book else 'Audiobook'
+        book_author = book[0]['author'] if book else ''
+        cover_url = resolve_stored_url(book[0]['cover_image_path'], 'AudioBooks') if book and book[0].get('cover_image_path') else ''
+
+        # Resolve audio URL and append query param for WAF bypass
+        base_audio_url = resolve_stored_url(track['file_path'], 'AudioBooks') if track.get('file_path') else ''
+        audio_url = f"{base_audio_url}?source=webplayer" if base_audio_url else ''
+
+        # Increment listen count
+        db.execute_query(
+            "UPDATE shared_chapters SET listen_count = listen_count + 1 WHERE token = %s",
+            (token,)
+        )
+
+        # Fetch sharer name
+        sharer = db.execute_query(
+            "SELECT name FROM users WHERE id = %s", (share['sharer_user_id'],)
+        )
+        sharer_name = sharer[0]['name'] if sharer else 'A friend'
+
+        import html as html_mod
+        track_title = html_mod.escape(track['title'] or 'Chapter')
+        book_title_safe = html_mod.escape(book_title)
+        book_author_safe = html_mod.escape(book_author)
+        sharer_name_safe = html_mod.escape(sharer_name)
+        message_safe = html_mod.escape(share.get('message') or '')
+        duration_seconds = track.get('duration_seconds') or 0
+        duration_min = int(duration_seconds) // 60
+        duration_sec = int(duration_seconds) % 60
+
+        page_html = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{track_title} — {book_title_safe} | Echo</title>
+    <meta name="description" content="Listen to '{track_title}' from '{book_title_safe}' — shared by {sharer_name_safe} via Echo.">
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }}
+        .card {{
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px 32px;
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }}
+        .cover {{
+            width: 200px;
+            height: 200px;
+            border-radius: 16px;
+            object-fit: cover;
+            margin: 0 auto 24px;
+            display: block;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+        }}
+        .no-cover {{
+            width: 200px;
+            height: 200px;
+            border-radius: 16px;
+            margin: 0 auto 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.08);
+            font-size: 64px;
+        }}
+        .track-title {{
+            font-size: 22px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 6px;
+        }}
+        .book-info {{
+            font-size: 14px;
+            color: #b0b0b0;
+            margin-bottom: 4px;
+        }}
+        .book-info strong {{ color: #e2b714; }}
+        .shared-by {{
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 8px;
+        }}
+        .message {{
+            background: rgba(255,255,255,0.05);
+            border-left: 3px solid #e2b714;
+            padding: 12px 16px;
+            margin: 16px 0;
+            border-radius: 0 8px 8px 0;
+            font-style: italic;
+            color: #ccc;
+            text-align: left;
+            font-size: 14px;
+        }}
+        .player-wrapper {{
+            margin: 24px 0 16px;
+        }}
+        audio {{
+            width: 100%;
+            height: 48px;
+            border-radius: 24px;
+            outline: none;
+        }}
+        audio::-webkit-media-controls-panel {{
+            background: rgba(255,255,255,0.1);
+        }}
+        .duration {{
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+        }}
+        .cta {{
+            display: inline-block;
+            margin-top: 24px;
+            padding: 12px 28px;
+            background: linear-gradient(135deg, #e2b714, #f5c518);
+            color: #1a1a2e;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: 700;
+            font-size: 14px;
+            transition: transform 0.2s;
+        }}
+        .cta:hover {{ transform: scale(1.05); }}
+        .footer {{
+            margin-top: 24px;
+            font-size: 11px;
+            color: #555;
+        }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        {'<img class="cover" src="' + cover_url + '" alt="Cover">' if cover_url else '<div class="no-cover">🎧</div>'}
+        <div class="track-title">{track_title}</div>
+        <div class="book-info">from <strong>{book_title_safe}</strong></div>
+        {'<div class="book-info">' + book_author_safe + '</div>' if book_author_safe else ''}
+        <div class="shared-by">Shared by {sharer_name_safe}</div>
+        {'<div class="message">"' + message_safe + '"</div>' if message_safe else ''}
+        <div class="player-wrapper">
+            <audio controls preload="metadata" src="{audio_url}">
+                Your browser does not support audio playback.
+            </audio>
+        </div>
+        <div class="duration">{duration_min}:{duration_sec:02d}</div>
+        <div class="footer">Powered by Echo — History Audiobooks</div>
+    </div>
+</body>
+</html>
+        """
+        return page_html, 200, {'Content-Type': 'text/html; charset=utf-8'}
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return _shared_error_page("Something went wrong. Please try again later.")
+    finally:
+        db.disconnect()
+
+
+def _shared_error_page(message):
+    """Return a styled error page for shared links."""
+    import html as html_mod
+    msg = html_mod.escape(message)
+    return f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Echo — Shared Chapter</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }}
+        .card {{
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 48px 32px;
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.08);
+        }}
+        .emoji {{ font-size: 48px; margin-bottom: 16px; }}
+        .msg {{ font-size: 16px; color: #ccc; line-height: 1.6; }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="emoji">😔</div>
+        <div class="msg">{msg}</div>
+    </div>
+</body>
+</html>
+    """, 200, {'Content-Type': 'text/html; charset=utf-8'}
 
 
 if __name__ == '__main__':

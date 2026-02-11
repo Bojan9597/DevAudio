@@ -2131,6 +2131,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No statistics data available yet. Start listening to see your progress!'**
   String get noStatsData;
+
+  /// No description provided for @recommendToFriend.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommend to Friend'**
+  String get recommendToFriend;
+
+  /// No description provided for @friendEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Friend\'s Email'**
+  String get friendEmail;
+
+  /// No description provided for @personalMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal Message (Optional)'**
+  String get personalMessage;
+
+  /// No description provided for @personalMessageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Write something nice...'**
+  String get personalMessageHint;
+
+  /// No description provided for @sendRecommendation.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Recommendation'**
+  String get sendRecommendation;
+
+  /// No description provided for @shareSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Chapter shared successfully! Your friend will receive an email.'**
+  String get shareSuccess;
+
+  /// No description provided for @shareError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to share chapter. Please try again.'**
+  String get shareError;
+
+  /// No description provided for @emailRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Email is required'**
+  String get emailRequired;
+
+  /// No description provided for @invalidEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid email address'**
+  String get invalidEmail;
 }
 
 class _AppLocalizationsDelegate
