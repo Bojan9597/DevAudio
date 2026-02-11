@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../repositories/book_repository.dart';
 import '../l10n/generated/app_localizations.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ShareChapterDialog extends StatefulWidget {
   final int? playlistItemId;
@@ -54,6 +55,40 @@ class _ShareChapterDialogState extends State<ShareChapterDialog> {
             backgroundColor: Colors.green[700],
             behavior: SnackBarBehavior.floating,
           ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSending = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.shareError),
+            backgroundColor: Colors.red[700],
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _shareViaApp() async {
+    setState(() => _isSending = true);
+    try {
+      final response = await BookRepository().shareChapter(
+        playlistItemId: widget.playlistItemId,
+        bookId: widget.bookId,
+        friendEmail: null, // Signals native share
+      );
+
+      final shareUrl = response['share_url'] as String;
+
+      if (mounted) {
+        setState(() => _isSending = false);
+        Navigator.of(context).pop(); // Close dialog on success
+
+        await Share.share(
+          'Check out "${widget.trackTitle}" from "${widget.bookTitle}"!\n\nListen here: $shareUrl',
+          subject: 'Sharing a chapter with you',
         );
       }
     } catch (e) {
@@ -198,43 +233,115 @@ class _ShareChapterDialogState extends State<ShareChapterDialog> {
               ),
               const SizedBox(height: 20),
 
-              // Send button (Fixed at bottom)
-              SizedBox(
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: _isSending ? null : _send,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.amber[700],
-                    foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    disabledBackgroundColor: Colors.amber.withOpacity(0.3),
-                  ),
-                  child: _isSending
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.black54,
-                          ),
-                        )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.send, size: 18),
-                            const SizedBox(width: 8),
-                            Text(
-                              l10n.sendRecommendation,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ],
+              // Action Buttons
+              Column(
+                children: [
+                  // Send Email Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: _isSending ? null : _send,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.amber[700],
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                ),
+                        disabledBackgroundColor: Colors.amber.withOpacity(0.3),
+                      ),
+                      child: _isSending
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.black54,
+                              ),
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.email, size: 18),
+                                const SizedBox(width: 8),
+                                Text(
+                                  l10n.sendRecommendation,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Divider with "OR"
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Divider(
+                          color: isDark ? Colors.white24 : Colors.grey[300],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          "OR",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.white54 : Colors.grey[600],
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Divider(
+                          color: isDark ? Colors.white24 : Colors.grey[300],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Share via App Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton(
+                      onPressed: _isSending ? null : _shareViaApp,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: isDark ? Colors.white : Colors.black87,
+                        side: BorderSide(
+                          color: isDark ? Colors.white24 : Colors.grey[400]!,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.share,
+                            size: 18,
+                            color: isDark ? Colors.white70 : Colors.black54,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            "Share via other apps",
+                            // TODO: Add to l10n
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

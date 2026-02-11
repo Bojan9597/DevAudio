@@ -1062,7 +1062,7 @@ class BookRepository {
   Future<Map<String, dynamic>> shareChapter({
     int? playlistItemId,
     required int bookId,
-    required String friendEmail,
+    String? friendEmail,
     String message = '',
   }) async {
     try {
@@ -1075,7 +1075,7 @@ class BookRepository {
         body: json.encode({
           'playlist_item_id': playlistItemId,
           'book_id': bookId,
-          'friend_email': friendEmail,
+          'friend_email': friendEmail ?? 'native_share',
           'message': message,
           'user_id': userId,
         }),

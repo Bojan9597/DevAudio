@@ -4842,6 +4842,9 @@ def share_chapter():
         # Build share URL
         share_url = f"{BASE_URL}shared/{token}"
 
+        if friend_email == 'native_share':
+             return jsonify({"message": "Link generated successfully", "token": token, "share_url": share_url}), 200
+
         # Build email HTML
         import html
         message_html = html.escape(message).replace('\n', '<br>') if message else ''
