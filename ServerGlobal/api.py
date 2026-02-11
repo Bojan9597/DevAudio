@@ -4540,3 +4540,8 @@ def trigger_daily_emails():
         return jsonify({"error": str(e)}), 500
     finally:
         db.disconnect()
+
+
+if __name__ == '__main__':
+    # ... existing main block ...
+    pass
