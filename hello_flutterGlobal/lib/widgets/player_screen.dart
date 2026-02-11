@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import '../l10n/generated/app_localizations.dart';
 import '../models/book.dart';
 
+import 'dart:convert';
 import 'dart:async';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
@@ -1004,17 +1005,18 @@ class _PlayerScreenState extends State<PlayerScreen>
       context: context,
       position: position,
       items: [
-        if (_isPurchased) // Only show Rate for subscribed users
-          PopupMenuItem(
-            value: 'rate',
-            child: Row(
-              children: [
-                const Icon(Icons.star, color: Colors.amber),
-                const SizedBox(width: 8),
-                Text(AppLocalizations.of(context)!.rate),
-              ],
-            ),
+        // if (_isPurchased) // Removed restriction - allow all users to rate?
+        // Ideally we check if they have listened to it, but for now just show it.
+        PopupMenuItem(
+          value: 'rate',
+          child: Row(
+            children: [
+              const Icon(Icons.star, color: Colors.amber),
+              const SizedBox(width: 8),
+              Text(AppLocalizations.of(context)!.rate),
+            ],
           ),
+        ),
         PopupMenuItem(
           value: 'details',
           child: Row(
@@ -1138,7 +1140,16 @@ class _PlayerScreenState extends State<PlayerScreen>
   Future<void> _submitRating(int stars) async {
     try {
       final userId = await _getUserId();
-      if (userId == null) return;
+      if (userId == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error: User not found')),
+          );
+        }
+        return;
+      }
+
+      print('[DEBUG] Submitting rating: $stars for book ${widget.book.id}');
 
       final response =
           await Dio(
@@ -1152,6 +1163,10 @@ class _PlayerScreenState extends State<PlayerScreen>
             data: {'user_id': userId, 'stars': stars},
             options: Options(headers: await _getAuthHeaders()),
           );
+
+      print(
+        '[DEBUG] Rating response: ${response.statusCode} - ${response.data}',
+      );
 
       if (response.statusCode == 200 && mounted) {
         // Update local book rating if response includes updated rating
@@ -1168,11 +1183,24 @@ class _PlayerScreenState extends State<PlayerScreen>
           }
         }
 
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Thanks for rating! ⭐' * stars)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${AppLocalizations.of(context)!.thanksForRating(stars)} ⭐',
+            ),
+          ),
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to submit rating (Code: ${response.statusCode})',
+            ),
+          ),
+        );
       }
     } catch (e) {
+      print('[DEBUG] Error submitting rating: $e');
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -1183,7 +1211,16 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   Future<int?> _getUserId() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt('user_id');
+    final String? userStr = prefs.getString('user_data');
+    if (userStr != null) {
+      try {
+        final userMap = json.decode(userStr) as Map<String, dynamic>;
+        return userMap['id'] as int?;
+      } catch (e) {
+        print('[DEBUG] Error parsing user_data: $e');
+      }
+    }
+    return null;
   }
 
   Future<Map<String, String>> _getAuthHeaders() async {
