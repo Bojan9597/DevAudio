@@ -4217,9 +4217,108 @@ def profile_init(user_id):
                 "auto_renew": bool(sub['auto_renew']), "is_active": is_active
             }
 
+        # 6. Chart Stats (heatmap, genres, weekly, mastery) — merged from /user/stats
+        chart_stats = {}
+
+        # 6a. Listening Heatmap (Last 365 days)
+        try:
+            heatmap_query = """
+                SELECT DATE(start_time) as day, SUM(played_seconds) as total_seconds
+                FROM playback_history
+                WHERE user_id = %s
+                  AND start_time > NOW() - INTERVAL '365 days'
+                GROUP BY day
+                ORDER BY day
+            """
+            heatmap_rows = db.execute_query(heatmap_query, (user_id,))
+            if heatmap_rows:
+                chart_stats['heatmap'] = {
+                    str(row['day']): round(row['total_seconds'] / 60)
+                    for row in heatmap_rows
+                }
+            else:
+                chart_stats['heatmap'] = {}
+        except Exception as e:
+            print(f"Error fetching heatmap in profile-init: {e}")
+            chart_stats['heatmap'] = {}
+
+        # 6b. Genre Distribution
+        try:
+            genre_query = """
+                SELECT c.slug, c.name, COUNT(DISTINCT ub.book_id) as count
+                FROM user_books ub
+                JOIN book_categories bc ON ub.book_id = bc.book_id
+                JOIN categories c ON bc.category_id = c.id
+                WHERE ub.user_id = %s
+                GROUP BY c.slug, c.name
+                ORDER BY count DESC
+                LIMIT 8
+            """
+            genre_rows = db.execute_query(genre_query, (user_id,))
+            if genre_rows:
+                chart_stats['genres'] = [
+                    {"slug": row['slug'], "name": row['name'], "count": row['count']}
+                    for row in genre_rows
+                ]
+            else:
+                chart_stats['genres'] = []
+        except Exception as e:
+            print(f"Error fetching genres in profile-init: {e}")
+            chart_stats['genres'] = []
+
+        # 6c. Weekly Activity (Last 7 days)
+        try:
+            weekly_query = """
+                SELECT DATE(start_time) as day, SUM(played_seconds) as total_seconds, EXTRACT(DOW FROM start_time) as dow
+                FROM playback_history
+                WHERE user_id = %s
+                  AND start_time > NOW() - INTERVAL '7 days'
+                GROUP BY day, dow
+                ORDER BY day
+            """
+            weekly_rows = db.execute_query(weekly_query, (user_id,))
+            if weekly_rows:
+                chart_stats['weekly'] = [
+                    {
+                        "date": str(row['day']),
+                        "minutes": round(row['total_seconds'] / 60),
+                        "dow": int(row['dow'])
+                    }
+                    for row in weekly_rows
+                ]
+            else:
+                chart_stats['weekly'] = []
+        except Exception as e:
+            print(f"Error fetching weekly stats in profile-init: {e}")
+            chart_stats['weekly'] = []
+
+        # 6d. Mastery
+        try:
+            books_read_query = "SELECT COUNT(*) as count FROM user_books WHERE user_id = %s AND is_read = 1"
+            books_read_res = db.execute_query(books_read_query, (user_id,))
+            books_read = books_read_res[0]['count'] if books_read_res else 0
+
+            quizzes_passed_query = "SELECT COUNT(DISTINCT quiz_id) as count FROM user_quiz_results WHERE user_id = %s AND is_passed = 1"
+            quizzes_passed_res = db.execute_query(quizzes_passed_query, (user_id,))
+            quizzes_passed = quizzes_passed_res[0]['count'] if quizzes_passed_res else 0
+
+            total_books_query = "SELECT COUNT(*) as count FROM books"
+            total_books_res = db.execute_query(total_books_query)
+            total_books = total_books_res[0]['count'] if total_books_res else 0
+
+            chart_stats['mastery'] = {
+                "books_read": books_read,
+                "books_total": total_books,
+                "quizzes_passed": quizzes_passed
+            }
+        except Exception as e:
+            print(f"Error fetching mastery in profile-init: {e}")
+            chart_stats['mastery'] = {"books_read": 0, "books_total": 0, "quizzes_passed": 0}
+
         return jsonify({
             "user": user_data, "listenHistory": history, "stats": stats,
             "badges": badges, "subscription": sub_data,
+            "chartStats": chart_stats,
         }), 200
     except Exception as e:
         import traceback

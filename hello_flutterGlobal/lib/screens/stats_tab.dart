@@ -8,7 +8,10 @@ import '../widgets/charts/mastery_circle.dart';
 import '../l10n/generated/app_localizations.dart';
 
 class StatsTab extends StatefulWidget {
-  const StatsTab({Key? key}) : super(key: key);
+  final UserStats? chartStats;
+  final Future<void> Function()? onRefresh;
+
+  const StatsTab({Key? key, this.chartStats, this.onRefresh}) : super(key: key);
 
   @override
   State<StatsTab> createState() => _StatsTabState();
@@ -17,7 +20,8 @@ class StatsTab extends StatefulWidget {
 class _StatsTabState extends State<StatsTab>
     with AutomaticKeepAliveClientMixin {
   final StatsService _statsService = StatsService();
-  Future<UserStats?>? _statsFuture;
+  UserStats? _stats;
+  bool _isLoading = false;
 
   @override
   bool get wantKeepAlive => true;
@@ -25,14 +29,40 @@ class _StatsTabState extends State<StatsTab>
   @override
   void initState() {
     super.initState();
-    _loadStats();
+    if (widget.chartStats != null) {
+      _stats = widget.chartStats;
+    } else {
+      _loadStatsFallback();
+    }
   }
 
-  Future<void> _loadStats() async {
-    setState(() {
-      _statsFuture = _statsService.getUserStats();
-    });
-    await _statsFuture;
+  @override
+  void didUpdateWidget(covariant StatsTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.chartStats != null &&
+        widget.chartStats != oldWidget.chartStats) {
+      setState(() => _stats = widget.chartStats);
+    }
+  }
+
+  /// Fallback: fetch stats independently if not provided by parent
+  Future<void> _loadStatsFallback() async {
+    setState(() => _isLoading = true);
+    final result = await _statsService.getUserStats();
+    if (mounted) {
+      setState(() {
+        _stats = result;
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _onRefresh() async {
+    if (widget.onRefresh != null) {
+      await widget.onRefresh!();
+    } else {
+      await _loadStatsFallback();
+    }
   }
 
   @override
@@ -40,77 +70,66 @@ class _StatsTabState extends State<StatsTab>
     super.build(context);
     final l10n = AppLocalizations.of(context)!;
 
-    return FutureBuilder<UserStats?>(
-      future: _statsFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    if (_isLoading && _stats == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-        if (snapshot.hasError || snapshot.data == null) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  l10n.noStatsData,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white70),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: _loadStats,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Retry'),
-                ),
-              ],
+    if (_stats == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              l10n.noStatsData,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white70),
             ),
-          );
-        }
-
-        final stats = snapshot.data!;
-
-        return RefreshIndicator(
-          onRefresh: _loadStats,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(
-              horizontal: 20.0,
-              vertical: 24.0,
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _onRefresh,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildSectionTitle('${l10n.listeningActivity} 📅'),
-                const SizedBox(height: 8),
-                ActivityHeatmap(heatmapData: stats.heatmap),
-                const SizedBox(height: 32),
+          ],
+        ),
+      );
+    }
 
-                _buildSectionTitle('${l10n.weeklyProgress} 📊'),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 200,
-                  child: WeeklyBarChart(weeklyData: stats.weekly),
-                ),
-                const SizedBox(height: 32),
+    final stats = _stats!;
 
-                _buildSectionTitle('${l10n.topGenres} 🍩'),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 250,
-                  child: GenrePieChart(genres: stats.genres),
-                ),
-                const SizedBox(height: 32),
+    return RefreshIndicator(
+      onRefresh: _onRefresh,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionTitle('${l10n.listeningActivity} 📅'),
+            const SizedBox(height: 8),
+            ActivityHeatmap(heatmapData: stats.heatmap),
+            const SizedBox(height: 32),
 
-                _buildSectionTitle('${l10n.knowledgeMastery} 🎯'),
-                const SizedBox(height: 16),
-                MasteryCircle(mastery: stats.mastery),
-                const SizedBox(height: 48),
-              ],
+            _buildSectionTitle('${l10n.weeklyProgress} 📊'),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 200,
+              child: WeeklyBarChart(weeklyData: stats.weekly),
             ),
-          ),
-        );
-      },
+            const SizedBox(height: 32),
+
+            _buildSectionTitle('${l10n.topGenres} 🍩'),
+            const SizedBox(height: 8),
+            SizedBox(height: 250, child: GenrePieChart(genres: stats.genres)),
+            const SizedBox(height: 32),
+
+            _buildSectionTitle('${l10n.knowledgeMastery} 🎯'),
+            const SizedBox(height: 16),
+            MasteryCircle(mastery: stats.mastery),
+            const SizedBox(height: 48),
+          ],
+        ),
+      ),
     );
   }
 

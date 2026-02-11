@@ -8,6 +8,7 @@ import '../repositories/book_repository.dart';
 import '../models/book.dart';
 import '../models/badge.dart';
 import '../models/subscription.dart';
+import '../models/user_stats.dart';
 import '../screens/playlist_screen.dart';
 import '../widgets/subscription_bottom_sheet.dart';
 import '../l10n/generated/app_localizations.dart';
@@ -26,6 +27,7 @@ class ProfileScreenCache {
       'total_listening_time_seconds': 0,
       'books_completed': 0,
     };
+    _ProfileScreenState._cachedChartStats = null;
   }
 }
 
@@ -48,6 +50,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     'total_listening_time_seconds': 0,
     'books_completed': 0,
   };
+  static UserStats? _cachedChartStats;
 
   Map<String, dynamic>? _user;
   bool _isLoading = true;
@@ -59,6 +62,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     'total_listening_time_seconds': 0,
     'books_completed': 0,
   };
+  UserStats? _chartStats;
   int _imageCacheKey = 0; // To force image refresh
 
   @override
@@ -88,6 +92,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _badges = List.from(_cachedBadges);
       _subscription = _cachedSubscription;
       _stats = Map.from(_cachedStats);
+      _chartStats = _cachedChartStats;
       _isLoading = false;
     });
   }
@@ -127,6 +132,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (data['subscription'] != null) {
             _subscription = Subscription.fromJson(data['subscription']);
           }
+          _chartStats = data['chartStats'] as UserStats?;
           _isLoading = false;
         });
 
@@ -137,6 +143,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _cachedBadges = List.from(_badges);
         _cachedSubscription = _subscription;
         _cachedStats = Map.from(_stats);
+        _cachedChartStats = _chartStats;
       }
     } catch (e) {
       print("Error loading profile data: $e");
@@ -860,7 +867,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildStatsTab() {
-    return const StatsTab();
+    return StatsTab(
+      chartStats: _chartStats,
+      onRefresh: () async {
+        await _loadProfileData(forceRefresh: true);
+      },
+    );
   }
 
   Widget _buildAchievementsTab() {

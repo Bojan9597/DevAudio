@@ -7,6 +7,7 @@ import '../utils/api_constants.dart';
 import '../services/connectivity_service.dart';
 import '../services/auth_service.dart'; // Import AuthService
 import '../services/api_client.dart'; // Import ApiClient
+import '../models/user_stats.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -976,7 +977,7 @@ class BookRepository {
   }
 
   /// Combined profile screen data in ONE API call.
-  /// Returns: user, listenHistory, stats, badges, subscription
+  /// Returns: user, listenHistory, stats, badges, subscription, chartStats
   Future<Map<String, dynamic>> getProfileInit(int userId) async {
     try {
       if (ConnectivityService().isOffline) {
@@ -1008,6 +1009,12 @@ class BookRepository {
           }
         }
 
+        // Parse chart stats
+        UserStats? chartStats;
+        if (data['chartStats'] != null) {
+          chartStats = UserStats.fromJson(data['chartStats']);
+        }
+
         return {
           'user': data['user'],
           'listenHistory': history,
@@ -1016,6 +1023,7 @@ class BookRepository {
               {'total_listening_time_seconds': 0, 'books_completed': 0},
           'badges': badges,
           'subscription': data['subscription'],
+          'chartStats': chartStats,
         };
       }
       throw Exception('Failed to load profile data');
