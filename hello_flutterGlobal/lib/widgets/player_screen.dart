@@ -16,6 +16,7 @@ import 'badge_dialog.dart';
 import 'subscription_bottom_sheet.dart';
 // import '../models/badge.dart'; // Unused
 import '../services/download_service.dart';
+import 'share_chapter_dialog.dart';
 import '../utils/api_constants.dart';
 import '../services/subscription_service.dart';
 import '../screens/quiz_taker_screen.dart'; // Import QuizTakerScreen
@@ -869,6 +870,23 @@ class _PlayerScreenState extends State<PlayerScreen>
     final minutes = twoDigits(duration.inMinutes.remainder(60));
     final seconds = twoDigits(duration.inSeconds.remainder(60));
     return "${duration.inHours > 0 ? '${twoDigits(duration.inHours)}:' : ''}$minutes:$seconds";
+  }
+
+  void _showShareDialog() {
+    int? playlistItemId;
+    if (widget.playlist != null && widget.playlist!.isNotEmpty) {
+      playlistItemId = widget.playlist![_currentIndex]['id'];
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => ShareChapterDialog(
+        playlistItemId: playlistItemId,
+        bookId: int.parse(widget.book.id),
+        trackTitle: _currentBook.title,
+        bookTitle: widget.book.title,
+      ),
+    );
   }
 
   void _toggleFavorite() async {
@@ -1940,6 +1958,10 @@ class _PlayerScreenState extends State<PlayerScreen>
                             '',
                             _isFavorite,
                           ),
+                        ),
+                        GestureDetector(
+                          onTap: isCurrent ? _showShareDialog : null,
+                          child: _buildBottomOption(Icons.share, '', false),
                         ),
                         GestureDetector(
                           key: isCurrent ? _moreButtonKey : null,

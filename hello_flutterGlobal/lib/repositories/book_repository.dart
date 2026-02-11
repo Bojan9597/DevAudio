@@ -1060,7 +1060,7 @@ class BookRepository {
 
   /// Share a chapter with a friend via email
   Future<Map<String, dynamic>> shareChapter({
-    required int playlistItemId,
+    int? playlistItemId,
     required int bookId,
     required String friendEmail,
     String message = '',
