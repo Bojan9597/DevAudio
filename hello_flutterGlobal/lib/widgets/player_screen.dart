@@ -16,8 +16,8 @@ import 'badge_dialog.dart';
 import 'subscription_bottom_sheet.dart';
 // import '../models/badge.dart'; // Unused
 import '../services/download_service.dart';
-import 'share_chapter_dialog.dart';
 import '../utils/api_constants.dart';
+import 'package:share_plus/share_plus.dart';
 import '../services/subscription_service.dart';
 import '../screens/quiz_taker_screen.dart'; // Import QuizTakerScreen
 import 'package:dio/dio.dart';
@@ -872,21 +872,36 @@ class _PlayerScreenState extends State<PlayerScreen>
     return "${duration.inHours > 0 ? '${twoDigits(duration.inHours)}:' : ''}$minutes:$seconds";
   }
 
-  void _showShareDialog() {
+  void _showShareDialog() async {
     int? playlistItemId;
     if (widget.playlist != null && widget.playlist!.isNotEmpty) {
       playlistItemId = widget.playlist![_currentIndex]['id'];
     }
 
-    showDialog(
-      context: context,
-      builder: (context) => ShareChapterDialog(
+    try {
+      final response = await BookRepository().shareChapter(
         playlistItemId: playlistItemId,
         bookId: int.parse(widget.book.id),
-        trackTitle: _currentBook.title,
-        bookTitle: widget.book.title,
-      ),
-    );
+        friendEmail: null,
+      );
+
+      final shareUrl = response['share_url'] as String;
+
+      await Share.share(
+        'Check out "${_currentBook.title}" from "${widget.book.title}"!\n\nListen here: $shareUrl',
+        subject: 'Sharing a chapter with you',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.shareError),
+            backgroundColor: Colors.red[700],
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   void _toggleFavorite() async {

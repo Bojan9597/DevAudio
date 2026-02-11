@@ -11,7 +11,7 @@ import '../main.dart'; // Access to routeObserver
 import '../utils/api_constants.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../services/player_preferences.dart';
-import '../widgets/share_chapter_dialog.dart';
+import 'package:share_plus/share_plus.dart';
 // We need access to the global audio player state if we want to sync with MiniPlayer
 // But user said "It should look like that audio player with profile picture and everything"
 // This implies a FULL SCREEN EXPERIENCE.
@@ -892,24 +892,43 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
                         const SizedBox(width: 16),
                         // Share / Recommend
                         GestureDetector(
-                          onTap: () {
+                          onTap: () async {
                             final track = book.tracks[trackIndex];
                             final trackId = (track is Map) ? track['id'] : null;
                             final trackTitle = (track is Map)
                                 ? track['title']
                                 : book.title;
                             if (trackId != null) {
-                              showDialog(
-                                context: context,
-                                builder: (_) => ShareChapterDialog(
-                                  playlistItemId: trackId is int
-                                      ? trackId
-                                      : int.tryParse(trackId.toString()) ?? 0,
+                              try {
+                                final playlistItemId = trackId is int
+                                    ? trackId
+                                    : int.tryParse(trackId.toString()) ?? 0;
+                                final response =
+                                    await BookRepository().shareChapter(
+                                  playlistItemId: playlistItemId,
                                   bookId: int.tryParse(book.id) ?? 0,
-                                  trackTitle: trackTitle ?? 'Chapter',
-                                  bookTitle: book.title,
-                                ),
-                              );
+                                  friendEmail: null,
+                                );
+
+                                final shareUrl = response['share_url'] as String;
+
+                                await Share.share(
+                                  'Check out "${trackTitle ?? 'Chapter'}" from "${book.title}"!\n\nListen here: $shareUrl',
+                                  subject: 'Sharing a chapter with you',
+                                );
+                              } catch (e) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                          AppLocalizations.of(context)!
+                                              .shareError),
+                                      backgroundColor: Colors.red[700],
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                }
+                              }
                             }
                           },
                           child: Container(
