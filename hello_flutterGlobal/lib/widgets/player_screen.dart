@@ -664,8 +664,31 @@ class _PlayerScreenState extends State<PlayerScreen>
         print(
           "[DEBUG][PlayerScreen] Same track already loaded, skipping reload",
         );
+
+        // FIX: Fetch latest user preference for BG music even if track is loaded
+        try {
+          _userId ??= await AuthService().getCurrentUserId();
+          if (_userId != null) {
+            final status = await BookRepository().getBookStatus(
+              _userId!,
+              widget.book.id,
+            );
+            if (status.containsKey('background_music_id')) {
+              final rawId = status['background_music_id'];
+              print(
+                '[DEBUG][PlayerScreen] (Early) Found stored BG music preference: $rawId',
+              );
+              if (rawId is int) {
+                _userPreferredBgMusicId = rawId;
+              }
+            }
+          }
+        } catch (e) {
+          print("[DEBUG] Error fetching status in early return: $e");
+        }
+
         // Still ensure bg music is synced (fire and forget)
-        _initBgMusic();
+        await _initBgMusic();
         _isInitializingPlayer = false;
         return;
       }
@@ -754,13 +777,32 @@ class _PlayerScreenState extends State<PlayerScreen>
         // If user has a saved bg music preference, switch to it
         if (status.containsKey('background_music_id')) {
           final rawId = status['background_music_id'];
+          print(
+            '[DEBUG][PlayerScreen] Found stored BG music preference: $rawId',
+          );
           if (rawId is int) {
             _userPreferredBgMusicId = rawId;
             // Update bg music if user preference differs from what was loaded
             if (rawId != audioHandler.selectedBgMusicId) {
+              print(
+                '[DEBUG][PlayerScreen] Switching BG music to preferred: $rawId',
+              );
               _updateBgMusicSource(rawId);
+            } else {
+              print(
+                '[DEBUG][PlayerScreen] Preferred BG music already active: $rawId',
+              );
             }
+          } else if (rawId == null) {
+            // Handle explicit "None" if needed, though null usually means "default"
+            print(
+              '[DEBUG][PlayerScreen] Stored BG music is NULL (Default/None)',
+            );
           }
+        } else {
+          print(
+            '[DEBUG][PlayerScreen] No background_music_id in status response',
+          );
         }
 
         if (savedPosition > 0) {
@@ -1983,6 +2025,9 @@ class _PlayerScreenState extends State<PlayerScreen>
       // We do NOT use audioHandler.selectedBgMusicId here because it might be holding
       // the music from the *previous* screen (e.g. Reels), which we want to override.
       int? bgMusicId = _userPreferredBgMusicId ?? widget.book.backgroundMusicId;
+      print(
+        '[DEBUG][_initBgMusic] UserPref: $_userPreferredBgMusicId, BookDef: ${widget.book.backgroundMusicId}, Resolved: $bgMusicId',
+      );
 
       // If no default on book, use Global Default
       if (bgMusicId == null && _bgMusicList.isNotEmpty) {
@@ -1992,11 +2037,13 @@ class _PlayerScreenState extends State<PlayerScreen>
         );
         if (defaultTrack.isNotEmpty) {
           bgMusicId = defaultTrack['id'];
+          print('[DEBUG][_initBgMusic] Using Global Default: $bgMusicId');
         }
       }
 
       // Set the background music source via audioHandler (handles looping, syncing, etc.)
       // Note: audioHandler.setBgMusicSource checks if the ID is the same and avoids reloading if so.
+      print('[DEBUG][_initBgMusic] Setting BG Source to: $bgMusicId');
       await audioHandler.setBgMusicSource(bgMusicId, _bgMusicList);
 
       if (mounted) setState(() {});

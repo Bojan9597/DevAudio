@@ -593,8 +593,13 @@ class BookRepository {
         url += '?playlist_item_id=$trackId';
       }
 
+      print('[DEBUG] Fetching book status: $url');
       final headers = await _getHeaders();
       final response = await _apiClient.get(Uri.parse(url), headers: headers);
+
+      print(
+        '[DEBUG] Book status response: ${response.statusCode} - ${response.body}',
+      );
 
       if (response.statusCode == 200) {
         return json.decode(response.body) as Map<String, dynamic>;
@@ -958,6 +963,7 @@ class BookRepository {
       final url = Uri.parse(
         '${ApiConstants.baseUrl}/user-books/background-music',
       );
+      print('[DEBUG] Updating user background music: $bookId -> $bgMusicId');
       final headers = await _getHeaders();
       final body = json.encode({
         'user_id': userId,
@@ -965,7 +971,10 @@ class BookRepository {
         'background_music_id': bgMusicId,
       });
 
-      await _apiClient.post(url, headers: headers, body: body);
+      final response = await _apiClient.post(url, headers: headers, body: body);
+      print(
+        '[DEBUG] Update response: ${response.statusCode} - ${response.body}',
+      );
     } catch (e) {
       print('Error updating user background music preference: $e');
     }

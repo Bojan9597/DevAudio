@@ -539,6 +539,7 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
             _playTrack(index, 0);
 
             // Apply background music from pre-fetched data (No API call!)
+            print("[DEBUG] onPageChanged: Index $index");
             _applyBgMusicFromBook(index);
 
             // Pre-load next batch if we are near the end (e.g., 2 items remaining)
@@ -907,7 +908,7 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
     // Use pre-fetched backgroundMusicId from the book object
     int? musicId = book.backgroundMusicId;
     print(
-      "[DEBUG] _applyBgMusicFromBook: Index $index, Book: ${book.title}, ID: $musicId",
+      "[DEBUG] _applyBgMusicFromBook: Index $index, Book: ${book.title}, ID from Book Object: $musicId",
     );
 
     // If no preference/default on book, use Global Default
@@ -923,6 +924,9 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
     }
 
     _selectedBgMusicId = musicId;
+    print(
+      "[DEBUG] _applyBgMusicFromBook: Final _selectedBgMusicId: $_selectedBgMusicId",
+    );
     _setBgMusicSource(musicId); // Fire and forget (it manages its own state)
   }
 

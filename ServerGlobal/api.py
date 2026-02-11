@@ -2902,9 +2902,53 @@ def get_book_status(user_id, book_id):
             else:
                  response_data["position_seconds"] = 0
             
+            
         return jsonify(response_data), 200
             
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
+
+@app.route('/user-books/background-music', methods=['POST'])
+@jwt_required
+def update_user_background_music():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    book_id = data.get('book_id')
+    bg_music_id = data.get('background_music_id')
+
+    if not all([user_id, book_id]):
+        return jsonify({"error": "Missing user_id or book_id"}), 400
+
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        # Upsert user_books record
+        # Note: This assumes there is a UNIQUE constraint on (user_id, book_id) in user_books.
+        # If not, we might get duplicates or errors, but standard join tables usually have it.
+        # We'll use ON CONFLICT DO UPDATE.
+        
+        # First ensure the record exists or create it, then update.
+        # Actually standard INSERT ON CONFLICT handle creation.
+        
+        # We also need to be careful if the user hasn't "started" the book yet?
+        # Usually user_books implies opened/purchased. 
+        # If it doesn't exist, we insert it.
+        
+        query = """
+            INSERT INTO user_books (user_id, book_id, background_music_id, last_accessed_at)
+            VALUES (%s, %s, %s, NOW())
+            ON CONFLICT (user_id, book_id)
+            DO UPDATE SET background_music_id = EXCLUDED.background_music_id, last_accessed_at = NOW()
+        """
+        db.execute_query(query, (user_id, book_id, bg_music_id))
+        
+        return jsonify({"message": "Background music preference updated"}), 200
+    except Exception as e:
+        print(f"Error updating background music: {e}")
         return jsonify({"error": str(e)}), 500
     finally:
         db.disconnect()
