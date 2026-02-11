@@ -119,7 +119,6 @@ class _PlayerScreenState extends State<PlayerScreen>
   bool _isDraggingSlider = false; // Track when user is dragging progress slider
   double _dragSliderValue = 0.0; // Temporary value while dragging
 
-  final GlobalKey _speedButtonKey = GlobalKey();
   final GlobalKey _moreButtonKey = GlobalKey();
 
   late PageController _pageController;
@@ -661,10 +660,6 @@ class _PlayerScreenState extends State<PlayerScreen>
           audioHandler.currentIndex == _currentIndex &&
           _player.processingState != ProcessingState.idle) {
         // Same track is already loaded, don't reload
-        print(
-          "[DEBUG][PlayerScreen] Same track already loaded, skipping reload",
-        );
-
         // FIX: Fetch latest user preference for BG music even if track is loaded
         try {
           _userId ??= await AuthService().getCurrentUserId();
@@ -675,9 +670,6 @@ class _PlayerScreenState extends State<PlayerScreen>
             );
             if (status.containsKey('background_music_id')) {
               final rawId = status['background_music_id'];
-              print(
-                '[DEBUG][PlayerScreen] (Early) Found stored BG music preference: $rawId',
-              );
               if (rawId is int) {
                 _userPreferredBgMusicId = rawId;
               }
@@ -777,32 +769,13 @@ class _PlayerScreenState extends State<PlayerScreen>
         // If user has a saved bg music preference, switch to it
         if (status.containsKey('background_music_id')) {
           final rawId = status['background_music_id'];
-          print(
-            '[DEBUG][PlayerScreen] Found stored BG music preference: $rawId',
-          );
           if (rawId is int) {
             _userPreferredBgMusicId = rawId;
             // Update bg music if user preference differs from what was loaded
             if (rawId != audioHandler.selectedBgMusicId) {
-              print(
-                '[DEBUG][PlayerScreen] Switching BG music to preferred: $rawId',
-              );
               _updateBgMusicSource(rawId);
-            } else {
-              print(
-                '[DEBUG][PlayerScreen] Preferred BG music already active: $rawId',
-              );
             }
-          } else if (rawId == null) {
-            // Handle explicit "None" if needed, though null usually means "default"
-            print(
-              '[DEBUG][PlayerScreen] Stored BG music is NULL (Default/None)',
-            );
           }
-        } else {
-          print(
-            '[DEBUG][PlayerScreen] No background_music_id in status response',
-          );
         }
 
         if (savedPosition > 0) {
@@ -930,42 +903,83 @@ class _PlayerScreenState extends State<PlayerScreen>
     }
   }
 
-  void _showSpeedMenu() async {
-    // ... (keep existing)
-    final RenderBox button =
-        _speedButtonKey.currentContext!.findRenderObject() as RenderBox;
-    final RenderBox overlay =
-        Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
-    final RelativeRect position = RelativeRect.fromRect(
-      Rect.fromPoints(
-        button.localToGlobal(Offset.zero, ancestor: overlay),
-        button.localToGlobal(
-          button.size.bottomRight(Offset.zero),
-          ancestor: overlay,
-        ),
-      ),
-      Offset.zero & overlay.size,
-    );
-
-    final double? selectedSpeed = await showMenu<double>(
+  void _showSpeedMenu() {
+    showModalBottomSheet(
       context: context,
-      position: position,
-      items: [
-        const PopupMenuItem(value: 0.5, child: Text('0.5x')),
-        const PopupMenuItem(value: 1.0, child: Text('1.0x')),
-        const PopupMenuItem(value: 2.0, child: Text('2.0x')),
-      ],
-      elevation: 8.0,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.grey[900] : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Playback Speed',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                alignment: WrapAlignment.center,
+                children: [0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map((speed) {
+                  final isSelected = _playbackSpeed == speed;
+                  return ChoiceChip(
+                    label: Text('${speed}x'),
+                    selected: isSelected,
+                    onSelected: (selected) async {
+                      if (selected) {
+                        try {
+                          await _player.setSpeed(speed);
+                        } catch (e) {
+                          print("Error setting speed to $speed: $e");
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text("Speed $speed not supported"),
+                              ),
+                            );
+                          }
+                          return;
+                        }
+                        // Sync to preferences
+                        await PlayerPreferences().setDefaultSpeed(speed);
+                        if (mounted) {
+                          setState(() {
+                            _playbackSpeed = speed;
+                          });
+                          Navigator.pop(context);
+                        }
+                      }
+                    },
+                    selectedColor: Colors.amber,
+                    labelStyle: TextStyle(
+                      color: isSelected
+                          ? Colors.black
+                          : (isDark ? Colors.white : Colors.black),
+                      fontWeight: FontWeight.bold,
+                    ),
+                    backgroundColor: isDark
+                        ? Colors.grey[800]
+                        : Colors.grey[200],
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
     );
-
-    if (selectedSpeed != null) {
-      _player.setSpeed(selectedSpeed);
-      // Sync to preferences
-      await PlayerPreferences().setDefaultSpeed(selectedSpeed);
-      setState(() {
-        _playbackSpeed = selectedSpeed;
-      });
-    }
   }
 
   void _showMoreMenu() async {
@@ -1864,7 +1878,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         GestureDetector(
-                          key: isCurrent ? _speedButtonKey : null,
+                          // key: isCurrent ? _speedButtonKey : null, // Removed as we use BottomSheet now
                           onTap: isCurrent ? _showSpeedMenu : null,
                           child: _buildBottomOption(
                             Icons.speed,
@@ -2025,9 +2039,6 @@ class _PlayerScreenState extends State<PlayerScreen>
       // We do NOT use audioHandler.selectedBgMusicId here because it might be holding
       // the music from the *previous* screen (e.g. Reels), which we want to override.
       int? bgMusicId = _userPreferredBgMusicId ?? widget.book.backgroundMusicId;
-      print(
-        '[DEBUG][_initBgMusic] UserPref: $_userPreferredBgMusicId, BookDef: ${widget.book.backgroundMusicId}, Resolved: $bgMusicId',
-      );
 
       // If no default on book, use Global Default
       if (bgMusicId == null && _bgMusicList.isNotEmpty) {
@@ -2037,13 +2048,11 @@ class _PlayerScreenState extends State<PlayerScreen>
         );
         if (defaultTrack.isNotEmpty) {
           bgMusicId = defaultTrack['id'];
-          print('[DEBUG][_initBgMusic] Using Global Default: $bgMusicId');
         }
       }
 
       // Set the background music source via audioHandler (handles looping, syncing, etc.)
       // Note: audioHandler.setBgMusicSource checks if the ID is the same and avoids reloading if so.
-      print('[DEBUG][_initBgMusic] Setting BG Source to: $bgMusicId');
       await audioHandler.setBgMusicSource(bgMusicId, _bgMusicList);
 
       if (mounted) setState(() {});

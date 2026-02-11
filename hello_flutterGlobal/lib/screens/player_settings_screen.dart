@@ -104,9 +104,9 @@ class _PlayerSettingsScreenState extends State<PlayerSettingsScreen> {
           ),
           Slider(
             value: _defaultSpeed,
-            min: 0.75,
+            min: 0.5,
             max: 3.0,
-            divisions: 9, // (3.0 - 0.75) / 0.25 = 9 steps
+            divisions: 10, // (3.0 - 0.5) / 0.25 = 10 steps
             label: "${_defaultSpeed}x",
             onChanged: (val) async {
               // Snap to nearest 0.25

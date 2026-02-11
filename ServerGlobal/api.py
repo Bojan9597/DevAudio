@@ -4396,45 +4396,6 @@ def get_bg_music_list():
     finally:
         db.disconnect()
 
-@app.route('/user-books/background-music', methods=['POST'])
-@jwt_required
-def update_user_bg_music():
-    data = request.json
-    user_id = data.get('user_id')
-    book_id = data.get('book_id')
-    bg_music_id = data.get('background_music_id') # Can be None
-
-    if not user_id or not book_id:
-        return jsonify({"error": "Missing user_id or book_id"}), 400
-
-    db = Database()
-    if not db.connect():
-        return jsonify({"error": "Database connection failed"}), 500
-        
-    try:
-        # Check if user_book entry exists
-        check_query = "SELECT id FROM user_books WHERE user_id = %s AND book_id = %s"
-        existing = db.execute_query(check_query, (user_id, book_id))
-        
-        if not existing:
-             # Create entry if it doesn't exist (ownership/history logic permitting)
-             # Usually should exist if we are playing it. If not, maybe create?
-             # Let's create it to be safe, ensuring they "own" it or at least track preference.
-             # BUT be careful with is_subscriber checks. 
-             # For now, assume if they are calling this, they have access.
-             insert_query = "INSERT INTO user_books (user_id, book_id, background_music_id) VALUES (%s, %s, %s)"
-             db.execute_query(insert_query, (user_id, book_id, bg_music_id))
-        else:
-             # Update
-             update_query = "UPDATE user_books SET background_music_id = %s WHERE user_id = %s AND book_id = %s"
-             db.execute_query(update_query, (bg_music_id, user_id, book_id))
-        
-        return jsonify({"message": "Background music preference updated"}), 200
-    except Exception as e:
-        print(f"Error updating user bg music: {e}")
-        return jsonify({"error": str(e)}), 500
-    finally:
-        db.disconnect()
 
 # ==================== EMAIL SETTINGS & NOTIFICATIONS ====================
 

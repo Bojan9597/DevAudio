@@ -593,13 +593,8 @@ class BookRepository {
         url += '?playlist_item_id=$trackId';
       }
 
-      print('[DEBUG] Fetching book status: $url');
       final headers = await _getHeaders();
       final response = await _apiClient.get(Uri.parse(url), headers: headers);
-
-      print(
-        '[DEBUG] Book status response: ${response.statusCode} - ${response.body}',
-      );
 
       if (response.statusCode == 200) {
         return json.decode(response.body) as Map<String, dynamic>;
