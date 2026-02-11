@@ -331,11 +331,10 @@ class MyAudioHandler extends BaseAudioHandler {
   @override
   Future<void> play() async {
     await _player.play();
-    // Explicitly sync background music after main player starts
-    // This ensures BG music starts even if it loaded before main play() was called
-    if (_bgMusicLoaded && _bgMusicEnabled && !_bgPlayer.playing) {
+
+    // Ensure background music starts if enabled
+    if (_bgMusicEnabled && _bgMusicLoaded && !_bgPlayer.playing) {
       _bgPlayer.play();
-      print('[AudioHandler] BG music explicitly synced on play()');
     }
   }
 
