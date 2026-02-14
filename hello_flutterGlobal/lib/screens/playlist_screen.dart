@@ -46,7 +46,6 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   bool _hasAccess = false;
   bool _isCheckingAccess = true;
   // late VideoPlayerController _completionVideoController; // Removed
-  bool _isVideoInitialized = false;
   // bool _isCompletionVideoInitialized = false; // Removed
   // bool _showCompletionOverlay = false; // Removed
   // bool _showCompletionOverlay = false;
@@ -354,13 +353,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   }
 
   Future<void> _initVideoPlayer() async {
-    // Background.png is now used as a static image, so we don't need video initialization
-    // The image will be loaded directly in the build method
-    if (mounted) {
-      setState(() {
-        _isVideoInitialized = true; // Mark as "initialized" to show background
-      });
-    }
+    // No-op: background is now a gradient, no image/video to initialize
   }
 
   Future<void> _updateBackgroundLoop(bool isBookCompleted) async {
@@ -950,8 +943,11 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text(widget.book.title),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: null,
         actions: [
           // PDF Button - only show if PDF exists
           if (_pdfUrl != null && _pdfUrl!.isNotEmpty)
@@ -978,25 +974,16 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
           ),
         ],
       ),
-      // Use gradient background for map feel
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: const Color(0xFF1A1410),
       body: Stack(
         children: [
-          // Background Image (loaded from local assets)
-          if (_isVideoInitialized)
-            SizedBox.expand(
-              child: Image.asset(
-                'assets/AncientScrollBackground.jpg',
-                fit: BoxFit.cover,
-                alignment: Alignment.center,
-                errorBuilder: (context, error, stackTrace) =>
-                    Container(color: const Color(0xFF121212)),
-              ),
+          // Textured background image
+          Positioned.fill(
+            child: Image.asset(
+              'assets/playlist_background.jpg',
+              fit: BoxFit.cover,
             ),
-
-          // Overlay to darken background for readability (reduced opacity)
-          if (_isVideoInitialized)
-            Container(color: Colors.black.withOpacity(0.3)),
+          ),
 
           // Content
           _isLoading

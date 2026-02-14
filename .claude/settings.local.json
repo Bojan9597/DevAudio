@@ -30,7 +30,11 @@
       "Bash(cmd.exe /c \"cd /d c:\\\\Users\\\\bojan\\\\Desktop\\\\TrainingFlutter\\\\hello_flutterGlobal && flutter gen-l10n 2>&1\")",
       "Bash(cmd.exe /c \"copy /Y \"\"c:\\\\Users\\\\bojan\\\\Desktop\\\\TrainingFlutter\\\\medieval-shield\\\\textures\\\\Medieval_Shield_low_M_Medieval_Shield_Base.png\"\" \"\"c:\\\\Users\\\\bojan\\\\Desktop\\\\TrainingFlutter\\\\hello_flutterGlobal\\\\assets\\\\lesson_node_1.png\"\"\")",
       "Bash(cmd.exe:*)",
-      "Bash(powershell.exe:*)"
+      "Bash(powershell.exe:*)",
+      "Bash(git -C \"c:\\\\Users\\\\bojan\\\\Desktop\\\\TrainingFlutter\" status --short)",
+      "Bash(git -C \"c:\\\\Users\\\\bojan\\\\Desktop\\\\TrainingFlutter\" log --name-status --since=\"2025-01-01\" -- \"*.png\" \"*.jpg\" \"*.jpeg\" \"*.webp\")",
+      "Bash(git -C \"c:\\\\Users\\\\bojan\\\\Desktop\\\\TrainingFlutter\" status --porcelain)",
+      "Bash(git -C \"c:\\\\Users\\\\bojan\\\\Desktop\\\\TrainingFlutter\" ls-files --others --exclude-standard)"
     ]
   }
 }
