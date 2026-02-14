@@ -410,9 +410,7 @@ class _ContentAreaState extends State<ContentArea> {
       child: Column(
         children: [
           Container(
-            color:
-                Theme.of(context).cardTheme.color ??
-                Theme.of(context).cardColor,
+            color: Theme.of(context).scaffoldBackgroundColor,
             child: TabBar(
               labelColor: Theme.of(context).colorScheme.primary,
               unselectedLabelColor: Theme.of(

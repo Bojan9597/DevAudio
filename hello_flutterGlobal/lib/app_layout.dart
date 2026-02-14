@@ -5,6 +5,7 @@ import 'widgets/side_menu.dart';
 import 'widgets/search_overlay.dart';
 import 'states/layout_state.dart';
 import 'l10n/generated/app_localizations.dart';
+import 'screens/settings_screen.dart';
 
 import 'dart:async';
 import 'services/connectivity_service.dart';
@@ -77,68 +78,100 @@ class _AppLayoutState extends State<AppLayout> {
           _selectedIndex = 0; // Any category selection goes to Discover tab
         // Index 0 is "Discover" (categories)
 
-        return Scaffold(
-          appBar: AppBar(
-            automaticallyImplyLeading: false,
+        final isReels = catId == 'reels';
+        final isLibrary = catId == 'library';
+        final isProfile = catId == 'profile';
 
-            backgroundColor: Theme.of(
-              context,
-            ).appBarTheme.backgroundColor?.withOpacity(0.1),
-            foregroundColor: Theme.of(context).colorScheme.onSurface,
-            leading: isOnDiscover
-                ? IconButton(
-                    icon: Icon(
-                      globalLayoutState.isCollapsed ? Icons.menu : Icons.close,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                    onPressed: () => globalLayoutState.toggleMenu(),
-                    tooltip: AppLocalizations.of(context)!.categories,
-                  )
-                : null,
-            titleSpacing: isOnDiscover ? 0 : null,
-            title: Row(
-              children: [
-                if (isOnDiscover)
-                  GestureDetector(
-                    onTap: () => globalLayoutState.toggleMenu(),
-                    child: Text(
-                      AppLocalizations.of(context)!.categories,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 16,
+        return Scaffold(
+          extendBodyBehindAppBar: isReels,
+          appBar: isReels
+              ? null
+              : AppBar(
+                  automaticallyImplyLeading: false,
+                  backgroundColor: (isLibrary || isProfile)
+                      ? Theme.of(context).scaffoldBackgroundColor
+                      : Theme.of(context).appBarTheme.backgroundColor?.withOpacity(0.1),
+                  foregroundColor: Theme.of(context).colorScheme.onSurface,
+                  elevation: (isLibrary || isProfile) ? 0 : null,
+                  leading: isOnDiscover
+                      ? IconButton(
+                          icon: Icon(
+                            globalLayoutState.isCollapsed
+                                ? Icons.menu
+                                : Icons.close,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                          onPressed: () => globalLayoutState.toggleMenu(),
+                          tooltip: AppLocalizations.of(context)!.categories,
+                        )
+                      : null,
+                  titleSpacing: isOnDiscover ? 0 : null,
+                  title: (isLibrary || isProfile)
+                      ? null
+                      : Row(
+                          children: [
+                            if (isOnDiscover)
+                              GestureDetector(
+                                onTap: () => globalLayoutState.toggleMenu(),
+                                child: Text(
+                                  AppLocalizations.of(context)!.categories,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                            if (!isOnDiscover && !isLibrary && !isProfile) ...[
+                              Text(
+                                'Echoes Of History',
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Image.asset(
+                                'assets/icon/logo1.png',
+                                height: 32,
+                                width: 32,
+                              ),
+                            ],
+                          ],
+                        ),
+                  actions: [
+                    if (isOnDiscover)
+                      IconButton(
+                        icon: Icon(
+                          Icons.search,
+                          color: Theme.of(context).appBarTheme.foregroundColor,
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SearchOverlay(),
+                            ),
+                          );
+                        },
                       ),
-                    ),
-                  ),
-                if (!isOnDiscover) ...[
-                  Text(
-                    'Echoes Of History',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Image.asset('assets/icon/logo1.png', height: 32, width: 32),
-                ],
-              ],
-            ),
-            actions: [
-              if (isOnDiscover)
-                IconButton(
-                  icon: Icon(
-                    Icons.search,
-                    color: Theme.of(context).appBarTheme.foregroundColor,
-                  ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const SearchOverlay()),
-                    );
-                  },
+                    if (isProfile)
+                      IconButton(
+                        icon: Icon(
+                          Icons.settings,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SettingsScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                  ],
                 ),
-            ],
-          ),
           body: GestureDetector(
             behavior: HitTestBehavior.translucent,
             onHorizontalDragEnd: (details) {

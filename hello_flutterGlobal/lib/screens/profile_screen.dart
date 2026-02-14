@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart' hide Badge;
-import 'settings_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../services/auth_service.dart';
@@ -717,25 +716,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                       ],
-                    ),
-                  ),
-                  Positioned(
-                    top: 16,
-                    right: 16,
-                    child: IconButton(
-                      icon: Icon(
-                        Icons.settings,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.5),
-                      ),
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const SettingsScreen(),
-                          ),
-                        );
-                      },
                     ),
                   ),
                 ],
