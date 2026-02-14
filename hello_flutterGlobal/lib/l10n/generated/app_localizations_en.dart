@@ -200,7 +200,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get topPicks => 'Top Picks';
 
   @override
-  String get continueListening => 'Continue Listening';
+  String get continueListening => 'Resume';
 
   @override
   String get nowPlaying => 'NOW PLAYING';

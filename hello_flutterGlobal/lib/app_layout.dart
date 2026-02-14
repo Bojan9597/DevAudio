@@ -155,6 +155,21 @@ class _AppLayoutState extends State<AppLayout> {
                           );
                         },
                       ),
+                    if (isLibrary)
+                      IconButton(
+                        icon: Icon(
+                          Icons.search,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SearchOverlay(),
+                            ),
+                          );
+                        },
+                      ),
                     if (isProfile)
                       IconButton(
                         icon: Icon(

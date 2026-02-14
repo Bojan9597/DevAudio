@@ -201,7 +201,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get topPicks => 'Mejores selecciones';
 
   @override
-  String get continueListening => 'Continuar escuchando';
+  String get continueListening => 'Reanudar';
 
   @override
   String get nowPlaying => 'REPRODUCIENDO';

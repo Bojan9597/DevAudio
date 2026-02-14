@@ -201,7 +201,7 @@ class AppLocalizationsSr extends AppLocalizations {
   String get topPicks => 'Najbolji izbori';
 
   @override
-  String get continueListening => 'Nastavite sa slušanjem';
+  String get continueListening => 'Nastavi';
 
   @override
   String get nowPlaying => 'SADA SE PUŠTA';

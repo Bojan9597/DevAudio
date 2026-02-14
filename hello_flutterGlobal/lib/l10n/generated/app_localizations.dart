@@ -467,7 +467,7 @@ abstract class AppLocalizations {
   /// No description provided for @continueListening.
   ///
   /// In en, this message translates to:
-  /// **'Continue Listening'**
+  /// **'Resume'**
   String get continueListening;
 
   /// No description provided for @nowPlaying.

@@ -413,9 +413,9 @@ class _ContentAreaState extends State<ContentArea> {
             color: Theme.of(context).scaffoldBackgroundColor,
             child: TabBar(
               labelColor: Theme.of(context).colorScheme.primary,
-              unselectedLabelColor: Theme.of(
-                context,
-              ).colorScheme.onSurface.withOpacity(0.6),
+              unselectedLabelColor: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white
+                  : Colors.black,
               indicatorColor: Theme.of(context).colorScheme.primary,
               tabs: tabs,
             ),
