@@ -956,6 +956,21 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
               tooltip: "View PDF",
               onPressed: _openPdfViewer,
             ),
+          // Download button
+          IconButton(
+            icon: _isDownloading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.download),
+            tooltip: _isDownloading ? "Downloading..." : "Download",
+            onPressed: _isDownloading ? null : _downloadFullPlaylist,
+          ),
           Builder(
             builder: (context) {
               bool isOwner =
@@ -985,14 +1000,18 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
             ),
           ),
 
-          // Content
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _error != null
-              ? Center(child: Text('Error: $_error'))
-              : _tracks.isEmpty
-              ? const Center(child: Text('No tracks found'))
-              : LessonMapWidget(
+          // Content (padded below AppBar)
+          Padding(
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(context).padding.top + kToolbarHeight,
+            ),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                ? Center(child: Text('Error: $_error'))
+                : _tracks.isEmpty
+                ? const Center(child: Text('No tracks found'))
+                : LessonMapWidget(
                   tracks: _tracks,
                   onTrackTap: (index) => _playTrack(_tracks[index], index),
                   hasQuiz: _hasQuiz,
@@ -1005,11 +1024,9 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                   isOwner:
                       _userId != null &&
                       widget.book.postedByUserId == _userId.toString(),
-                  // Add Download Props
-                  // bookTitle: widget.book.title, // Removed to prevent duplicate title
-                  onDownloadTap: _downloadFullPlaylist,
-                  isDownloading: _isDownloading,
+                  // Download moved to AppBar
                 ),
+          ),
         ],
       ),
       floatingActionButton: null,
