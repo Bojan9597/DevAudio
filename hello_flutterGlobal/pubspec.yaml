@@ -63,6 +63,7 @@ dependencies:
   flutter_local_notifications: ^18.0.1
   fl_chart: ^1.1.1
   share_plus: ^12.0.1
+  model_viewer_plus: ^1.8.1
 
 
 dev_dependencies:
@@ -104,6 +105,7 @@ flutter:
     - assets/icon/
     - assets/Background.png
     - assets/AncientScrollBackground.jpg
+    - assets/models/medieval_shield.glb
     - assets/lesson_node_1.png
     - assets/lesson_node_2.png
     - assets/lesson_node_3.png

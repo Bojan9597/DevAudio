@@ -27,7 +27,10 @@
       "Bash(sshpass -p 'Pijanista123\\(\\)' ssh -o StrictHostKeyChecking=no root@76.13.140.158 \"echo ''=== PostgreSQL Connections ==='' && sudo -u postgres psql -c \"\"SELECT count\\(*\\) as total_connections, state, wait_event_type FROM pg_stat_activity GROUP BY state, wait_event_type ORDER BY count\\(*\\) DESC;\"\" && echo ''=== Max Connections Setting ==='' && sudo -u postgres psql -c \"\"SHOW max_connections;\"\" && echo ''=== Connection Stats ==='' && sudo -u postgres psql -c \"\"SELECT numbackends as active_backends, xact_commit, xact_rollback, blks_read, blks_hit, ROUND\\(blks_hit::numeric/\\(blks_hit+blks_read+1\\)*100, 2\\) as cache_hit_ratio FROM pg_stat_database WHERE datname = ''echo_history'';\"\" && echo ''=== Server Resources ==='' && free -h && echo ''=== CPU ==='' && nproc && echo ''=== Uptime/Load ==='' && uptime && echo ''=== Gunicorn Workers ==='' && ps aux | grep gunicorn | grep -v grep && echo ''=== PostgreSQL Memory Settings ==='' && sudo -u postgres psql -c \"\"SHOW shared_buffers;\"\" && sudo -u postgres psql -c \"\"SHOW work_mem;\"\" && sudo -u postgres psql -c \"\"SHOW effective_cache_size;\"\"\")",
       "Bash(pip install:*)",
       "Bash(cmd.exe /c \"cd /d c:\\\\Users\\\\bojan\\\\Desktop\\\\TrainingFlutter\\\\hello_flutterGlobal && flutter gen-l10n\")",
-      "Bash(cmd.exe /c \"cd /d c:\\\\Users\\\\bojan\\\\Desktop\\\\TrainingFlutter\\\\hello_flutterGlobal && flutter gen-l10n 2>&1\")"
+      "Bash(cmd.exe /c \"cd /d c:\\\\Users\\\\bojan\\\\Desktop\\\\TrainingFlutter\\\\hello_flutterGlobal && flutter gen-l10n 2>&1\")",
+      "Bash(cmd.exe /c \"copy /Y \"\"c:\\\\Users\\\\bojan\\\\Desktop\\\\TrainingFlutter\\\\medieval-shield\\\\textures\\\\Medieval_Shield_low_M_Medieval_Shield_Base.png\"\" \"\"c:\\\\Users\\\\bojan\\\\Desktop\\\\TrainingFlutter\\\\hello_flutterGlobal\\\\assets\\\\lesson_node_1.png\"\"\")",
+      "Bash(cmd.exe:*)",
+      "Bash(powershell.exe:*)"
     ]
   }
 }

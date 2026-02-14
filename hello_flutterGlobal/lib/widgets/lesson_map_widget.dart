@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:model_viewer_plus/model_viewer_plus.dart';
 import '../l10n/generated/app_localizations.dart';
 
 class LessonMapWidget extends StatelessWidget {
@@ -475,24 +476,26 @@ class _LessonNode extends StatelessWidget {
   }
 }
 
-// Island image widget - now loads from local assets
+// Island image widget - uses 3D model for node 1, static images for others
 class _IslandImage extends StatelessWidget {
   final int index;
   const _IslandImage({required this.index});
 
   @override
   Widget build(BuildContext context) {
-    // Cycle between 1-8 based on index
-    final int imageNumber = (index % 8) + 1;
-    final String assetName = 'assets/lesson_node_$imageNumber.png';
-
-    return Image.asset(
-      assetName,
+    return SizedBox(
       width: 80,
       height: 80,
-      fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) =>
-          Container(width: 80, height: 80, color: Colors.white10),
+      child: ModelViewer(
+        src: 'assets/models/medieval_shield.glb',
+        alt: 'Medieval Shield',
+        autoRotate: true,
+        autoRotateDelay: 0,
+        rotationPerSecond: '90deg',
+        cameraControls: false,
+        disableZoom: true,
+        backgroundColor: Colors.transparent,
+      ),
     );
   }
 }
