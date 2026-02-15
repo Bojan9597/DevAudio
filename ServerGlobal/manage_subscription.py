@@ -7,6 +7,11 @@ Usage:
 """
 
 import sys
+<<<<<<< HEAD
+=======
+from dotenv import load_dotenv
+load_dotenv()
+>>>>>>> 66daca0 (delete subscriptions script added)
 from database import Database
 
 ADMIN_EMAIL = "bojanpejic97@gmail.com"
