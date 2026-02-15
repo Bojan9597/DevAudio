@@ -265,6 +265,75 @@ def resolve_url(stored_path, base_url=None):
     return stored_path
 
 
+def delete_r2_object(r2_key):
+    """
+    Delete a single object from R2.
+
+    Args:
+        r2_key: The key (path) in the R2 bucket
+
+    Returns:
+        True on success, False on failure.
+    """
+    if not R2_ENABLED:
+        return False
+
+    try:
+        client = get_r2_client()
+        client.delete_object(Bucket=R2_BUCKET_NAME, Key=r2_key)
+        print(f"[R2] Deleted: {r2_key}")
+        return True
+    except Exception as e:
+        print(f"[R2] Failed to delete {r2_key}: {e}")
+        return False
+
+
+def delete_r2_prefix(prefix):
+    """
+    Delete all objects under a given prefix (folder) in R2.
+
+    Args:
+        prefix: The key prefix (e.g. 'AudioBooks/12345_title/')
+
+    Returns:
+        Number of objects deleted.
+    """
+    if not R2_ENABLED:
+        return 0
+
+    try:
+        client = get_r2_client()
+        deleted = 0
+        response = client.list_objects_v2(Bucket=R2_BUCKET_NAME, Prefix=prefix)
+
+        while True:
+            contents = response.get('Contents', [])
+            if not contents:
+                break
+
+            objects = [{'Key': obj['Key']} for obj in contents]
+            client.delete_objects(
+                Bucket=R2_BUCKET_NAME,
+                Delete={'Objects': objects}
+            )
+            deleted += len(objects)
+
+            if response.get('IsTruncated'):
+                response = client.list_objects_v2(
+                    Bucket=R2_BUCKET_NAME,
+                    Prefix=prefix,
+                    ContinuationToken=response['NextContinuationToken']
+                )
+            else:
+                break
+
+        print(f"[R2] Deleted {deleted} object(s) under prefix: {prefix}")
+        return deleted
+    except Exception as e:
+        print(f"[R2] Failed to delete prefix {prefix}: {e}")
+        return 0
+
+
 def is_r2_enabled():
     """Check if R2 storage is configured and enabled."""
     return R2_ENABLED
