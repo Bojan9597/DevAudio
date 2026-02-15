@@ -63,6 +63,10 @@ class _ContentAreaState extends State<ContentArea> {
   int _lastRefreshVersion = 0;
   String _lastCategoryId = '';
 
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  bool _isSearchExpanded = false;
+
   @override
   void initState() {
     super.initState();
@@ -78,6 +82,12 @@ class _ContentAreaState extends State<ContentArea> {
     globalLayoutState.addListener(_handleLayoutChange);
     _lastRefreshVersion = globalLayoutState.refreshVersion;
     _lastCategoryId = globalLayoutState.selectedCategoryId;
+
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text;
+      });
+    });
   }
 
   /// Check if cache is valid (within 30 seconds)
@@ -108,6 +118,7 @@ class _ContentAreaState extends State<ContentArea> {
 
   @override
   void dispose() {
+    _searchController.dispose();
     globalLayoutState.removeListener(_handleLayoutChange);
     super.dispose();
   }
@@ -283,7 +294,19 @@ class _ContentAreaState extends State<ContentArea> {
   }
 
   Widget _buildLibraryView() {
-    final favoriteBooks = _allBooks.where((b) => b.isFavorite == true).toList();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+
+    bool matchesSearch(Book b) {
+      if (_searchQuery.isEmpty) return true;
+      final query = _searchQuery.toLowerCase();
+      return b.title.toLowerCase().contains(query) ||
+          b.author.toLowerCase().contains(query);
+    }
+
+    final favoriteBooks = _allBooks
+        .where((b) => b.isFavorite == true && matchesSearch(b))
+        .toList();
 
     // "My Books" = Purchased Books EXCLUDING my own uploads (if admin)
     final uploadedIds = _isAdmin
@@ -293,9 +316,16 @@ class _ContentAreaState extends State<ContentArea> {
     // FIX: For "My Books" (Downloads), we should check ALL books for download status,
     // not just the ones the server says we "purchased". This ensures books locally
     // downloaded (e.g. from previous subscription) still appear.
+    // Also filter by search query
     final booksToCheckForDownloads = _allBooks
-        .where((b) => !uploadedIds.contains(b.id))
+        .where((b) => !uploadedIds.contains(b.id) && matchesSearch(b))
         .toList();
+
+    // Filter history by search query
+    final historyFiltered = _historyBooks.where(matchesSearch).toList();
+
+    // Filter uploaded books by search query
+    final uploadedFiltered = _uploadedBooks.where(matchesSearch).toList();
 
     // Build tabs list - only include Uploaded tab for admin
     final tabs = <Tab>[
@@ -329,7 +359,7 @@ class _ContentAreaState extends State<ContentArea> {
       // Continue Listening Tab - show books with listening progress
       RefreshIndicator(
         onRefresh: () => _loadBooks(forceRefresh: true),
-        child: _buildContinueListeningTab(_historyBooks),
+        child: _buildContinueListeningTab(historyFiltered),
       ),
       // My Books Tab - show only downloaded books
       RefreshIndicator(
@@ -342,7 +372,7 @@ class _ContentAreaState extends State<ContentArea> {
           onRefresh: () => _loadBooks(forceRefresh: true),
           child: Stack(
             children: [
-              _uploadedBooks.isEmpty
+              uploadedFiltered.isEmpty
                   ? ListView(
                       // Need scrollable for RefreshIndicator to work
                       physics: const AlwaysScrollableScrollPhysics(),
@@ -365,9 +395,9 @@ class _ContentAreaState extends State<ContentArea> {
                         bottom: 130,
                       ),
                       child: ListView.builder(
-                        itemCount: _uploadedBooks.length,
+                        itemCount: uploadedFiltered.length,
                         itemBuilder: (context, index) {
-                          final book = _uploadedBooks[index];
+                          final book = uploadedFiltered[index];
                           return _buildMyBookTile(book);
                         },
                       ),
@@ -409,11 +439,85 @@ class _ContentAreaState extends State<ContentArea> {
       length: tabs.length,
       child: Column(
         children: [
+          // Search Header (Icon or Expanded Bar)
+          SafeArea(
+            bottom: false,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: _isSearchExpanded
+                  ? Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      child: TextField(
+                        autofocus: true,
+                        controller: _searchController,
+                        style: TextStyle(color: textColor),
+                        decoration: InputDecoration(
+                          hintText: AppLocalizations.of(
+                            context,
+                          )!.searchForBooks,
+                          hintStyle: TextStyle(
+                            color: textColor.withOpacity(0.5),
+                          ),
+                          prefixIcon: IconButton(
+                            icon: Icon(
+                              Icons.arrow_back,
+                              color: textColor.withOpacity(0.7),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isSearchExpanded = false;
+                                _searchQuery = '';
+                                _searchController.clear();
+                              });
+                            },
+                          ),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(
+                                    Icons.clear,
+                                    color: textColor.withOpacity(0.7),
+                                  ),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: isDark
+                              ? Colors.grey[800]
+                              : Colors.grey[200],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 0,
+                          ),
+                        ),
+                      ),
+                    )
+                  : Container(
+                      height: 56,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      alignment: Alignment.centerRight,
+                      child: IconButton(
+                        icon: Icon(Icons.search, color: textColor),
+                        onPressed: () {
+                          setState(() {
+                            _isSearchExpanded = true;
+                          });
+                        },
+                      ),
+                    ),
+            ),
+          ),
           Container(
             color: Theme.of(context).scaffoldBackgroundColor,
             child: TabBar(
               labelColor: Theme.of(context).colorScheme.primary,
-              unselectedLabelColor: Theme.of(context).brightness == Brightness.dark
+              unselectedLabelColor:
+                  Theme.of(context).brightness == Brightness.dark
                   ? Colors.white
                   : Colors.black,
               indicatorColor: Theme.of(context).colorScheme.primary,

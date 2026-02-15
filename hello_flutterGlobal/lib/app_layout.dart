@@ -84,13 +84,15 @@ class _AppLayoutState extends State<AppLayout> {
 
         return Scaffold(
           extendBodyBehindAppBar: isReels,
-          appBar: isReels
+          appBar: (isReels || isLibrary)
               ? null
               : AppBar(
                   automaticallyImplyLeading: false,
                   backgroundColor: (isLibrary || isProfile)
                       ? Theme.of(context).scaffoldBackgroundColor
-                      : Theme.of(context).appBarTheme.backgroundColor?.withOpacity(0.1),
+                      : Theme.of(
+                          context,
+                        ).appBarTheme.backgroundColor?.withOpacity(0.1),
                   foregroundColor: Theme.of(context).colorScheme.onSurface,
                   elevation: (isLibrary || isProfile) ? 0 : null,
                   leading: isOnDiscover
@@ -116,7 +118,9 @@ class _AppLayoutState extends State<AppLayout> {
                                 child: Text(
                                   AppLocalizations.of(context)!.categories,
                                   style: TextStyle(
-                                    color: Theme.of(context).colorScheme.onSurface,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
                                     fontWeight: FontWeight.w500,
                                     fontSize: 16,
                                   ),
@@ -126,7 +130,9 @@ class _AppLayoutState extends State<AppLayout> {
                               Text(
                                 'Echoes Of History',
                                 style: TextStyle(
-                                  color: Theme.of(context).colorScheme.onSurface,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
