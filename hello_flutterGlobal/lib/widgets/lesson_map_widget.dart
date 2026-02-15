@@ -45,6 +45,11 @@ class LessonMapWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Find the first non-completed track index (the "next up" to listen)
+    final int nextUpIndex = tracks.indexWhere(
+      (t) => t['is_completed'] != true,
+    );
+
     return Column(
       children: [
         // Header with title and download button
@@ -190,6 +195,7 @@ class LessonMapWidget extends StatelessWidget {
                             title: title,
                             index: index, // Pass index for image selection
                             isCompleted: isCompleted,
+                            isNextUp: index == nextUpIndex,
                             onTap: () => onTrackTap(index),
                             // Track Quiz Args
                             hasTrackQuiz: hasTrackQuiz,
@@ -313,6 +319,7 @@ class _LessonNode extends StatelessWidget {
   final String title;
   final int index;
   final bool isCompleted;
+  final bool isNextUp;
   final VoidCallback onTap;
 
   final bool isQuiz;
@@ -329,6 +336,7 @@ class _LessonNode extends StatelessWidget {
     required this.title,
     required this.index,
     required this.isCompleted,
+    this.isNextUp = false,
     required this.onTap,
     this.isQuiz = false,
     this.isLocked = false,
@@ -427,8 +435,8 @@ class _LessonNode extends StatelessWidget {
                   : Stack(
                       alignment: Alignment.center,
                       children: [
-                        // Island background (PNG with transparency)
-                        _IslandImage(index: index),
+                        // Island background: 3D model only for next-up, PNG for rest
+                        _IslandImage(index: index, isNextUp: isNextUp),
                         // Centered star icon
                         Icon(
                           Icons.star_rounded,
@@ -476,25 +484,38 @@ class _LessonNode extends StatelessWidget {
   }
 }
 
-// Island image widget - uses 3D model for node 1, static images for others
+// Island image widget - uses 3D model only for next-up node, static PNG for all others
 class _IslandImage extends StatelessWidget {
   final int index;
-  const _IslandImage({required this.index});
+  final bool isNextUp;
+  const _IslandImage({required this.index, this.isNextUp = false});
 
   @override
   Widget build(BuildContext context) {
+    if (isNextUp) {
+      // 3D rotating shield only for the next track to listen
+      return SizedBox(
+        width: 80,
+        height: 80,
+        child: ModelViewer(
+          src: 'assets/models/medieval_shield.glb',
+          alt: 'Medieval Shield',
+          autoRotate: true,
+          autoRotateDelay: 0,
+          rotationPerSecond: '90deg',
+          cameraControls: false,
+          disableZoom: true,
+          backgroundColor: Colors.transparent,
+        ),
+      );
+    }
+    // Static PNG for all other nodes (fast loading)
     return SizedBox(
       width: 80,
       height: 80,
-      child: ModelViewer(
-        src: 'assets/models/medieval_shield.glb',
-        alt: 'Medieval Shield',
-        autoRotate: true,
-        autoRotateDelay: 0,
-        rotationPerSecond: '90deg',
-        cameraControls: false,
-        disableZoom: true,
-        backgroundColor: Colors.transparent,
+      child: Image.asset(
+        'assets/shield_background_removed.png',
+        fit: BoxFit.contain,
       ),
     );
   }
