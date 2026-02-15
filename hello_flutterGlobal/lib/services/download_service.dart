@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_service.dart';
@@ -16,6 +17,70 @@ class DownloadService {
 
   // Track ongoing downloads to prevent duplicate requests
   static final Map<String, Future<void>> _activeDownloads = {};
+
+  // Cancel tokens for active downloads (keyed by bookId)
+  static final Map<String, CancelToken> _cancelTokens = {};
+
+  // Progress notifier: bookId -> progress (0.0 to 1.0)
+  static final Map<String, ValueNotifier<double>> _progressNotifiers = {};
+
+  /// Get or create a progress notifier for a book download
+  ValueNotifier<double> getProgressNotifier(String bookId) {
+    _progressNotifiers[bookId] ??= ValueNotifier<double>(0.0);
+    return _progressNotifiers[bookId]!;
+  }
+
+  /// Cancel an active download for a book and clean up files
+  Future<void> cancelDownload(String bookId, {int? userId}) async {
+    // Cancel the Dio request
+    final token = _cancelTokens[bookId];
+    if (token != null && !token.isCancelled) {
+      token.cancel('User cancelled download');
+    }
+    _cancelTokens.remove(bookId);
+    _progressNotifiers[bookId]?.value = 0.0;
+    _progressNotifiers.remove(bookId);
+
+    // Clean up any partially downloaded files
+    await deleteAllBookData(bookId, userId: userId);
+    print(
+      '[DownloadService] Download cancelled and files cleaned for book $bookId',
+    );
+  }
+
+  /// Delete all locally stored data for a book (audio tracks, PDFs, playlist JSON, quiz JSON)
+  Future<void> deleteAllBookData(String bookId, {int? userId}) async {
+    try {
+      final userPath = await _getUserPath(userId);
+      final bookDir = Directory('$userPath/book_$bookId');
+      if (await bookDir.exists()) {
+        await bookDir.delete(recursive: true);
+        print('[DownloadService] Deleted book directory: ${bookDir.path}');
+      }
+
+      // Clean up SharedPreferences entries
+      final prefs = await SharedPreferences.getInstance();
+      final keysToRemove = prefs
+          .getKeys()
+          .where(
+            (key) =>
+                key.contains(bookId) &&
+                (key.startsWith('offline_playlist_json_') ||
+                    key.startsWith('offline_quiz_json_')),
+          )
+          .toList();
+      for (final key in keysToRemove) {
+        await prefs.remove(key);
+      }
+      if (keysToRemove.isNotEmpty) {
+        print(
+          '[DownloadService] Removed ${keysToRemove.length} SharedPreferences entries for book $bookId',
+        );
+      }
+    } catch (e) {
+      print('[DownloadService] Error cleaning up book data: $e');
+    }
+  }
 
   Future<String> _getLocalPath() async {
     final directory = await getApplicationDocumentsDirectory();
@@ -130,6 +195,9 @@ class DownloadService {
     String url, {
     int? userId,
     String? bookId,
+    CancelToken? cancelToken,
+    bool isPlaylistDownload = false,
+    Function(double)? onProgress,
   }) async {
     // Use user-specific key for active downloads tracking
     final downloadKey = userId != null ? '${userId}_$fileKey' : fileKey;
@@ -149,6 +217,9 @@ class DownloadService {
       url,
       userId: userId,
       bookId: bookId,
+      cancelToken: cancelToken,
+      isPlaylistDownload: isPlaylistDownload,
+      onProgress: onProgress,
     );
     _activeDownloads[downloadKey] = downloadFuture;
 
@@ -185,45 +256,81 @@ class DownloadService {
   }) async {
     print('[DownloadService] Starting playlist download for book $bookId');
 
-    final futures = <Future<void>>[];
+    // Create cancel token for this book
+    final cancelToken = CancelToken();
+    _cancelTokens[bookId] = cancelToken;
 
+    // Track progress across all tracks
+    final progressNotifier = getProgressNotifier(bookId);
+    progressNotifier.value = 0.0;
+
+    // Count tracks that need downloading
+    final tracksToDownload = <Map<String, dynamic>>[];
     for (final track in playlist) {
       final trackId = track['id'].toString();
-      final uniqueId = 'track_$trackId'; // Must match _getUniqueAudioId logic
-
-      // OPTIMIZATION: Check if already downloaded
+      final uniqueId = 'track_$trackId';
       final isDownloaded = await isBookDownloaded(
         uniqueId,
         userId: userId,
         bookId: bookId,
       );
-
-      if (isDownloaded) {
+      if (!isDownloaded) {
+        tracksToDownload.add(track);
+      } else {
         print('[DownloadService] Skipping existing track: $uniqueId');
-        continue;
       }
-
-      final url = track['file_path'];
-
-      // Handle URL absolute/relative
-      String absoluteUrl = url;
-      if (!url.startsWith('http')) {
-        final baseUrl = AuthService().baseUrl;
-        absoluteUrl = '$baseUrl$url';
-      }
-
-      futures.add(
-        downloadBook(uniqueId, absoluteUrl, userId: userId, bookId: bookId),
-      );
     }
 
-    if (futures.isEmpty) {
+    if (tracksToDownload.isEmpty) {
       print('[DownloadService] All tracks already downloaded.');
+      progressNotifier.value = 1.0;
+      _cancelTokens.remove(bookId);
       return;
     }
 
-    await Future.wait(futures);
-    print('[DownloadService] Playlist download completed');
+    final totalTracks = tracksToDownload.length;
+    int completedTracks = 0;
+
+    try {
+      // Download tracks sequentially for smooth progress
+      for (final track in tracksToDownload) {
+        if (cancelToken.isCancelled) break;
+
+        final trackId = track['id'].toString();
+        final uniqueId = 'track_$trackId';
+        final url = track['file_path'];
+        String absoluteUrl = url;
+        if (!url.startsWith('http')) {
+          final baseUrl = AuthService().baseUrl;
+          absoluteUrl = '$baseUrl$url';
+        }
+
+        await downloadBook(
+          uniqueId,
+          absoluteUrl,
+          userId: userId,
+          bookId: bookId,
+          cancelToken: cancelToken,
+          isPlaylistDownload: true,
+          onProgress: (trackProgress) {
+            if (_cancelTokens.containsKey(bookId)) {
+              final totalProgress =
+                  (completedTracks + trackProgress) / totalTracks;
+              progressNotifier.value = totalProgress;
+            }
+          },
+        );
+
+        completedTracks++;
+        progressNotifier.value = completedTracks / totalTracks;
+        print(
+          '[DownloadService] Playlist progress: $completedTracks/$totalTracks',
+        );
+      }
+      print('[DownloadService] Playlist download completed');
+    } finally {
+      _cancelTokens.remove(bookId);
+    }
   }
 
   Future<void> _performDownload(
@@ -231,6 +338,9 @@ class DownloadService {
     String url, {
     int? userId,
     String? bookId,
+    CancelToken? cancelToken,
+    bool isPlaylistDownload = false,
+    Function(double)? onProgress,
   }) async {
     try {
       final filePath = await getLocalBookPath(
@@ -245,14 +355,34 @@ class DownloadService {
       final tempPath = '$filePath.tmp';
       print('[DownloadService] Downloading to temp: $tempPath');
 
+      // For single-file downloads only, update progress notifier directly
+      // Playlist downloads manage their own progress at the track-completion level
+      final singleFileNotifier = (!isPlaylistDownload && bookId != null)
+          ? _progressNotifiers[bookId]
+          : null;
+
       // Download directly (no encryption)
       await _dio.download(
         url,
         tempPath,
+        cancelToken: cancelToken,
         onReceiveProgress: (received, total) {
           if (total > 0) {
-            final progress = (received / total * 100).toStringAsFixed(1);
-            print('[DownloadService] Download progress: $progress%');
+            final progress = received / total;
+            // Update single-file progress (playlists update per-track in downloadPlaylist)
+            if (singleFileNotifier != null &&
+                _cancelTokens.containsKey(bookId)) {
+              singleFileNotifier.value = progress;
+            }
+            // Report granular progress if callback provided
+            if (onProgress != null) {
+              onProgress(progress);
+            }
+            if ((progress * 100).toInt() % 10 == 0) {
+              print(
+                '[DownloadService] Download progress: ${(progress * 100).toStringAsFixed(1)}%',
+              );
+            }
           }
         },
       );
@@ -281,6 +411,24 @@ class DownloadService {
       print(
         '[DownloadService] Download complete. Final file size: $finalSize bytes',
       );
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) {
+        print('[DownloadService] Download cancelled for $fileKey');
+        // Clean up partial downloads
+        try {
+          final filePath = await getLocalBookPath(
+            fileKey,
+            userId: userId,
+            bookId: bookId,
+          );
+          final file = File(filePath);
+          if (await file.exists()) await file.delete();
+          final tempFile = File('$filePath.tmp');
+          if (await tempFile.exists()) await tempFile.delete();
+        } catch (_) {}
+        return; // Don't rethrow cancel
+      }
+      rethrow;
     } catch (e) {
       print('[DownloadService] Download failed: $e');
       // Clean up partial downloads

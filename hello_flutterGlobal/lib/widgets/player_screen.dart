@@ -114,6 +114,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   int? _userId;
   bool _isFavorite = false;
   bool _isDownloading = false;
+  bool _downloadCancelled = false;
   String? _lastError; // Track last error to avoid duplicate messages
   bool _isInitializingPlayer = false; // Prevent concurrent player init
   bool _isHandlingCompletion =
@@ -586,48 +587,145 @@ class _PlayerScreenState extends State<PlayerScreen>
     }
   }
 
-  void _showDownloadingMessage({bool isPlaylist = false}) {
+  void _showDownloadProgressSnackbar() {
     if (!mounted) return;
+    final progressNotifier = DownloadService().getProgressNotifier(
+      widget.book.id,
+    );
+
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          isPlaylist
-              ? AppLocalizations.of(context)!.downloadingFullPlaylist
-              : AppLocalizations.of(context)!.downloadingForOfflinePlayback,
+        content: ValueListenableBuilder<double>(
+          valueListenable: progressNotifier,
+          builder: (context, progress, child) {
+            final percent = (progress * 100).toInt();
+            return Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppLocalizations.of(context)!.downloading,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: progress,
+                                backgroundColor: Colors.white38,
+                                valueColor: const AlwaysStoppedAnimation<Color>(
+                                  Colors.amber,
+                                ),
+                                minHeight: 4,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '$percent%',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                GestureDetector(
+                  onTap: () => _cancelDownload(),
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
-        duration: const Duration(seconds: 2),
+        duration: const Duration(minutes: 30), // Effectively persistent
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.grey[850],
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
 
+  void _cancelDownload() async {
+    _downloadCancelled = true;
+    setState(() => _isDownloading = false);
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    await DownloadService().cancelDownload(widget.book.id, userId: _userId);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.downloadCancelled),
+          duration: const Duration(seconds: 2),
+          backgroundColor: Colors.orange[700],
+        ),
+      );
+    }
+  }
+
   Future<void> _downloadBook() async {
-    setState(() => _isDownloading = true);
+    setState(() {
+      _isDownloading = true;
+      _downloadCancelled = false;
+    });
+    _showDownloadProgressSnackbar();
     try {
       if (widget.playlist != null && widget.playlist!.isNotEmpty) {
         // Download entire playlist
-        _showDownloadingMessage(isPlaylist: true);
         await DownloadService().downloadPlaylist(
           widget.playlist!,
           widget.book.id,
           userId: _userId,
         );
       } else {
-        // Download single book
-        _showDownloadingMessage();
+        // Download single book — create cancel token for single files too
+        final cancelToken = CancelToken();
+        final progressNotifier = DownloadService().getProgressNotifier(
+          widget.book.id,
+        );
+        progressNotifier.value = 0.0;
         await DownloadService().downloadBook(
           _getUniqueAudioId(),
           _currentBook.audioUrl,
           userId: _userId,
           bookId: widget.book.id,
+          cancelToken: cancelToken,
         );
       }
 
-      if (mounted) {
+      if (mounted && !_downloadCancelled) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               AppLocalizations.of(context)!.downloadCompleteAvailableOffline,
             ),
+            backgroundColor: Colors.green[700],
           ),
         );
         // Re-init player to pickup local file if currently playing
@@ -635,7 +733,10 @@ class _PlayerScreenState extends State<PlayerScreen>
       }
     } catch (e) {
       print("Download error: $e");
-      if (mounted) {
+      if (mounted &&
+          !_downloadCancelled &&
+          !e.toString().contains('cancelled')) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Download failed: $e')));

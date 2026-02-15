@@ -19,6 +19,7 @@ import '../services/subscription_service.dart';
 import '../widgets/subscription_bottom_sheet.dart';
 import '../widgets/content_area.dart';
 import 'pdf_viewer_screen.dart';
+import '../l10n/generated/app_localizations.dart';
 
 class PlaylistScreen extends StatefulWidget {
   final Book book;
@@ -50,6 +51,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   // bool _showCompletionOverlay = false; // Removed
   // bool _showCompletionOverlay = false;
   bool _isDownloading = false;
+  bool _downloadCancelled = false;
   String? _pdfUrl;
   bool _hasAutoResumed = false; // Prevent auto-resuming multiple times
 
@@ -130,31 +132,29 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     if (isFullyDownloaded) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Book is already downloaded.'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.bookAlreadyDownloaded),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
       return;
     }
 
-    setState(() => _isDownloading = true);
+    setState(() {
+      _isDownloading = true;
+      _downloadCancelled = false;
+    });
+    _showDownloadProgressSnackbar();
     try {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Downloading full playlist...'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-
       await DownloadService().downloadPlaylist(
         _tracks.cast<Map<String, dynamic>>(),
         widget.book.id,
         userId: _userId,
       );
+
+      // Don't show success if user cancelled
+      if (_downloadCancelled) return;
 
       // Also download PDF if available
       if (_pdfUrl != null && _pdfUrl!.isNotEmpty) {
@@ -172,22 +172,130 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       // Invalidate library cache so "My Books" updates immediately
       ContentArea.invalidateLibraryCache();
 
-      if (mounted) {
+      if (mounted && !_downloadCancelled) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Download Complete! Available offline.'),
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.downloadCompleteAvailableOffline,
+            ),
+            backgroundColor: Colors.green[700],
           ),
         );
       }
     } catch (e) {
       print("Playlist download error: $e");
-      if (mounted) {
+      if (mounted &&
+          !_downloadCancelled &&
+          !e.toString().contains('cancelled')) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Download failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _isDownloading = false);
+    }
+  }
+
+  void _showDownloadProgressSnackbar() {
+    if (!mounted) return;
+    final progressNotifier = DownloadService().getProgressNotifier(
+      widget.book.id,
+    );
+
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: ValueListenableBuilder<double>(
+          valueListenable: progressNotifier,
+          builder: (context, progress, child) {
+            final percent = (progress * 100).toInt();
+            return Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppLocalizations.of(context)!.downloading,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: progress,
+                                backgroundColor: Colors.white38,
+                                valueColor: const AlwaysStoppedAnimation<Color>(
+                                  Colors.amber,
+                                ),
+                                minHeight: 4,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '$percent%',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                GestureDetector(
+                  onTap: () => _cancelDownload(),
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        duration: const Duration(minutes: 30),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.grey[850],
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  void _cancelDownload() async {
+    _downloadCancelled = true;
+    setState(() => _isDownloading = false);
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    await DownloadService().cancelDownload(widget.book.id, userId: _userId);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.downloadCancelled),
+          duration: const Duration(seconds: 2),
+          backgroundColor: Colors.orange[700],
+        ),
+      );
     }
   }
 
@@ -1012,20 +1120,20 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                 : _tracks.isEmpty
                 ? const Center(child: Text('No tracks found'))
                 : LessonMapWidget(
-                  tracks: _tracks,
-                  onTrackTap: (index) => _playTrack(_tracks[index], index),
-                  hasQuiz: _hasQuiz,
-                  isBookCompleted:
-                      _areTracksCompleted, // Use tracks completion to unlock final quiz
-                  isQuizPassed: _isQuizPassed,
-                  onQuizTap: _onQuizTap,
-                  trackQuizzes: _trackQuizzes,
-                  onTrackQuizTap: _onTrackQuizTap,
-                  isOwner:
-                      _userId != null &&
-                      widget.book.postedByUserId == _userId.toString(),
-                  // Download moved to AppBar
-                ),
+                    tracks: _tracks,
+                    onTrackTap: (index) => _playTrack(_tracks[index], index),
+                    hasQuiz: _hasQuiz,
+                    isBookCompleted:
+                        _areTracksCompleted, // Use tracks completion to unlock final quiz
+                    isQuizPassed: _isQuizPassed,
+                    onQuizTap: _onQuizTap,
+                    trackQuizzes: _trackQuizzes,
+                    onTrackQuizTap: _onTrackQuizTap,
+                    isOwner:
+                        _userId != null &&
+                        widget.book.postedByUserId == _userId.toString(),
+                    // Download moved to AppBar
+                  ),
           ),
         ],
       ),

@@ -643,5 +643,7 @@
   "shareSuccess": "Chapter shared successfully! Your friend will receive an email.",
   "shareError": "Failed to share chapter. Please try again.",
   "emailRequired": "Email is required",
-  "invalidEmail": "Please enter a valid email address"
+  "invalidEmail": "Please enter a valid email address",
+  "downloadCancelled": "Download cancelled",
+  "bookAlreadyDownloaded": "Book is already downloaded."
 }

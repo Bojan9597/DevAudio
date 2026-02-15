@@ -2185,6 +2185,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please enter a valid email address'**
   String get invalidEmail;
+
+  /// No description provided for @downloadCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Download cancelled'**
+  String get downloadCancelled;
+
+  /// No description provided for @bookAlreadyDownloaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Book is already downloaded.'**
+  String get bookAlreadyDownloaded;
 }
 
 class _AppLocalizationsDelegate

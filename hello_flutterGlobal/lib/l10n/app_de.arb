@@ -365,5 +365,7 @@
   "seeWhatIsNew": "Sehen Sie, was neu ist",
   "trendingToday": "Heute im Trend",
   "emailSettingsSaved": "Einstellungen gespeichert",
-  "listeningNotifications": "Hörbenachrichtigungen"
+  "listeningNotifications": "Hörbenachrichtigungen",
+  "downloadCancelled": "Download abgebrochen",
+  "bookAlreadyDownloaded": "Buch ist bereits heruntergeladen."
 }

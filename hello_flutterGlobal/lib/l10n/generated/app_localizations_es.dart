@@ -1161,4 +1161,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get invalidEmail => 'Please enter a valid email address';
+
+  @override
+  String get downloadCancelled => 'Descarga cancelada';
+
+  @override
+  String get bookAlreadyDownloaded => 'El libro ya está descargado.';
 }
