@@ -3083,6 +3083,11 @@ def upload_book():
             db.disconnect()
             return jsonify({"error": "No audio files provided"}), 400
 
+        # Cover photo is mandatory
+        if 'cover' not in request.files or request.files['cover'].filename == '':
+            db.disconnect()
+            return jsonify({"error": "Cover photo is required"}), 400
+
         # Base directories
         base_dir = os.path.dirname(os.path.abspath(__file__))
         static_dir = os.path.join(base_dir, 'static')
