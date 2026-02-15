@@ -107,6 +107,7 @@ flutter:
     - assets/AncientScrollBackground.jpg
     - assets/playlist_background.jpg
     - assets/models/medieval_shield.glb
+    - assets/models/question_mark.glb
     - assets/lesson_node_1.png
     - assets/lesson_node_2.png
     - assets/lesson_node_3.png

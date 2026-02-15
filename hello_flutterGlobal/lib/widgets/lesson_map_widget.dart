@@ -414,43 +414,71 @@ class _LessonNode extends StatelessWidget {
   }
 
   Widget _buildMainNode() {
-    // Logic for the main node (Star or Big Quiz)
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 140,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Icon Container
-            Container(
-              width: 80,
-              height: 80,
-              child: isQuiz
-                  ? Icon(
-                      isLocked ? Icons.lock : Icons.quiz,
-                      size: 50,
-                      color: isCompleted ? Colors.amber : Colors.grey,
-                    )
-                  : Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // Island background: 3D model only for next-up, PNG for rest
-                        _IslandImage(index: index, isNextUp: isNextUp),
-                        // Centered star icon
-                        Icon(
-                          Icons.star_rounded,
-                          size: 30,
-                          color: isCompleted
-                              ? Colors.amber
-                              : Colors.grey.shade700,
-                        ),
-                      ],
-                    ),
+    // Use Stack with transparent overlay so taps work over ModelViewer WebViews
+    return SizedBox(
+      width: 140,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Icon Container - Stack ensures tap overlay sits above any WebView
+          SizedBox(
+            width: 80,
+            height: 80,
+            child: Stack(
+              children: [
+                // Layer 1: The visual content
+                if (isQuiz)
+                  isLocked
+                      ? Center(
+                          child: Icon(
+                            Icons.lock,
+                            size: 50,
+                            color: Colors.grey,
+                          ),
+                        )
+                      : SizedBox(
+                          width: 80,
+                          height: 80,
+                          child: ModelViewer(
+                            src: 'assets/models/question_mark.glb',
+                            alt: 'Quiz',
+                            autoRotate: true,
+                            autoRotateDelay: 0,
+                            rotationPerSecond: '90deg',
+                            cameraControls: false,
+                            disableZoom: true,
+                            backgroundColor: Colors.transparent,
+                          ),
+                        )
+                else
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      _IslandImage(index: index, isNextUp: isNextUp),
+                      Icon(
+                        Icons.star_rounded,
+                        size: 30,
+                        color: isCompleted
+                            ? Colors.amber
+                            : Colors.grey.shade700,
+                      ),
+                    ],
+                  ),
+                // Layer 2: Transparent tap overlay on top of everything
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onTap,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            // Title
-            Text(
+          ),
+          const SizedBox(height: 8),
+          // Title (tappable normally)
+          GestureDetector(
+            onTap: onTap,
+            child: Text(
               displayTitle(title),
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -470,8 +498,8 @@ class _LessonNode extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -494,18 +522,20 @@ class _IslandImage extends StatelessWidget {
   Widget build(BuildContext context) {
     if (isNextUp) {
       // 3D rotating shield only for the next track to listen
-      return SizedBox(
-        width: 80,
-        height: 80,
-        child: ModelViewer(
-          src: 'assets/models/medieval_shield.glb',
-          alt: 'Medieval Shield',
-          autoRotate: true,
-          autoRotateDelay: 0,
-          rotationPerSecond: '90deg',
-          cameraControls: false,
-          disableZoom: true,
-          backgroundColor: Colors.transparent,
+      return IgnorePointer(
+        child: SizedBox(
+          width: 80,
+          height: 80,
+          child: ModelViewer(
+            src: 'assets/models/medieval_shield.glb',
+            alt: 'Medieval Shield',
+            autoRotate: true,
+            autoRotateDelay: 0,
+            rotationPerSecond: '90deg',
+            cameraControls: false,
+            disableZoom: true,
+            backgroundColor: Colors.transparent,
+          ),
         ),
       );
     }
