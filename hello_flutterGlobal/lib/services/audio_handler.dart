@@ -7,6 +7,7 @@ import '../utils/api_constants.dart';
 import '../repositories/book_repository.dart';
 import 'download_service.dart';
 import 'player_preferences.dart';
+import '../widgets/content_area.dart';
 
 class MyAudioHandler extends BaseAudioHandler {
   final AudioPlayer _player = AudioPlayer();
@@ -293,13 +294,18 @@ class MyAudioHandler extends BaseAudioHandler {
   void _startBackgroundProgressSync() {
     _progressTimer?.cancel();
     _progressTimer = Timer.periodic(const Duration(seconds: 15), (_) {
-      _saveProgressInBackground();
+      if (_player.playing) {
+        _performSave();
+      }
     });
   }
 
-  /// Save progress even when app is in background
   Future<void> _saveProgressInBackground() async {
-    if (_userId == null || !_player.playing || currentBook == null) return;
+    await _performSave();
+  }
+
+  Future<void> _performSave() async {
+    if (_userId == null || currentBook == null) return;
 
     final position = _player.position.inSeconds;
     final duration = _player.duration?.inSeconds;
@@ -322,6 +328,8 @@ class MyAudioHandler extends BaseAudioHandler {
         playlistItemId: playlistItemId,
       );
       print('[AudioHandler] Background progress saved: $position seconds');
+      // Invalidate Library Cache so UI updates on next visit
+      ContentArea.invalidateLibraryCache();
     } catch (e) {
       print('[AudioHandler] Failed to save background progress: $e');
     }
@@ -341,6 +349,9 @@ class MyAudioHandler extends BaseAudioHandler {
   // Pause playback
   @override
   Future<void> pause() async {
+    // Save progress *before* stopping playback to capture final position
+    await _performSave();
+
     await _player.pause();
     await _bgPlayer.pause(); // Explicitly pause background music
   }

@@ -32,7 +32,7 @@ class ContentArea extends StatefulWidget {
   State<ContentArea> createState() => _ContentAreaState();
 }
 
-class _ContentAreaState extends State<ContentArea> {
+class _ContentAreaState extends State<ContentArea> with WidgetsBindingObserver {
   // Static cache for library data (30 seconds)
   static const Duration _cacheDuration = Duration(seconds: 30);
   static DateTime? _lastFetchTime;
@@ -70,6 +70,7 @@ class _ContentAreaState extends State<ContentArea> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _checkAdminStatus();
     // Restore from cache if valid, otherwise load fresh
     if (_isCacheValid()) {
@@ -88,6 +89,19 @@ class _ContentAreaState extends State<ContentArea> {
         _searchQuery = _searchController.text;
       });
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // If we are on the library screen and cache is invalid (e.g. invalidated by AudioHandler),
+      // reload the books to show updated progress.
+      if (globalLayoutState.selectedCategoryId == 'library') {
+        if (!_isCacheValid()) {
+          _loadBooks();
+        }
+      }
+    }
   }
 
   /// Check if cache is valid (within 30 seconds)
@@ -118,6 +132,7 @@ class _ContentAreaState extends State<ContentArea> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _searchController.dispose();
     globalLayoutState.removeListener(_handleLayoutChange);
     super.dispose();
