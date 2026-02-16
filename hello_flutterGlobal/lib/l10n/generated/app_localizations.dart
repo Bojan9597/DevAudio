@@ -2197,6 +2197,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Book is already downloaded.'**
   String get bookAlreadyDownloaded;
+
+  /// No description provided for @userPreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'User Preferences'**
+  String get userPreferences;
+
+  /// No description provided for @dailyGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Goal'**
+  String get dailyGoal;
+
+  /// No description provided for @primaryGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Primary Goal'**
+  String get primaryGoal;
+
+  /// No description provided for @interests.
+  ///
+  /// In en, this message translates to:
+  /// **'Interests'**
+  String get interests;
+
+  /// No description provided for @preferencesSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferences saved successfully'**
+  String get preferencesSaved;
+
+  /// No description provided for @failedToSavePreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save preferences'**
+  String get failedToSavePreferences;
+
+  /// No description provided for @save.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get save;
+
+  /// No description provided for @custom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get custom;
 }
 
 class _AppLocalizationsDelegate

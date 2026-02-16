@@ -1,5 +1,11 @@
 from database import Database
 import sys
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 
 ADMIN_EMAIL = "bojanpejic97@gmail.com"
 

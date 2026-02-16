@@ -43,6 +43,24 @@ class AuthService {
     return null;
   }
 
+  Future<Map<String, dynamic>> getUserPreferences() async {
+    final user = await getUser();
+    if (user != null &&
+        user.containsKey('preferences') &&
+        user['preferences'] != null) {
+      if (user['preferences'] is String) {
+        try {
+          return Map<String, dynamic>.from(json.decode(user['preferences']));
+        } catch (e) {
+          print("Error parsing preferences JSON: $e");
+          return {};
+        }
+      }
+      return Map<String, dynamic>.from(user['preferences']);
+    }
+    return {};
+  }
+
   /// Check if user has completed onboarding preferences.
   /// If the field is missing (user logged in before this feature), default to true.
   Future<bool> hasPreferences() async {
@@ -192,6 +210,7 @@ class AuthService {
   Future<bool> saveUserPreferences({
     required int userId,
     List<int>? bookIds,
+    List<String>? categories,
     int? dailyGoalMinutes,
     String? primaryGoal,
   }) async {
@@ -211,6 +230,7 @@ class AuthService {
         body: json.encode({
           'user_id': userId,
           if (bookIds != null) 'book_ids': bookIds,
+          if (categories != null) 'categories': categories,
           if (dailyGoalMinutes != null) 'daily_goal_minutes': dailyGoalMinutes,
           if (primaryGoal != null) 'primary_goal': primaryGoal,
         }),
@@ -241,6 +261,7 @@ class AuthService {
             body: json.encode({
               'user_id': userId,
               if (bookIds != null) 'book_ids': bookIds,
+              if (categories != null) 'categories': categories,
               if (dailyGoalMinutes != null)
                 'daily_goal_minutes': dailyGoalMinutes,
               if (primaryGoal != null) 'primary_goal': primaryGoal,

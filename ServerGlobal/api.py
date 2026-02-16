@@ -447,7 +447,7 @@ def login():
 
     try:
         # Fetch user
-        query = "SELECT id, name, email, password_hash, profile_picture_url, is_verified FROM users WHERE email = %s"
+        query = "SELECT id, name, email, password_hash, profile_picture_url, is_verified, preferences FROM users WHERE email = %s"
         users = db.execute_query(query, (email,))
         
         if not users:
@@ -483,7 +483,8 @@ def login():
                     "name": user['name'],
                     "email": user['email'],
                     "profile_picture_url": resolve_stored_url(user['profile_picture_url'], "profilePictures"),
-                    "aes_key": aes_key
+                    "aes_key": aes_key,
+                    "preferences": user.get('preferences')
                 }
             }), 200
         else:
@@ -585,7 +586,8 @@ def google_login():
                     "email": user['email'],
                     "profile_picture_url": resolve_stored_url(user['profile_picture_url'], "profilePictures"),
                     "aes_key": aes_key,
-                    "has_preferences": has_preferences
+                    "has_preferences": has_preferences,
+                    "preferences": user.get('preferences')
                 }
             }), 200
         else:
@@ -619,7 +621,8 @@ def google_login():
                     "email": email,
                     "profile_picture_url": None,
                     "aes_key": aes_key,
-                    "has_preferences": False
+                    "has_preferences": False,
+                    "preferences": None
                 }
             }), 201
 
@@ -630,7 +633,7 @@ def google_login():
 
 
 # ===================== ONBOARDING & PREFERENCES =====================
-@app.route('/save-preferences', methods=['POST'])
+@app.route('/user/preferences', methods=['POST'])
 @jwt_required
 def save_preferences():
     """Save user onboarding preferences (categories, daily goal, primary goal, book picks)."""
@@ -652,21 +655,65 @@ def save_preferences():
 
     try:
         import json as json_lib
-        preferences = {
-            "categories": categories,
-            "daily_goal_minutes": daily_goal_minutes,
-            "primary_goal": primary_goal,
-            "original_book_ids": book_ids
-        }
-        query = "UPDATE users SET preferences = %s WHERE id = %s"
-        db.execute_query(query, (json_lib.dumps(preferences), user_id))
+        
+        # Fetch existing preferences first to avoid overwriting missing fields
+        select_query = "SELECT preferences FROM users WHERE id = %s"
+        result = db.execute_query(select_query, (user_id,))
+        
+        current_preferences = {}
+        if result and result[0]['preferences']:
+            try:
+                if isinstance(result[0]['preferences'], str):
+                     current_preferences = json_lib.loads(result[0]['preferences'])
+                elif isinstance(result[0]['preferences'], dict):
+                     current_preferences = result[0]['preferences']
+            except:
+                current_preferences = {}
 
-        return jsonify({"message": "Preferences saved successfully", "preferences": preferences}), 200
+        # Merge updates
+        # Only update fields that are present in the request
+        # If the request sends empty list for categories, we accept it? 
+        # Yes, user might deselect all. But avoiding implicit overwrite of book_ids.
+        
+        # Prepare new dictionary starting with current
+        updated_preferences = current_preferences.copy()
+        
+        # Explicitly update keys if they are in the request payload
+        # Note: request.get_json() returns all keys if sent.
+        # But 'categories' etc might be missing if client doesn't send them?
+        # UserPreferencesScreen sends categories, daily_goal, primary_goal.
+        # It does NOT send book_ids.
+        
+        if 'categories' in data:
+            updated_preferences['categories'] = data['categories']
+        if 'daily_goal_minutes' in data:
+            updated_preferences['daily_goal_minutes'] = data['daily_goal_minutes']
+        if 'primary_goal' in data:
+            updated_preferences['primary_goal'] = data['primary_goal']
+        if 'book_ids' in data:
+             updated_preferences['original_book_ids'] = data['book_ids']
+
+        # Ensure defaults for required fields if they are still missing (e.g. fresh user)
+        if 'categories' not in updated_preferences:
+             updated_preferences['categories'] = []
+        if 'daily_goal_minutes' not in updated_preferences:
+             updated_preferences['daily_goal_minutes'] = 15
+        if 'primary_goal' not in updated_preferences:
+             updated_preferences['primary_goal'] = ''
+        if 'original_book_ids' not in updated_preferences:
+             updated_preferences['original_book_ids'] = []
+
+        query = "UPDATE users SET preferences = %s WHERE id = %s"
+        db.execute_query(query, (json_lib.dumps(updated_preferences), user_id))
+
+        return jsonify({"message": "Preferences saved successfully", "preferences": updated_preferences}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
         db.disconnect()
+
+
 
 
 @app.route('/onboarding-books', methods=['GET'])
@@ -1000,7 +1047,7 @@ def get_user_profile():
             return jsonify({"error": "Database connection failed"}), 500
             
         try:
-            query = "SELECT id, name, email, profile_picture_url, is_verified FROM users WHERE id = %s"
+            query = "SELECT id, name, email, profile_picture_url, is_verified, preferences FROM users WHERE id = %s"
             users = db.execute_query(query, (user_id,))
             
             if not users:
@@ -1016,7 +1063,8 @@ def get_user_profile():
                     "name": user['name'],
                     "email": user['email'],
                     "profile_picture_url": resolve_stored_url(user['profile_picture_url'], "profilePictures"),
-                    "aes_key": aes_key
+                    "aes_key": aes_key,
+                    "preferences": user.get('preferences')
                 }
             }), 200
         finally:
@@ -4263,7 +4311,7 @@ def profile_init(user_id):
             payload = pyjwt.decode(access_token, options={"verify_signature": False})
             token_user_id = payload.get('user_id')
             users = db.execute_query(
-                "SELECT id, name, email, profile_picture_url, is_verified FROM users WHERE id = %s",
+                "SELECT id, name, email, profile_picture_url, is_verified, preferences FROM users WHERE id = %s",
                 (token_user_id,)
             )
             if users:
@@ -4274,7 +4322,8 @@ def profile_init(user_id):
                     "name": user['name'],
                     "email": user['email'],
                     "profile_picture_url": resolve_stored_url(user['profile_picture_url'], "profilePictures"),
-                    "aes_key": aes_key
+                    "aes_key": aes_key,
+                    "preferences": user.get('preferences')
                 }
 
         # 2. Listen history with batched progress queries

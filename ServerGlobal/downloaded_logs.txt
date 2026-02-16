@@ -1,0 +1,50 @@
+Feb 16 19:55:30 srv1330114 gunicorn[288413]:   File "/var/www/server_global/venv/lib/python3.12/site-packages/flask/sansio/scaffold.py", line 47, in wrapper_func
+Feb 16 19:55:30 srv1330114 gunicorn[288413]:     return f(self, *args, **kwargs)
+Feb 16 19:55:30 srv1330114 gunicorn[288413]:            ^^^^^^^^^^^^^^^^^^^^^^^^
+Feb 16 19:55:30 srv1330114 gunicorn[288413]:   File "/var/www/server_global/venv/lib/python3.12/site-packages/flask/sansio/app.py", line 657, in add_url_rule
+Feb 16 19:55:30 srv1330114 gunicorn[288413]:     raise AssertionError(
+Feb 16 19:55:30 srv1330114 gunicorn[288413]: AssertionError: View function mapping is overwriting an existing endpoint function: get_user_profile
+Feb 16 19:55:30 srv1330114 gunicorn[288413]: View function mapping is overwriting an existing endpoint function: get_user_profile
+Feb 16 19:55:30 srv1330114 gunicorn[288413]: [2026-02-16 19:55:30 +0000] [288413] [INFO] Worker exiting (pid: 288413)
+Feb 16 19:55:30 srv1330114 gunicorn[288413]: [R2] Cloudflare R2 storage enabled. Bucket: echohistory
+Feb 16 19:55:30 srv1330114 gunicorn[288413]: [R2] Using Public Domain: https://media.velorus.ba
+Feb 16 19:55:30 srv1330114 gunicorn[288413]: Server initialized with BASE_URL: https://echo.velorus.ba/
+Feb 16 19:55:30 srv1330114 gunicorn[288413]: --------------------------------------------------
+Feb 16 19:55:30 srv1330114 gunicorn[288413]:    DEBUG LOGGING MIDDLEWARE IS ACTIVE
+Feb 16 19:55:30 srv1330114 gunicorn[288413]:    Requests will be printed here...
+Feb 16 19:55:30 srv1330114 gunicorn[288413]: --------------------------------------------------
+Feb 16 19:55:30 srv1330114 gunicorn[288408]: [2026-02-16 19:55:30 +0000] [288408] [INFO] Worker (pid:288410) was sent SIGTERM!
+Feb 16 19:55:30 srv1330114 gunicorn[288408]: [2026-02-16 19:55:30 +0000] [288408] [INFO] Worker (pid:288411) was sent SIGTERM!
+Feb 16 19:55:30 srv1330114 gunicorn[288408]: [2026-02-16 19:55:30 +0000] [288408] [INFO] Worker (pid:288412) was sent SIGTERM!
+Feb 16 19:55:30 srv1330114 gunicorn[288408]: [2026-02-16 19:55:30 +0000] [288408] [ERROR] Worker (pid:288413) exited with code 3.
+Feb 16 19:55:30 srv1330114 gunicorn[288408]: Traceback (most recent call last):
+Feb 16 19:55:30 srv1330114 gunicorn[288408]:   File "/var/www/server_global/venv/lib/python3.12/site-packages/gunicorn/arbiter.py", line 224, in run
+Feb 16 19:55:30 srv1330114 gunicorn[288408]:     handler()
+Feb 16 19:55:30 srv1330114 gunicorn[288408]:   File "/var/www/server_global/venv/lib/python3.12/site-packages/gunicorn/arbiter.py", line 249, in handle_chld
+Feb 16 19:55:30 srv1330114 gunicorn[288408]:     self.reap_workers()
+Feb 16 19:55:30 srv1330114 gunicorn[288408]:   File "/var/www/server_global/venv/lib/python3.12/site-packages/gunicorn/arbiter.py", line 613, in reap_workers
+Feb 16 19:55:30 srv1330114 gunicorn[288408]:     raise HaltServer(reason, self.WORKER_BOOT_ERROR)
+Feb 16 19:55:30 srv1330114 gunicorn[288408]: gunicorn.errors.HaltServer: <HaltServer 'Worker failed to boot.' 3>
+Feb 16 19:55:30 srv1330114 gunicorn[288408]: During handling of the above exception, another exception occurred:
+Feb 16 19:55:30 srv1330114 gunicorn[288408]: Traceback (most recent call last):
+Feb 16 19:55:30 srv1330114 gunicorn[288408]:   File "/var/www/server_global/venv/bin/gunicorn", line 8, in <module>
+Feb 16 19:55:30 srv1330114 gunicorn[288408]:     sys.exit(run())
+Feb 16 19:55:30 srv1330114 gunicorn[288408]:              ^^^^^
+Feb 16 19:55:30 srv1330114 gunicorn[288408]:   File "/var/www/server_global/venv/lib/python3.12/site-packages/gunicorn/app/wsgiapp.py", line 66, in run
+Feb 16 19:55:30 srv1330114 gunicorn[288408]:     WSGIApplication("%(prog)s [OPTIONS] [APP_MODULE]", prog=prog).run()
+Feb 16 19:55:30 srv1330114 gunicorn[288408]:   File "/var/www/server_global/venv/lib/python3.12/site-packages/gunicorn/app/base.py", line 235, in run
+Feb 16 19:55:30 srv1330114 gunicorn[288408]:     super().run()
+Feb 16 19:55:30 srv1330114 gunicorn[288408]:   File "/var/www/server_global/venv/lib/python3.12/site-packages/gunicorn/app/base.py", line 71, in run
+Feb 16 19:55:30 srv1330114 gunicorn[288408]:     Arbiter(self).run()
+Feb 16 19:55:30 srv1330114 gunicorn[288408]:   File "/var/www/server_global/venv/lib/python3.12/site-packages/gunicorn/arbiter.py", line 232, in run
+Feb 16 19:55:30 srv1330114 gunicorn[288408]:     self.halt(reason=inst.reason, exit_status=inst.exit_status)
+Feb 16 19:55:30 srv1330114 gunicorn[288408]:   File "/var/www/server_global/venv/lib/python3.12/site-packages/gunicorn/arbiter.py", line 353, in halt
+Feb 16 19:55:30 srv1330114 gunicorn[288408]:     self.stop()
+Feb 16 19:55:30 srv1330114 gunicorn[288408]:   File "/var/www/server_global/venv/lib/python3.12/site-packages/gunicorn/arbiter.py", line 433, in stop
+Feb 16 19:55:30 srv1330114 gunicorn[288408]:     self.reap_workers()
+Feb 16 19:55:30 srv1330114 gunicorn[288408]:   File "/var/www/server_global/venv/lib/python3.12/site-packages/gunicorn/arbiter.py", line 613, in reap_workers
+Feb 16 19:55:30 srv1330114 gunicorn[288408]:     raise HaltServer(reason, self.WORKER_BOOT_ERROR)
+Feb 16 19:55:30 srv1330114 gunicorn[288408]: gunicorn.errors.HaltServer: <HaltServer 'Worker failed to boot.' 3>
+Feb 16 19:55:30 srv1330114 systemd[1]: echo_history.service: Main process exited, code=exited, status=1/FAILURE
+Feb 16 19:55:30 srv1330114 systemd[1]: echo_history.service: Failed with result 'exit-code'.
+Feb 16 19:55:30 srv1330114 systemd[1]: echo_history.service: Consumed 1.859s CPU time.

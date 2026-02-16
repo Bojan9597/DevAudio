@@ -1167,4 +1167,28 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get bookAlreadyDownloaded => 'El libro ya está descargado.';
+
+  @override
+  String get userPreferences => 'User Preferences';
+
+  @override
+  String get dailyGoal => 'Daily Goal';
+
+  @override
+  String get primaryGoal => 'Primary Goal';
+
+  @override
+  String get interests => 'Interests';
+
+  @override
+  String get preferencesSaved => 'Preferences saved successfully';
+
+  @override
+  String get failedToSavePreferences => 'Failed to save preferences';
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String get custom => 'Custom';
 }

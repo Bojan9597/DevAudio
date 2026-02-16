@@ -4,6 +4,7 @@ import '../services/subscription_service.dart';
 import '../services/content_key_manager.dart';
 import '../repositories/book_repository.dart';
 import 'login_screen.dart';
+import 'user_preferences_screen.dart';
 import 'profile_screen.dart';
 import 'upload_book_screen.dart';
 import '../states/layout_state.dart';
@@ -103,6 +104,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
           : ListView(
               children: [
                 _buildSectionHeader(l10n.appSettings),
+                ListTile(
+                  leading: const Icon(Icons.tune),
+                  title: Text(l10n.userPreferences),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const UserPreferencesScreen(),
+                      ),
+                    );
+                  },
+                ),
                 ListTile(
                   leading: const Icon(Icons.language),
                   title: Text(l10n.language),

@@ -1,4 +1,5 @@
 import paramiko
+import sys
 import time
 
 # Define server details
@@ -23,39 +24,23 @@ def deploy():
         remote_path = f"{REMOTE_DIR}/api.py"
         print(f"Uploading {local_path} to {remote_path}...")
         sftp.put(local_path, remote_path)
+            
         sftp.close()
-        print("api.py uploaded.")
+        print("File uploaded.")
 
         # Restart Service
-        print("Attempting to restart service...")
-        # Check for service name
-        stdin, stdout, stderr = ssh.exec_command("systemctl list-units --full -all | grep -E 'server_global|gunicorn|flask' | awk '{print $1}'")
-        services = stdout.read().decode().strip().split('\n')
+        print("Restarting echo_history.service...")
+        stdin, stdout, stderr = ssh.exec_command("systemctl restart echo_history.service")
         
-        service_name = None
-        for s in services:
-            if "server_global" in s:
-                service_name = s
-                break
-            if "gunicorn" in s:
-                service_name = s # Fallback or specific gunicorn service
+        # Wait for completion
+        exit_status = stdout.channel.recv_exit_status()
         
-        if not service_name and services:
-             # Just pick the first likely one if exact match fails but grep found something
-             if services[0]:
-                service_name = services[0]
-
-        if service_name:
-            print(f"Found service: {service_name}. Restarting...")
-            stdin, stdout, stderr = ssh.exec_command(f"systemctl restart {service_name}")
-            exit_status = stdout.channel.recv_exit_status()
-            if exit_status == 0:
-                print(f"Service {service_name} restarted successfully.")
-            else:
-                print(f"Failed to restart {service_name}. Error: {stderr.read().decode()}")
+        if exit_status == 0:
+            print("Service restarted successfully.")
         else:
-            print("Could not detect systemd service name. Please restart manually.")
-            print("Found candidates: ", services)
+            print("Service restart failed.")
+            print("Error:")
+            print(stderr.read().decode())
 
     except Exception as e:
         print(f"Deployment failed: {e}")

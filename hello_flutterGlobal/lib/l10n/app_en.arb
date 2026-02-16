@@ -645,5 +645,13 @@
   "emailRequired": "Email is required",
   "invalidEmail": "Please enter a valid email address",
   "downloadCancelled": "Download cancelled",
-  "bookAlreadyDownloaded": "Book is already downloaded."
+  "bookAlreadyDownloaded": "Book is already downloaded.",
+  "userPreferences": "User Preferences",
+  "dailyGoal": "Daily Goal",
+  "primaryGoal": "Primary Goal",
+  "interests": "Interests",
+  "preferencesSaved": "Preferences saved successfully",
+  "failedToSavePreferences": "Failed to save preferences",
+  "save": "Save",
+  "custom": "Custom"
 }

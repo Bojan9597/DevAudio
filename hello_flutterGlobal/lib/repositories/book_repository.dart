@@ -1146,7 +1146,8 @@ class BookRepository {
       );
 
       if (response.statusCode == 200) {
-        // Immediately update local goal service
+        // Immediately update local goal service and user profile
+        await _authService.refreshUserProfile();
         DailyGoalService().updateTarget(dailyGoalMinutes);
         return true;
       }
