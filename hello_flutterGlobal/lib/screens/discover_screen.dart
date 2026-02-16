@@ -197,6 +197,11 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           _hasMore = newBooks.length == _limit;
           _isLoading = false;
         });
+
+        // If a filter is active, auto-load more if filtered results are too few
+        if (_filterIndex != 0) {
+          _autoLoadMoreIfNeeded();
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -320,6 +325,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                 selected: isSelected,
                 onSelected: (_) {
                   setState(() => _filterIndex = index);
+                  // If filter results are too few to scroll, auto-load more
+                  _autoLoadMoreIfNeeded();
                 },
               ),
             );
@@ -327,6 +334,17 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         ),
       ),
     );
+  }
+
+  void _autoLoadMoreIfNeeded() {
+    // After filtering, if we have fewer than 4 visible books but more pages exist,
+    // automatically load more so the user sees results
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final filtered = _filteredBooks;
+      if (filtered.length < 4 && _hasMore && !_isLoading) {
+        _loadMoreBooks();
+      }
+    });
   }
 
   Widget _buildSectionHeader(String title, Color textColor) {
@@ -563,7 +581,33 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
   Widget _buildSliverGrid(Color cardColor, Color textColor) {
     final displayBooks = _filteredBooks;
-    if (displayBooks.isEmpty && !_isLoading) {
+    final isFiltering = _filterIndex != 0;
+
+    // Show "no books" only when ALL books are empty (not just filtered)
+    if (_books.isEmpty && !_isLoading) {
+      return SliverToBoxAdapter(
+        child: SizedBox(
+          height: 200,
+          child: Center(
+            child: Text(
+              AppLocalizations.of(context)!.noBooksFound,
+              style: TextStyle(color: textColor.withOpacity(0.7)),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // When filter is active and filtered results are empty, but we might have more pages
+    if (displayBooks.isEmpty && isFiltering) {
+      if (_isLoading || _hasMore) {
+        return const SliverToBoxAdapter(
+          child: SizedBox(
+            height: 100,
+            child: Center(child: CircularProgressIndicator()),
+          ),
+        );
+      }
       return SliverToBoxAdapter(
         child: SizedBox(
           height: 200,

@@ -31,10 +31,11 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
   static const Color _cardColor = Color(0xFF1E1E1E);
 
   final List<Map<String, dynamic>> _goalOptions = [
-    {'label': '< 15 min', 'minutes': 15},
-    {'label': '15-30 min', 'minutes': 30},
-    {'label': '1+ hour', 'minutes': 60},
+    {'label': '15 min', 'minutes': 15},
+    {'label': '30 min', 'minutes': 30},
+    {'label': '1 hr', 'minutes': 60},
   ];
+  bool _showCustomSlider = false;
 
   final List<Map<String, String>> _goalChoices = [
     {
@@ -90,6 +91,7 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
           }
           if (prefs['daily_goal_minutes'] != null) {
             _dailyGoalMinutes = prefs['daily_goal_minutes'];
+            _showCustomSlider = !_goalOptions.any((o) => o['minutes'] == _dailyGoalMinutes);
           }
           if (prefs['primary_goal'] != null) {
             _primaryGoal = prefs['primary_goal'];
@@ -209,32 +211,65 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
 
   Widget _buildDailyGoalSection() {
     final l10n = AppLocalizations.of(context)!;
+    final isPreset = _goalOptions.any((o) => o['minutes'] == _dailyGoalMinutes);
     return Column(
       children: [
         Row(
-          children: _goalOptions.map((option) {
-            final isSelected = _dailyGoalMinutes == option['minutes'];
-            return Expanded(
+          children: [
+            ..._goalOptions.map((option) {
+              final isSelected = !_showCustomSlider && _dailyGoalMinutes == option['minutes'];
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() {
+                    _showCustomSlider = false;
+                    _dailyGoalMinutes = option['minutes'];
+                  }),
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: isSelected ? _accentColor : _cardColor,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isSelected ? _accentColor : Colors.white12,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      option['label'],
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: isSelected ? Colors.black : Colors.white,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+            Expanded(
               child: GestureDetector(
-                onTap: () =>
-                    setState(() => _dailyGoalMinutes = option['minutes']),
+                onTap: () => setState(() => _showCustomSlider = true),
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 4),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(
-                    color: isSelected ? _accentColor : _cardColor,
+                    color: _showCustomSlider || !isPreset ? _accentColor : _cardColor,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: isSelected ? _accentColor : Colors.white12,
+                      color: _showCustomSlider || !isPreset ? _accentColor : Colors.white12,
                     ),
                   ),
                   alignment: Alignment.center,
                   child: Text(
-                    option['label'],
+                    l10n.custom,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: isSelected ? Colors.black : Colors.white,
-                      fontWeight: isSelected
+                      color: _showCustomSlider || !isPreset ? Colors.black : Colors.white,
+                      fontWeight: _showCustomSlider || !isPreset
                           ? FontWeight.bold
                           : FontWeight.normal,
                       fontSize: 12,
@@ -242,31 +277,31 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
                   ),
                 ),
               ),
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 12),
-        // Custom slider
-        Row(
-          children: [
-            Text("${l10n.custom}:", style: const TextStyle(color: Colors.grey)),
-            Expanded(
-              child: Slider(
-                value: _dailyGoalMinutes.toDouble().clamp(1, 120),
-                min: 1,
-                max: 120,
-                activeColor: _accentColor,
-                inactiveColor: _cardColor,
-                onChanged: (val) =>
-                    setState(() => _dailyGoalMinutes = val.round()),
-              ),
-            ),
-            Text(
-              "$_dailyGoalMinutes min",
-              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ],
         ),
+        if (_showCustomSlider || !isPreset) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Slider(
+                  value: _dailyGoalMinutes.toDouble().clamp(1, 120),
+                  min: 1,
+                  max: 120,
+                  activeColor: _accentColor,
+                  inactiveColor: _cardColor,
+                  onChanged: (val) =>
+                      setState(() => _dailyGoalMinutes = val.round()),
+                ),
+              ),
+              Text(
+                "$_dailyGoalMinutes min",
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }
