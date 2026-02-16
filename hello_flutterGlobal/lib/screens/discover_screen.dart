@@ -43,6 +43,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   int _currentPage = 1;
   final int _limit = 10;
 
+  // Filter: 0 = All, 1 = Free, 2 = Premium
+  int _filterIndex = 0;
+
   @override
   void initState() {
     super.initState();
@@ -257,7 +260,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
                 // Top Picks Section (Best Choices)
                 _buildSectionHeader(
-                  AppLocalizations.of(context)!.topPicks,
+                  AppLocalizations.of(context)!.topPicksForYou,
                   textColor,
                 ),
                 _buildHorizontalBookList(_topPicks, cardColor, textColor),
@@ -280,12 +283,49 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                   AppLocalizations.of(context)!.allBooks,
                   textColor,
                 ),
+                _buildFilterChips(textColor),
                 _buildSliverGrid(cardColor, textColor),
               ],
             ),
           ),
         ),
       ],
+    );
+  }
+
+  List<Book> get _filteredBooks {
+    switch (_filterIndex) {
+      case 1:
+        return _books.where((b) => !b.isPremium).toList();
+      case 2:
+        return _books.where((b) => b.isPremium).toList();
+      default:
+        return _books;
+    }
+  }
+
+  Widget _buildFilterChips(Color textColor) {
+    final l10n = AppLocalizations.of(context)!;
+    final labels = [l10n.filterAll, l10n.filterFree, l10n.filterPremium];
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        child: Row(
+          children: List.generate(labels.length, (index) {
+            final isSelected = _filterIndex == index;
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                label: Text(labels[index]),
+                selected: isSelected,
+                onSelected: (_) {
+                  setState(() => _filterIndex = index);
+                },
+              ),
+            );
+          }),
+        ),
+      ),
     );
   }
 
@@ -522,7 +562,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   }
 
   Widget _buildSliverGrid(Color cardColor, Color textColor) {
-    if (_books.isEmpty && !_isLoading) {
+    final displayBooks = _filteredBooks;
+    if (displayBooks.isEmpty && !_isLoading) {
       return SliverToBoxAdapter(
         child: SizedBox(
           height: 200,
@@ -547,11 +588,11 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           mainAxisSpacing: 0,
         ),
         delegate: SliverChildBuilderDelegate((context, index) {
-          if (index == _books.length) {
+          if (index == displayBooks.length) {
             return const Center(child: CircularProgressIndicator());
           }
-          return _buildBookCard(_books[index], cardColor, textColor);
-        }, childCount: _books.length + (_isLoading ? 1 : 0)),
+          return _buildBookCard(displayBooks[index], cardColor, textColor);
+        }, childCount: displayBooks.length + (_isLoading ? 1 : 0)),
       ),
     );
   }

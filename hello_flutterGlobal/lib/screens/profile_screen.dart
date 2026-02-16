@@ -183,7 +183,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (context) => SubscriptionBottomSheet(
         onSubscribed: () {
           Navigator.pop(context);
-          _loadSubscription(); // Refresh subscription status
+          // Invalidate profile static cache so it refetches immediately
+          _lastFetchTime = null;
+          // Update AuthService subscription cache immediately
+          AuthService().setSubscriptionStatus(true);
+          // Reload full profile data (includes subscription)
+          _loadProfileData(forceRefresh: true);
           if (onSubscribed != null) {
             onSubscribed();
           }

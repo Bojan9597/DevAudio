@@ -44,6 +44,90 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  void _showDeleteAccountDialog() {
+    final l10n = AppLocalizations.of(context)!;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.deleteAccountConfirmTitle),
+        content: Text(l10n.deleteAccountConfirmMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.no),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _showFinalDeleteConfirmation();
+            },
+            child: Text(l10n.yes, style: const TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFinalDeleteConfirmation() {
+    final l10n = AppLocalizations.of(context)!;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.deleteAccountFinalTitle),
+        content: Text(l10n.deleteAccountFinalMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.no),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteAccount();
+            },
+            child: Text(l10n.yes, style: const TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteAccount() async {
+    setState(() => _isLoading = true);
+    try {
+      final success = await _authService.deleteAccount();
+      if (success) {
+        // Clear all local data same as logout
+        final userId = await _authService.getCurrentUserId();
+        await audioHandler.clearState();
+        await SubscriptionService().clearCache();
+        if (userId != null) {
+          await ContentKeyManager().clearUserKey(userId);
+        }
+        BookRepository().clearFavoritesCache();
+        ProfileScreenCache.clear();
+        await NotificationService().cancelAllTasks();
+        await _authService.logout();
+        await globalLayoutState.updateUser(null);
+
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(AppLocalizations.of(context)!.deleteAccountFailed)),
+          );
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   Future<void> _logout() async {
     setState(() => _isLoading = true);
     try {
@@ -213,7 +297,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.play_circle_outline),
-                  title: const Text("Player"), // TODO: Localize
+                  title: Text(l10n.playerSettings),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
                     Navigator.push(
@@ -339,6 +423,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     );
                   },
+                ),
+
+                const Divider(),
+
+                _buildSectionHeader(l10n.account),
+                ListTile(
+                  leading: const Icon(Icons.delete_forever, color: Colors.red),
+                  title: Text(
+                    l10n.deleteAccount,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                  onTap: _showDeleteAccountDialog,
                 ),
 
                 const Divider(),

@@ -1191,4 +1191,52 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get custom => 'Custom';
+
+  @override
+  String get playerSettings => 'Player-Einstellungen';
+
+  @override
+  String get topPicksForYou => 'Top-Auswahl für dich';
+
+  @override
+  String get deleteAccount => 'Konto löschen';
+
+  @override
+  String get deleteAccountConfirmTitle => 'Konto löschen?';
+
+  @override
+  String get deleteAccountConfirmMessage =>
+      'Sind Sie sicher, dass Sie Ihr Konto löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.';
+
+  @override
+  String get deleteAccountFinalTitle => 'Sind Sie absolut sicher?';
+
+  @override
+  String get deleteAccountFinalMessage =>
+      'Alle Ihre Daten, einschließlich Hörverlauf, Favoriten und Abonnement werden dauerhaft gelöscht.';
+
+  @override
+  String get deleteAccountSuccess => 'Konto erfolgreich gelöscht';
+
+  @override
+  String get deleteAccountFailed =>
+      'Konto konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.';
+
+  @override
+  String get yes => 'Ja';
+
+  @override
+  String get no => 'Nein';
+
+  @override
+  String get filterAll => 'Alle';
+
+  @override
+  String get filterFree => 'Kostenlos';
+
+  @override
+  String get filterPremium => 'Premium';
+
+  @override
+  String get account => 'Konto';
 }

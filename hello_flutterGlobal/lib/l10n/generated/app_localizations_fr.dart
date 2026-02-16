@@ -1193,4 +1193,52 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get custom => 'Custom';
+
+  @override
+  String get playerSettings => 'Paramètres du lecteur';
+
+  @override
+  String get topPicksForYou => 'Meilleurs choix pour vous';
+
+  @override
+  String get deleteAccount => 'Supprimer le compte';
+
+  @override
+  String get deleteAccountConfirmTitle => 'Supprimer le compte ?';
+
+  @override
+  String get deleteAccountConfirmMessage =>
+      'Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.';
+
+  @override
+  String get deleteAccountFinalTitle => 'Êtes-vous absolument sûr ?';
+
+  @override
+  String get deleteAccountFinalMessage =>
+      'Toutes vos données, y compris l\'historique d\'écoute, les favoris et l\'abonnement seront définitivement supprimées.';
+
+  @override
+  String get deleteAccountSuccess => 'Compte supprimé avec succès';
+
+  @override
+  String get deleteAccountFailed =>
+      'Échec de la suppression du compte. Veuillez réessayer.';
+
+  @override
+  String get yes => 'Oui';
+
+  @override
+  String get no => 'Non';
+
+  @override
+  String get filterAll => 'Tous';
+
+  @override
+  String get filterFree => 'Gratuit';
+
+  @override
+  String get filterPremium => 'Premium';
+
+  @override
+  String get account => 'Compte';
 }

@@ -2245,6 +2245,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Custom'**
   String get custom;
+
+  /// No description provided for @playerSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Player Settings'**
+  String get playerSettings;
+
+  /// No description provided for @topPicksForYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Top Picks for You'**
+  String get topPicksForYou;
+
+  /// No description provided for @deleteAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Account'**
+  String get deleteAccount;
+
+  /// No description provided for @deleteAccountConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Account?'**
+  String get deleteAccountConfirmTitle;
+
+  /// No description provided for @deleteAccountConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete your account? This action cannot be undone.'**
+  String get deleteAccountConfirmMessage;
+
+  /// No description provided for @deleteAccountFinalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you absolutely sure?'**
+  String get deleteAccountFinalTitle;
+
+  /// No description provided for @deleteAccountFinalMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'All your data, including listening history, favorites, and subscription will be permanently deleted.'**
+  String get deleteAccountFinalMessage;
+
+  /// No description provided for @deleteAccountSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Account deleted successfully'**
+  String get deleteAccountSuccess;
+
+  /// No description provided for @deleteAccountFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete account. Please try again.'**
+  String get deleteAccountFailed;
+
+  /// No description provided for @yes.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get yes;
+
+  /// No description provided for @no.
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get no;
+
+  /// No description provided for @filterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get filterAll;
+
+  /// No description provided for @filterFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Free'**
+  String get filterFree;
+
+  /// No description provided for @filterPremium.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium'**
+  String get filterPremium;
+
+  /// No description provided for @account.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get account;
 }
 
 class _AppLocalizationsDelegate

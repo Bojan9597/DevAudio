@@ -367,5 +367,21 @@
   "emailSettingsSaved": "Configuración guardada",
   "listeningNotifications": "Notificaciones de escucha",
   "downloadCancelled": "Descarga cancelada",
-  "bookAlreadyDownloaded": "El libro ya está descargado."
+  "bookAlreadyDownloaded": "El libro ya está descargado.",
+
+  "playerSettings": "Ajustes del reproductor",
+  "topPicksForYou": "Mejores selecciones para ti",
+  "deleteAccount": "Eliminar cuenta",
+  "deleteAccountConfirmTitle": "¿Eliminar cuenta?",
+  "deleteAccountConfirmMessage": "¿Estás seguro de que quieres eliminar tu cuenta? Esta acción no se puede deshacer.",
+  "deleteAccountFinalTitle": "¿Estás completamente seguro?",
+  "deleteAccountFinalMessage": "Todos tus datos, incluyendo historial de escucha, favoritos y suscripción serán eliminados permanentemente.",
+  "deleteAccountSuccess": "Cuenta eliminada correctamente",
+  "deleteAccountFailed": "Error al eliminar la cuenta. Inténtalo de nuevo.",
+  "yes": "Sí",
+  "no": "No",
+  "filterAll": "Todos",
+  "filterFree": "Gratis",
+  "filterPremium": "Premium",
+  "account": "Cuenta"
 }

@@ -1186,4 +1186,52 @@ class AppLocalizationsSr extends AppLocalizations {
 
   @override
   String get custom => 'Custom';
+
+  @override
+  String get playerSettings => 'Podešavanja plejera';
+
+  @override
+  String get topPicksForYou => 'Najbolji izbori za tebe';
+
+  @override
+  String get deleteAccount => 'Obriši nalog';
+
+  @override
+  String get deleteAccountConfirmTitle => 'Obrisati nalog?';
+
+  @override
+  String get deleteAccountConfirmMessage =>
+      'Da li ste sigurni da želite da obrišete nalog? Ova radnja se ne može poništiti.';
+
+  @override
+  String get deleteAccountFinalTitle => 'Da li ste potpuno sigurni?';
+
+  @override
+  String get deleteAccountFinalMessage =>
+      'Svi vaši podaci, uključujući istoriju slušanja, omiljene i pretplatu biće trajno obrisani.';
+
+  @override
+  String get deleteAccountSuccess => 'Nalog je uspešno obrisan';
+
+  @override
+  String get deleteAccountFailed =>
+      'Brisanje naloga nije uspelo. Pokušajte ponovo.';
+
+  @override
+  String get yes => 'Da';
+
+  @override
+  String get no => 'Ne';
+
+  @override
+  String get filterAll => 'Sve';
+
+  @override
+  String get filterFree => 'Besplatno';
+
+  @override
+  String get filterPremium => 'Premium';
+
+  @override
+  String get account => 'Nalog';
 }

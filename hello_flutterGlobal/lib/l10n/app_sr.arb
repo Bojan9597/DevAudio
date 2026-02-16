@@ -367,5 +367,21 @@
   "emailSettingsSaved": "Podešavanja sačuvana",
   "listeningNotifications": "Obaveštenja za slušanje",
   "downloadCancelled": "Preuzimanje otkazano",
-  "bookAlreadyDownloaded": "Knjiga je već preuzeta."
+  "bookAlreadyDownloaded": "Knjiga je već preuzeta.",
+
+  "playerSettings": "Podešavanja plejera",
+  "topPicksForYou": "Najbolji izbori za tebe",
+  "deleteAccount": "Obriši nalog",
+  "deleteAccountConfirmTitle": "Obrisati nalog?",
+  "deleteAccountConfirmMessage": "Da li ste sigurni da želite da obrišete nalog? Ova radnja se ne može poništiti.",
+  "deleteAccountFinalTitle": "Da li ste potpuno sigurni?",
+  "deleteAccountFinalMessage": "Svi vaši podaci, uključujući istoriju slušanja, omiljene i pretplatu biće trajno obrisani.",
+  "deleteAccountSuccess": "Nalog je uspešno obrisan",
+  "deleteAccountFailed": "Brisanje naloga nije uspelo. Pokušajte ponovo.",
+  "yes": "Da",
+  "no": "Ne",
+  "filterAll": "Sve",
+  "filterFree": "Besplatno",
+  "filterPremium": "Premium",
+  "account": "Nalog"
 }

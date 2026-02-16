@@ -653,5 +653,21 @@
   "preferencesSaved": "Preferences saved successfully",
   "failedToSavePreferences": "Failed to save preferences",
   "save": "Save",
-  "custom": "Custom"
+  "custom": "Custom",
+
+  "playerSettings": "Player Settings",
+  "topPicksForYou": "Top Picks for You",
+  "deleteAccount": "Delete Account",
+  "deleteAccountConfirmTitle": "Delete Account?",
+  "deleteAccountConfirmMessage": "Are you sure you want to delete your account? This action cannot be undone.",
+  "deleteAccountFinalTitle": "Are you absolutely sure?",
+  "deleteAccountFinalMessage": "All your data, including listening history, favorites, and subscription will be permanently deleted.",
+  "deleteAccountSuccess": "Account deleted successfully",
+  "deleteAccountFailed": "Failed to delete account. Please try again.",
+  "yes": "Yes",
+  "no": "No",
+  "filterAll": "All",
+  "filterFree": "Free",
+  "filterPremium": "Premium",
+  "account": "Account"
 }

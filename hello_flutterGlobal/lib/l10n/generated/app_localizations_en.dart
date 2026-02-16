@@ -1181,4 +1181,52 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get custom => 'Custom';
+
+  @override
+  String get playerSettings => 'Player Settings';
+
+  @override
+  String get topPicksForYou => 'Top Picks for You';
+
+  @override
+  String get deleteAccount => 'Delete Account';
+
+  @override
+  String get deleteAccountConfirmTitle => 'Delete Account?';
+
+  @override
+  String get deleteAccountConfirmMessage =>
+      'Are you sure you want to delete your account? This action cannot be undone.';
+
+  @override
+  String get deleteAccountFinalTitle => 'Are you absolutely sure?';
+
+  @override
+  String get deleteAccountFinalMessage =>
+      'All your data, including listening history, favorites, and subscription will be permanently deleted.';
+
+  @override
+  String get deleteAccountSuccess => 'Account deleted successfully';
+
+  @override
+  String get deleteAccountFailed =>
+      'Failed to delete account. Please try again.';
+
+  @override
+  String get yes => 'Yes';
+
+  @override
+  String get no => 'No';
+
+  @override
+  String get filterAll => 'All';
+
+  @override
+  String get filterFree => 'Free';
+
+  @override
+  String get filterPremium => 'Premium';
+
+  @override
+  String get account => 'Account';
 }

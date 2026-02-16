@@ -866,6 +866,50 @@ def logout():
         return jsonify({"error": f"Logout failed: {str(e)}"}), 500
 
 
+@app.route('/delete-account', methods=['DELETE'])
+@jwt_required
+def delete_account():
+    """Permanently delete the authenticated user's account and all associated data."""
+    try:
+        auth_header = request.headers.get('Authorization')
+        access_token = auth_header.split()[1]
+        payload = pyjwt.decode(access_token, options={"verify_signature": False})
+        user_id = payload.get('user_id')
+
+        if not user_id:
+            return jsonify({"error": "Invalid token"}), 401
+
+        db = Database()
+        if not db.connect():
+            return jsonify({"error": "Database connection failed"}), 500
+
+        try:
+            # Verify user exists and is not admin
+            user = db.execute_query("SELECT id, email FROM users WHERE id = %s", (user_id,))
+            if not user:
+                return jsonify({"error": "User not found"}), 404
+
+            if user[0]['email'].lower() == 'bojanpejic97@gmail.com':
+                return jsonify({"error": "Admin account cannot be deleted"}), 403
+
+            # CASCADE should handle related records (subscriptions, user_books, etc.)
+            db.execute_query("DELETE FROM users WHERE id = %s", (user_id,))
+
+            # Blacklist current tokens
+            access_payload = pyjwt.decode(access_token, options={"verify_signature": False})
+            access_exp = datetime.datetime.fromtimestamp(access_payload['exp'])
+            blacklist_token(access_token, access_exp)
+
+            # Invalidate cache
+            invalidate_user_cache(user_id)
+
+            return jsonify({"message": "Account deleted successfully"}), 200
+        finally:
+            db.disconnect()
+    except Exception as e:
+        return jsonify({"error": f"Failed to delete account: {str(e)}"}), 500
+
+
 # Configure upload folder
 basedir = os.path.abspath(os.path.dirname(__file__))
 UPLOAD_FOLDER = os.path.join(basedir, 'static', 'profilePictures')

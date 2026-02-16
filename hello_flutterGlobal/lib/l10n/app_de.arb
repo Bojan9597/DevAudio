@@ -367,5 +367,21 @@
   "emailSettingsSaved": "Einstellungen gespeichert",
   "listeningNotifications": "Hörbenachrichtigungen",
   "downloadCancelled": "Download abgebrochen",
-  "bookAlreadyDownloaded": "Buch ist bereits heruntergeladen."
+  "bookAlreadyDownloaded": "Buch ist bereits heruntergeladen.",
+
+  "playerSettings": "Player-Einstellungen",
+  "topPicksForYou": "Top-Auswahl für dich",
+  "deleteAccount": "Konto löschen",
+  "deleteAccountConfirmTitle": "Konto löschen?",
+  "deleteAccountConfirmMessage": "Sind Sie sicher, dass Sie Ihr Konto löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+  "deleteAccountFinalTitle": "Sind Sie absolut sicher?",
+  "deleteAccountFinalMessage": "Alle Ihre Daten, einschließlich Hörverlauf, Favoriten und Abonnement werden dauerhaft gelöscht.",
+  "deleteAccountSuccess": "Konto erfolgreich gelöscht",
+  "deleteAccountFailed": "Konto konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.",
+  "yes": "Ja",
+  "no": "Nein",
+  "filterAll": "Alle",
+  "filterFree": "Kostenlos",
+  "filterPremium": "Premium",
+  "account": "Konto"
 }

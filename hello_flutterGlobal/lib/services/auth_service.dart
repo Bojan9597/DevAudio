@@ -140,6 +140,29 @@ class AuthService {
     }
   }
 
+  Future<bool> deleteAccount() async {
+    if (ConnectivityService().isOffline) return false;
+
+    final token = await getAccessToken();
+    if (token == null) return false;
+
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/delete-account'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          ApiConstants.appSourceHeader: ApiConstants.appSourceValue,
+        },
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Error deleting account: $e');
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString(_accessTokenKey);

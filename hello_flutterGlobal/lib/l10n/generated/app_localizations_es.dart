@@ -1191,4 +1191,52 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get custom => 'Custom';
+
+  @override
+  String get playerSettings => 'Ajustes del reproductor';
+
+  @override
+  String get topPicksForYou => 'Mejores selecciones para ti';
+
+  @override
+  String get deleteAccount => 'Eliminar cuenta';
+
+  @override
+  String get deleteAccountConfirmTitle => '¿Eliminar cuenta?';
+
+  @override
+  String get deleteAccountConfirmMessage =>
+      '¿Estás seguro de que quieres eliminar tu cuenta? Esta acción no se puede deshacer.';
+
+  @override
+  String get deleteAccountFinalTitle => '¿Estás completamente seguro?';
+
+  @override
+  String get deleteAccountFinalMessage =>
+      'Todos tus datos, incluyendo historial de escucha, favoritos y suscripción serán eliminados permanentemente.';
+
+  @override
+  String get deleteAccountSuccess => 'Cuenta eliminada correctamente';
+
+  @override
+  String get deleteAccountFailed =>
+      'Error al eliminar la cuenta. Inténtalo de nuevo.';
+
+  @override
+  String get yes => 'Sí';
+
+  @override
+  String get no => 'No';
+
+  @override
+  String get filterAll => 'Todos';
+
+  @override
+  String get filterFree => 'Gratis';
+
+  @override
+  String get filterPremium => 'Premium';
+
+  @override
+  String get account => 'Cuenta';
 }
