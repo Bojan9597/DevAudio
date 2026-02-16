@@ -38,26 +38,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   bool _customGoal = false;
   double _customSliderValue = 30;
   final List<Map<String, dynamic>> _goalOptions = [
-    {'label': '< 15 min', 'subtitle': 'Quick listener', 'minutes': 15},
-    {'label': '15-30 min', 'subtitle': 'Casual listener', 'minutes': 30},
-    {'label': '1+ hour', 'subtitle': 'Deep diver', 'minutes': 60},
+    {'label': '15 min', 'subtitle': 'Quick listener', 'minutes': 15},
+    {'label': '30 min', 'subtitle': 'Casual listener', 'minutes': 30},
+    {'label': '1 hr', 'subtitle': 'Deep diver', 'minutes': 60},
   ];
 
   // Step 3: Primary goal
   String _selectedGoal = '';
   final List<Map<String, String>> _goalChoices = [
-    {'label': 'Entertainment', 'icon': '🎭', 'desc': 'Enjoy fascinating stories'},
-    {'label': 'Learn new skills', 'icon': '📚', 'desc': 'Expand your knowledge'},
+    {
+      'label': 'Entertainment',
+      'icon': '🎭',
+      'desc': 'Enjoy fascinating stories',
+    },
+    {
+      'label': 'Learn new skills',
+      'icon': '📚',
+      'desc': 'Expand your knowledge',
+    },
     {
       'label': 'Relaxation',
       'icon': '🧘',
       'desc': 'Unwind with calming content',
     },
-    {
-      'label': 'Personal growth',
-      'icon': '🌱',
-      'desc': 'Develop yourself',
-    },
+    {'label': 'Personal growth', 'icon': '🌱', 'desc': 'Develop yourself'},
   ];
 
   // Step 4 (bonus): Book picks
@@ -91,6 +95,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           }
         }
       }
+
       collectLeaves(categories);
       if (mounted) {
         setState(() {
@@ -176,17 +181,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
       if (mounted) {
         await globalLayoutState.updateUser(userId.toString());
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const AppLayout()),
-        );
+        Navigator.of(
+          context,
+        ).pushReplacement(MaterialPageRoute(builder: (_) => const AppLayout()));
       }
     } catch (e) {
       // Still mark as complete locally to avoid infinite onboarding loop
       await _authService.setHasPreferences(true);
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const AppLayout()),
-        );
+        Navigator.of(
+          context,
+        ).pushReplacement(MaterialPageRoute(builder: (_) => const AppLayout()));
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -216,9 +221,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       height: 4,
                       margin: EdgeInsets.only(right: i < 3 ? 8 : 0),
                       decoration: BoxDecoration(
-                        color: i <= _currentStep
-                            ? _accentColor
-                            : _surfaceColor,
+                        color: i <= _currentStep ? _accentColor : _surfaceColor,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -357,9 +360,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               color: selected ? _accentColor : _cardColor,
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: selected
-                                    ? _accentColor
-                                    : Colors.white12,
+                                color: selected ? _accentColor : Colors.white12,
                                 width: 1.5,
                               ),
                             ),
@@ -444,9 +445,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               Text(
                                 goal['label']!,
                                 style: TextStyle(
-                                  color: selected
-                                      ? _accentColor
-                                      : Colors.white,
+                                  color: selected ? _accentColor : Colors.white,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -507,7 +506,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               children: [
                 // Preset options
                 ..._goalOptions.map((option) {
-                  final selected = !_customGoal &&
+                  final selected =
+                      !_customGoal &&
                       _selectedGoalMinutes == option['minutes'] as int;
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
@@ -544,8 +544,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               ),
                               child: Icon(
                                 Icons.headphones,
-                                color:
-                                    selected ? _accentColor : Colors.white38,
+                                color: selected ? _accentColor : Colors.white38,
                                 size: 24,
                               ),
                             ),
@@ -576,8 +575,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               ),
                             ),
                             if (selected)
-                              Icon(Icons.check_circle,
-                                  color: _accentColor, size: 24),
+                              Icon(
+                                Icons.check_circle,
+                                color: _accentColor,
+                                size: 24,
+                              ),
                           ],
                         ),
                       ),
@@ -656,8 +658,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               ),
                             ),
                             if (_customGoal)
-                              Icon(Icons.check_circle,
-                                  color: _accentColor, size: 24),
+                              Icon(
+                                Icons.check_circle,
+                                color: _accentColor,
+                                size: 24,
+                              ),
                           ],
                         ),
                         if (_customGoal) ...[
@@ -667,11 +672,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               activeTrackColor: _accentColor,
                               inactiveTrackColor: _surfaceColor,
                               thumbColor: _accentColor,
-                              overlayColor:
-                                  _accentColor.withValues(alpha: 0.2),
+                              overlayColor: _accentColor.withValues(alpha: 0.2),
                               trackHeight: 6,
                               thumbShape: const RoundSliderThumbShape(
-                                  enabledThumbRadius: 12),
+                                enabledThumbRadius: 12,
+                              ),
                             ),
                             child: Slider(
                               value: _customSliderValue,
@@ -687,20 +692,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             ),
                           ),
                           Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
                             child: Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('1 min',
-                                    style: TextStyle(
-                                        color: Colors.grey.shade600,
-                                        fontSize: 12)),
-                                Text('2h',
-                                    style: TextStyle(
-                                        color: Colors.grey.shade600,
-                                        fontSize: 12)),
+                                Text(
+                                  '1 min',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                Text(
+                                  '2h',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -753,147 +762,142 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     child: CircularProgressIndicator(color: _accentColor),
                   )
                 : _onboardingBooks.isEmpty
-                    ? Center(
-                        child: Text(
-                          'No books available yet',
-                          style: TextStyle(color: Colors.grey.shade500),
-                        ),
-                      )
-                    : GridView.builder(
-                        padding: const EdgeInsets.only(right: 24),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
+                ? Center(
+                    child: Text(
+                      'No books available yet',
+                      style: TextStyle(color: Colors.grey.shade500),
+                    ),
+                  )
+                : GridView.builder(
+                    padding: const EdgeInsets.only(right: 24),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           childAspectRatio: 0.62,
                           crossAxisSpacing: 14,
                           mainAxisSpacing: 14,
                         ),
-                        itemCount: _onboardingBooks.length,
-                        itemBuilder: (context, index) {
-                          final book = _onboardingBooks[index];
-                          final bookId = int.tryParse(
-                                book['id']?.toString() ?? '',
-                              ) ??
-                              0;
-                          final selected = _selectedBookIds.contains(bookId);
-                          final coverUrl =
-                              book['coverUrlThumbnail'] ?? book['coverUrl'];
+                    itemCount: _onboardingBooks.length,
+                    itemBuilder: (context, index) {
+                      final book = _onboardingBooks[index];
+                      final bookId =
+                          int.tryParse(book['id']?.toString() ?? '') ?? 0;
+                      final selected = _selectedBookIds.contains(bookId);
+                      final coverUrl =
+                          book['coverUrlThumbnail'] ?? book['coverUrl'];
 
-                          return GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                if (selected) {
-                                  _selectedBookIds.remove(bookId);
-                                } else {
-                                  _selectedBookIds.add(bookId);
-                                }
-                              });
-                            },
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(
-                                  color: selected
-                                      ? _accentColor
-                                      : Colors.transparent,
-                                  width: 2.5,
-                                ),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Stack(
-                                  fit: StackFit.expand,
-                                  children: [
-                                    // Cover image
-                                    coverUrl != null && coverUrl.isNotEmpty
-                                        ? CachedNetworkImage(
-                                            imageUrl: coverUrl,
-                                            fit: BoxFit.cover,
-                                            placeholder: (_, _) => Container(
-                                              color: _surfaceColor,
-                                              child: const Icon(
-                                                Icons.book,
-                                                color: Colors.white24,
-                                                size: 40,
-                                              ),
-                                            ),
-                                            errorWidget: (_, _, _) =>
-                                                Container(
-                                              color: _surfaceColor,
-                                              child: const Icon(
-                                                Icons.book,
-                                                color: Colors.white24,
-                                                size: 40,
-                                              ),
-                                            ),
-                                          )
-                                        : Container(
-                                            color: _surfaceColor,
-                                            child: const Icon(
-                                              Icons.book,
-                                              color: Colors.white24,
-                                              size: 40,
-                                            ),
-                                          ),
-
-                                    // Title overlay at bottom
-                                    Positioned(
-                                      bottom: 0,
-                                      left: 0,
-                                      right: 0,
-                                      child: Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            begin: Alignment.bottomCenter,
-                                            end: Alignment.topCenter,
-                                            colors: [
-                                              Colors.black.withValues(
-                                                alpha: 0.85,
-                                              ),
-                                              Colors.transparent,
-                                            ],
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            if (selected) {
+                              _selectedBookIds.remove(bookId);
+                            } else {
+                              _selectedBookIds.add(bookId);
+                            }
+                          });
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: selected
+                                  ? _accentColor
+                                  : Colors.transparent,
+                              width: 2.5,
+                            ),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                // Cover image
+                                coverUrl != null && coverUrl.isNotEmpty
+                                    ? CachedNetworkImage(
+                                        imageUrl: coverUrl,
+                                        fit: BoxFit.cover,
+                                        placeholder: (_, _) => Container(
+                                          color: _surfaceColor,
+                                          child: const Icon(
+                                            Icons.book,
+                                            color: Colors.white24,
+                                            size: 40,
                                           ),
                                         ),
-                                        child: Text(
-                                          book['title'] ?? '',
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
+                                        errorWidget: (_, _, _) => Container(
+                                          color: _surfaceColor,
+                                          child: const Icon(
+                                            Icons.book,
+                                            color: Colors.white24,
+                                            size: 40,
                                           ),
                                         ),
+                                      )
+                                    : Container(
+                                        color: _surfaceColor,
+                                        child: const Icon(
+                                          Icons.book,
+                                          color: Colors.white24,
+                                          size: 40,
+                                        ),
+                                      ),
+
+                                // Title overlay at bottom
+                                Positioned(
+                                  bottom: 0,
+                                  left: 0,
+                                  right: 0,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.bottomCenter,
+                                        end: Alignment.topCenter,
+                                        colors: [
+                                          Colors.black.withValues(alpha: 0.85),
+                                          Colors.transparent,
+                                        ],
                                       ),
                                     ),
-
-                                    // Selection checkmark
-                                    if (selected)
-                                      Positioned(
-                                        top: 8,
-                                        right: 8,
-                                        child: Container(
-                                          padding: const EdgeInsets.all(2),
-                                          decoration: const BoxDecoration(
-                                            color: _accentColor,
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: const Icon(
-                                            Icons.check,
-                                            color: Colors.black,
-                                            size: 18,
-                                          ),
-                                        ),
+                                    child: Text(
+                                      book['title'] ?? '',
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
                                       ),
-                                  ],
+                                    ),
+                                  ),
                                 ),
-                              ),
+
+                                // Selection checkmark
+                                if (selected)
+                                  Positioned(
+                                    top: 8,
+                                    right: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(2),
+                                      decoration: const BoxDecoration(
+                                        color: _accentColor,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.check,
+                                        color: Colors.black,
+                                        size: 18,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
-                          );
-                        },
-                      ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -904,8 +908,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return name
         .replaceAll('_', ' ')
         .split(' ')
-        .map((w) =>
-            w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : w)
+        .map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : w)
         .join(' ');
   }
 }
