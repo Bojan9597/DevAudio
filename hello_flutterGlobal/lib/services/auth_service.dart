@@ -42,6 +42,26 @@ class AuthService {
     return null;
   }
 
+  /// Check if user has completed onboarding preferences.
+  /// If the field is missing (user logged in before this feature), default to true.
+  Future<bool> hasPreferences() async {
+    final user = await getUser();
+    if (user != null) {
+      if (!user.containsKey('has_preferences')) return true;
+      return user['has_preferences'] == true;
+    }
+    return false;
+  }
+
+  /// Mark preferences as completed locally (after saving to server)
+  Future<void> setHasPreferences(bool value) async {
+    final user = await getUser();
+    if (user != null) {
+      user['has_preferences'] = value;
+      await _saveUser(user);
+    }
+  }
+
   Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.containsKey(_userKey) && prefs.containsKey(_accessTokenKey);

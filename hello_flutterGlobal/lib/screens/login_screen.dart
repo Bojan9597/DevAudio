@@ -3,6 +3,7 @@ import '../services/auth_service.dart';
 import '../app_layout.dart';
 import '../states/layout_state.dart';
 import '../l10n/generated/app_localizations.dart';
+import 'onboarding_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -32,9 +33,19 @@ class _LoginScreenState extends State<LoginScreen> {
         if (userId != null) {
           await globalLayoutState.updateUser(userId.toString());
         }
-        Navigator.of(
-          context,
-        ).pushReplacement(MaterialPageRoute(builder: (_) => const AppLayout()));
+
+        final hasPrefs = await _authService.hasPreferences();
+        if (!mounted) return;
+
+        if (hasPrefs) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const AppLayout()),
+          );
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

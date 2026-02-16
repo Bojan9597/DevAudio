@@ -5,6 +5,7 @@ import 'l10n/generated/app_localizations.dart';
 import 'states/layout_state.dart';
 import 'app_layout.dart';
 import 'screens/login_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'services/auth_service.dart';
 import 'theme/app_theme.dart';
 
@@ -81,6 +82,7 @@ class AuthWrapper extends StatefulWidget {
 
 class _AuthWrapperState extends State<AuthWrapper> {
   bool? _isLoggedIn;
+  bool _hasPreferences = true; // default true to avoid flash
 
   @override
   void initState() {
@@ -174,6 +176,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
     final authService = AuthService();
     final isLoggedIn = await authService.isLoggedIn();
 
+    bool hasPrefs = true;
     if (isLoggedIn) {
       final userId = await authService.getCurrentUserId();
       if (userId != null) {
@@ -188,6 +191,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
           userId.toString(),
         );
       }
+      hasPrefs = await authService.hasPreferences();
     } else {
       await globalLayoutState.updateUser(null);
     }
@@ -195,6 +199,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
     if (mounted) {
       setState(() {
         _isLoggedIn = isLoggedIn;
+        _hasPreferences = hasPrefs;
       });
       if (isLoggedIn) {
         NotificationService().processPendingPayload();
@@ -211,6 +216,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
       );
     }
     if (_isLoggedIn!) {
+      if (!_hasPreferences) {
+        return const OnboardingScreen();
+      }
       return const AppLayout();
     }
     return const LoginScreen();

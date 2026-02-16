@@ -557,7 +557,7 @@ def google_login():
 
     try:
         # Check if user exists
-        query = "SELECT id, name, email, profile_picture_url FROM users WHERE email = %s"
+        query = "SELECT id, name, email, profile_picture_url, preferences FROM users WHERE email = %s"
         users = db.execute_query(query, (email,))
 
         if users:
@@ -573,6 +573,8 @@ def google_login():
             # Store session
             session_manager.store_session(user['id'], session_id, refresh_token)
 
+            has_preferences = user.get('preferences') is not None and user.get('preferences') != {}
+
             return jsonify({
                 "message": "Login successful",
                 "access_token": access_token,
@@ -582,7 +584,8 @@ def google_login():
                     "name": user['name'],
                     "email": user['email'],
                     "profile_picture_url": resolve_stored_url(user['profile_picture_url'], "profilePictures"),
-                    "aes_key": aes_key
+                    "aes_key": aes_key,
+                    "has_preferences": has_preferences
                 }
             }), 200
         else:
@@ -615,11 +618,116 @@ def google_login():
                     "name": name,
                     "email": email,
                     "profile_picture_url": None,
-                    "aes_key": aes_key
+                    "aes_key": aes_key,
+                    "has_preferences": False
                 }
             }), 201
 
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
+
+
+# ===================== ONBOARDING & PREFERENCES =====================
+@app.route('/save-preferences', methods=['POST'])
+@jwt_required
+def save_preferences():
+    """Save user onboarding preferences (categories, daily goal, primary goal, book picks)."""
+    data = request.get_json()
+    user_id = data.get('user_id')
+    categories = data.get('categories', [])
+    daily_goal_minutes = data.get('daily_goal_minutes', 15)
+    primary_goal = data.get('primary_goal', '')
+    book_ids = data.get('book_ids', [])
+
+    if not user_id:
+        return jsonify({"error": "user_id is required"}), 400
+    if not categories:
+        return jsonify({"error": "At least one category is required"}), 400
+
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        import json as json_lib
+        preferences = {
+            "categories": categories,
+            "daily_goal_minutes": daily_goal_minutes,
+            "primary_goal": primary_goal,
+            "original_book_ids": book_ids
+        }
+        query = "UPDATE users SET preferences = %s WHERE id = %s"
+        db.execute_query(query, (json_lib.dumps(preferences), user_id))
+
+        return jsonify({"message": "Preferences saved successfully", "preferences": preferences}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
+
+
+@app.route('/onboarding-books', methods=['GET'])
+def get_onboarding_books():
+    """Return a curated list of books for onboarding book selection. Optionally filter by categories."""
+    db = Database()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        categories = request.args.getlist('categories')
+
+        if categories:
+            placeholders = ','.join(['%s'] * len(categories))
+            query = f"""
+                SELECT b.id, b.title, b.author, b.cover_image_path, c.slug as category_slug,
+                       COALESCE(br.avg_rating, 0) as average_rating
+                FROM books b
+                LEFT JOIN categories c ON b.primary_category_id = c.id
+                LEFT JOIN (
+                    SELECT book_id, AVG(stars) as avg_rating FROM book_ratings GROUP BY book_id
+                ) br ON br.book_id = b.id
+                WHERE c.slug IN ({placeholders})
+                ORDER BY COALESCE(br.avg_rating, 0) DESC, b.id DESC
+                LIMIT 20
+            """
+            result = db.execute_query(query, tuple(categories))
+        else:
+            query = """
+                SELECT b.id, b.title, b.author, b.cover_image_path, c.slug as category_slug,
+                       COALESCE(br.avg_rating, 0) as average_rating
+                FROM books b
+                LEFT JOIN categories c ON b.primary_category_id = c.id
+                LEFT JOIN (
+                    SELECT book_id, AVG(stars) as avg_rating FROM book_ratings GROUP BY book_id
+                ) br ON br.book_id = b.id
+                ORDER BY COALESCE(br.avg_rating, 0) DESC, b.id DESC
+                LIMIT 20
+            """
+            result = db.execute_query(query)
+
+        books = []
+        if result:
+            for row in result:
+                cover_url, cover_thumbnail_url = resolve_cover_urls(row['cover_image_path'])
+                books.append({
+                    "id": str(row['id']),
+                    "title": row['title'],
+                    "author": row['author'],
+                    "coverUrl": cover_url,
+                    "coverUrlThumbnail": cover_thumbnail_url,
+                    "categoryId": row.get('category_slug') or "",
+                    "averageRating": round(float(row['average_rating']), 1) if row.get('average_rating') else 0.0
+                })
+
+        return jsonify(books), 200
+
+    except Exception as e:
+        print(f"Error in get_onboarding_books: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
     finally:
         db.disconnect()
@@ -1714,11 +1822,38 @@ def get_discover():
             ) br_stats ON br_stats.book_id = b.id
         """
 
-        # Fetch all three book lists in one go (newest, popular, paginated)
+        # Fetch user preferences for personalized top picks
+        user_pref_categories = None
+        if user_id:
+            pref_result = db.execute_query("SELECT preferences FROM users WHERE id = %s", (user_id,))
+            if pref_result and pref_result[0].get('preferences'):
+                prefs_data = pref_result[0]['preferences']
+                if isinstance(prefs_data, str):
+                    import json as json_lib
+                    prefs_data = json_lib.loads(prefs_data)
+                user_pref_categories = prefs_data.get('categories', [])
+
+        # Fetch all three book lists in one go (newest, popular/personalized, paginated)
         newest_result = db.execute_query(base_select + " ORDER BY b.id DESC LIMIT 5")
-        popular_result = db.execute_query(base_select + """ ORDER BY (
-            COALESCE(br_stats.avg_rating, 0) * COALESCE(br_stats.rating_cnt, 0)
-        ) DESC NULLS LAST, b.id DESC LIMIT 5""")
+
+        # Top Picks: personalized by preferred categories if available, else by rating
+        if user_pref_categories:
+            cat_placeholders = ','.join(['%s'] * len(user_pref_categories))
+            popular_result = db.execute_query(base_select + f"""
+                WHERE c.slug IN ({cat_placeholders})
+                ORDER BY (
+                    COALESCE(br_stats.avg_rating, 0) * COALESCE(br_stats.rating_cnt, 0)
+                ) DESC NULLS LAST, b.id DESC LIMIT 5""", tuple(user_pref_categories))
+            # Fall back to general popularity if not enough personalized results
+            if not popular_result or len(popular_result) < 5:
+                popular_result = db.execute_query(base_select + """ ORDER BY (
+                    COALESCE(br_stats.avg_rating, 0) * COALESCE(br_stats.rating_cnt, 0)
+                ) DESC NULLS LAST, b.id DESC LIMIT 5""")
+        else:
+            popular_result = db.execute_query(base_select + """ ORDER BY (
+                COALESCE(br_stats.avg_rating, 0) * COALESCE(br_stats.rating_cnt, 0)
+            ) DESC NULLS LAST, b.id DESC LIMIT 5""")
+
         all_result = db.execute_query(base_select + " ORDER BY b.id DESC LIMIT %s OFFSET %s", (limit, offset))
         
         # Collect all book IDs for batch subcategory/progress queries

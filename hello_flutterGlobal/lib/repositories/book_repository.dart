@@ -1091,4 +1091,58 @@ class BookRepository {
       rethrow;
     }
   }
+
+  /// Fetch books for onboarding selection, optionally filtered by categories.
+  Future<List<Map<String, dynamic>>> getOnboardingBooks({List<String>? categories}) async {
+    try {
+      final uri = Uri.parse('${ApiConstants.baseUrl}/onboarding-books').replace(
+        queryParameters: {
+          if (categories != null && categories.isNotEmpty)
+            'categories': categories,
+        },
+      );
+
+      final response = await http.get(uri, headers: {
+        ApiConstants.appSourceHeader: ApiConstants.appSourceValue,
+      });
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching onboarding books: $e');
+      return [];
+    }
+  }
+
+  /// Save user onboarding preferences to server.
+  Future<bool> savePreferences({
+    required int userId,
+    required List<String> categories,
+    required int dailyGoalMinutes,
+    required String primaryGoal,
+    required List<int> bookIds,
+  }) async {
+    try {
+      final headers = await _getHeaders();
+      headers[ApiConstants.appSourceHeader] = ApiConstants.appSourceValue;
+      final response = await http.post(
+        Uri.parse('${ApiConstants.baseUrl}/save-preferences'),
+        headers: headers,
+        body: json.encode({
+          'user_id': userId,
+          'categories': categories,
+          'daily_goal_minutes': dailyGoalMinutes,
+          'primary_goal': primaryGoal,
+          'book_ids': bookIds,
+        }),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Error saving preferences: $e');
+      return false;
+    }
+  }
 }
