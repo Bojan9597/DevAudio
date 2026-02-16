@@ -8,7 +8,7 @@ SERVER_USER = "root"
 SERVER_PASS = "Pijanista123()"
 REMOTE_DIR = "/var/www/server_global"
 
-def deploy():
+def run_cleanup():
     print(f"Connecting to {SERVER_IP}...")
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -19,39 +19,37 @@ def deploy():
         
         sftp = ssh.open_sftp()
         
-        # Upload api.py
-        local_path = "api.py"
-        remote_path = f"{REMOTE_DIR}/api.py"
+        # Upload cleanup_users.py
+        local_path = "cleanup_users.py"
+        remote_path = f"{REMOTE_DIR}/cleanup_users.py"
         print(f"Uploading {local_path} to {remote_path}...")
         sftp.put(local_path, remote_path)
-
-        # Upload badge_service.py
-        local_path = "badge_service.py"
-        remote_path = f"{REMOTE_DIR}/badge_service.py"
-        print(f"Uploading {local_path} to {remote_path}...")
-        sftp.put(local_path, remote_path)
-            
-        sftp.close()
-        print("Files uploaded.")
-
-        # Restart Service
-        print("Restarting echo_history.service...")
-        stdin, stdout, stderr = ssh.exec_command("systemctl restart echo_history.service")
         
-        # Wait for completion
+        sftp.close()
+        print("File uploaded.")
+
+        # Execute Cleanup Script
+        print("Running cleanup script on server...")
+        cmd = f"cd {REMOTE_DIR} && python3 cleanup_users.py"
+        stdin, stdout, stderr = ssh.exec_command(cmd)
+        
+        # Wait for completion and print output
         exit_status = stdout.channel.recv_exit_status()
         
-        if exit_status == 0:
-            print("Service restarted successfully.")
-        else:
-            print("Service restart failed.")
-            print("Error:")
+        print("--- Cleanup Output ---")
+        print(stdout.read().decode())
+        
+        if exit_status != 0:
+            print("--- Cleanup Errors ---")
             print(stderr.read().decode())
+            print("Cleanup FAILED.")
+        else:
+            print("Cleanup SUCCESS.")
 
     except Exception as e:
-        print(f"Deployment failed: {e}")
+        print(f"Cleanup execution failed: {e}")
     finally:
         ssh.close()
 
 if __name__ == "__main__":
-    deploy()
+    run_cleanup()

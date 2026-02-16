@@ -8,7 +8,7 @@ SERVER_USER = "root"
 SERVER_PASS = "Pijanista123()"
 REMOTE_DIR = "/var/www/server_global"
 
-def deploy():
+def run_read_prefs():
     print(f"Connecting to {SERVER_IP}...")
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -19,39 +19,37 @@ def deploy():
         
         sftp = ssh.open_sftp()
         
-        # Upload api.py
-        local_path = "api.py"
-        remote_path = f"{REMOTE_DIR}/api.py"
+        # Upload read_prefs.py
+        local_path = "read_prefs.py"
+        remote_path = f"{REMOTE_DIR}/read_prefs.py"
         print(f"Uploading {local_path} to {remote_path}...")
         sftp.put(local_path, remote_path)
-
-        # Upload badge_service.py
-        local_path = "badge_service.py"
-        remote_path = f"{REMOTE_DIR}/badge_service.py"
-        print(f"Uploading {local_path} to {remote_path}...")
-        sftp.put(local_path, remote_path)
-            
-        sftp.close()
-        print("Files uploaded.")
-
-        # Restart Service
-        print("Restarting echo_history.service...")
-        stdin, stdout, stderr = ssh.exec_command("systemctl restart echo_history.service")
         
-        # Wait for completion
+        sftp.close()
+        print("File uploaded.")
+
+        # Execute Script
+        print("Running read_prefs script on server...")
+        cmd = f"cd {REMOTE_DIR} && python3 read_prefs.py"
+        stdin, stdout, stderr = ssh.exec_command(cmd)
+        
+        # Wait for completion and print output
         exit_status = stdout.channel.recv_exit_status()
         
-        if exit_status == 0:
-            print("Service restarted successfully.")
-        else:
-            print("Service restart failed.")
-            print("Error:")
+        print("--- Output ---")
+        print(stdout.read().decode())
+        
+        if exit_status != 0:
+            print("--- Errors ---")
             print(stderr.read().decode())
+            print("Execution FAILED.")
+        else:
+            print("Execution SUCCESS.")
 
     except Exception as e:
-        print(f"Deployment failed: {e}")
+        print(f"Execution failed: {e}")
     finally:
         ssh.close()
 
 if __name__ == "__main__":
-    deploy()
+    run_read_prefs()

@@ -103,7 +103,16 @@ class BadgeService:
             res_bought = cursor.fetchone()
             books_bought = res_bought['cnt'] if res_bought else 0
 
-            return {'books_completed': books_completed, 'books_bought': books_bought}
+            # Streak (fetch from users table)
+            cursor.execute("SELECT current_streak FROM users WHERE id = %s", (user_id,))
+            res_user = cursor.fetchone()
+            current_streak = res_user['current_streak'] if res_user else 0
+
+            return {
+                'books_completed': books_completed, 
+                'books_bought': books_bought,
+                'streak': current_streak
+            }
         finally:
              cursor.close()
     
@@ -112,4 +121,6 @@ class BadgeService:
             return stats['books_completed']
         elif code.startswith('buy_'):
             return stats['books_bought']
+        elif code.startswith('streak_'):
+            return stats['streak']
         return 0

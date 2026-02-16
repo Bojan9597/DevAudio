@@ -1032,7 +1032,82 @@ def upload_profile_picture():
     finally:
         db.disconnect()
 
+@app.route('/user/daily-goal-reached', methods=['POST'])
+@jwt_required
+def daily_goal_reached():
+    """
+    Record that the user reached their daily listening goal.
+    Updates streak and checks for badges.
+    """
+    auth_header = request.headers.get('Authorization')
+    try:
+        access_token = auth_header.split()[1]
+        payload = pyjwt.decode(access_token, options={"verify_signature": False})
+        user_id = payload.get('user_id')
+        
+        db = Database()
+        if not db.connect():
+            return jsonify({"error": "Database connection failed"}), 500
+            
+        try:
+            # 1. Get current streak data
+            query = "SELECT current_streak, last_daily_goal_at FROM users WHERE id = %s"
+            result = db.execute_query(query, (user_id,))
+            
+            if not result:
+                return jsonify({"error": "User not found"}), 404
+                
+            user = result[0]
+            current_streak = user['current_streak'] if user['current_streak'] else 0
+            last_goal_at = user['last_daily_goal_at'] # dict cursor returns datetime object
+            
+            # Determine today's date (server time)
+            now = datetime.datetime.now()
+            today_date = now.date()
+            
+            last_goal_date = last_goal_at.date() if last_goal_at else None
+            
+            new_streak = current_streak
+            streak_updated = False
+            
+            if last_goal_date == today_date:
+                # Already recorded for today
+                pass 
+            elif last_goal_date == today_date - datetime.timedelta(days=1):
+                # Consecutive day
+                new_streak += 1
+                streak_updated = True
+            else:
+                # Broken streak or first time
+                new_streak = 1
+                streak_updated = True
+                
+            # Update DB if needed
+            if streak_updated:
+                update_query = "UPDATE users SET current_streak = %s, last_daily_goal_at = %s WHERE id = %s"
+                db.execute_query(update_query, (new_streak, now, user_id))
+            
+            # 2. Check for badges
+            badge_service = BadgeService(db.conn)
+            new_badges = badge_service.check_badges(user_id)
+            
+            return jsonify({
+                "message": "Daily goal recorded",
+                "streak": new_streak,
+                "streak_updated": streak_updated,
+                "badges_earned": new_badges
+            }), 200
+
+        finally:
+            db.disconnect()
+            
+    except Exception as e:
+        print(f"Error in daily_goal_reached: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/user/profile', methods=['GET'])
+
 @jwt_required
 def get_user_profile():
     """Get current user profile with fresh URLs."""
@@ -4317,13 +4392,33 @@ def profile_init(user_id):
             if users:
                 user = users[0]
                 aes_key = get_or_create_user_aes_key(user['id'], db)
+                
+                # Initialize preferences if NULL
+                user_prefs = user.get('preferences')
+                if user_prefs is None:
+                    default_prefs = {
+                        "categories": [],
+                        "daily_goal_minutes": 15, # Default to 15
+                        "primary_goal": "read_more",
+                        "book_picks": []
+                    }
+                    # Update DB
+                    try:
+                         # Use json.dumps for the DB update
+                        update_query = "UPDATE users SET preferences = %s WHERE id = %s"
+                        db.execute_query(update_query, (json.dumps(default_prefs), token_user_id))
+                        user_prefs = default_prefs # Use dict for response
+                    except Exception as e:
+                        print(f"Error initializing preferences: {e}")
+                        user_prefs = default_prefs # Fallback for response
+
                 user_data = {
                     "id": user['id'],
                     "name": user['name'],
                     "email": user['email'],
                     "profile_picture_url": resolve_stored_url(user['profile_picture_url'], "profilePictures"),
                     "aes_key": aes_key,
-                    "preferences": user.get('preferences')
+                    "preferences": user_prefs
                 }
 
         # 2. Listen history with batched progress queries
