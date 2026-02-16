@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'connectivity_service.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'daily_goal_service.dart';
 
 import '../utils/api_constants.dart';
 
@@ -185,6 +186,80 @@ class AuthService {
       }
     } catch (e) {
       print('Error refreshing user profile: $e');
+    }
+  }
+
+  Future<bool> saveUserPreferences({
+    required int userId,
+    List<int>? bookIds,
+    int? dailyGoalMinutes,
+    String? primaryGoal,
+  }) async {
+    if (ConnectivityService().isOffline) throw Exception('Offline mode');
+
+    String? token = await getAccessToken();
+    if (token == null) return false;
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/user/preferences'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+          ApiConstants.appSourceHeader: ApiConstants.appSourceValue,
+        },
+        body: json.encode({
+          'user_id': userId,
+          if (bookIds != null) 'book_ids': bookIds,
+          if (dailyGoalMinutes != null) 'daily_goal_minutes': dailyGoalMinutes,
+          if (primaryGoal != null) 'primary_goal': primaryGoal,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        await refreshUserProfile();
+        if (dailyGoalMinutes != null) {
+          DailyGoalService().updateTarget(dailyGoalMinutes);
+        }
+        return true;
+      } else if (response.statusCode == 401) {
+        // Try refresh
+        print("401 saving preferences, attempting refresh...");
+        final refreshed = await refreshAccessToken();
+        if (refreshed) {
+          token = await getAccessToken();
+          if (token == null) return false;
+
+          // Retry
+          final response2 = await http.post(
+            Uri.parse('$baseUrl/user/preferences'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+              ApiConstants.appSourceHeader: ApiConstants.appSourceValue,
+            },
+            body: json.encode({
+              'user_id': userId,
+              if (bookIds != null) 'book_ids': bookIds,
+              if (dailyGoalMinutes != null)
+                'daily_goal_minutes': dailyGoalMinutes,
+              if (primaryGoal != null) 'primary_goal': primaryGoal,
+            }),
+          );
+
+          if (response2.statusCode == 200) {
+            await refreshUserProfile();
+            if (dailyGoalMinutes != null) {
+              DailyGoalService().updateTarget(dailyGoalMinutes);
+            }
+            return true;
+          }
+        }
+      }
+      return false;
+    } catch (e) {
+      print('Error saving user preferences: $e');
+      return false;
     }
   }
 

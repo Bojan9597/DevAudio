@@ -18,6 +18,7 @@ import 'services/notification_service.dart';
 import 'services/notification_preferences.dart';
 import 'services/player_preferences.dart';
 import 'services/notification_workmanager.dart';
+import 'services/daily_goal_service.dart';
 
 // Global audio handler instance - Late initialization required
 late MyAudioHandler audioHandler;
@@ -139,7 +140,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
     _safeInit(() => ConnectivityService().initialize());
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
-    // 5. Check Auth
+    // 5. Init Daily Goal Service
+    _safeInit(() => DailyGoalService().init());
+
+    // 6. Check Auth
     await _checkAuth();
   }
 

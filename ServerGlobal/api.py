@@ -3638,7 +3638,92 @@ def save_quiz_result():
     finally:
         db.disconnect()
 
-# ===================== SUBSCRIPTION ENDPOINTS =====================
+# ===================== USER PREFERENCES =====================
+@app.route('/user/preferences', methods=['POST'])
+@jwt_required
+def save_user_preferences():
+    """Save user onboarding preferences."""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id') 
+        
+        # Verify user via token if possible, but for now rely on @jwt_required
+        auth_header = request.headers.get('Authorization')
+        if auth_header:
+            try:
+                token = auth_header.split()[1]
+                payload = pyjwt.decode(token, options={"verify_signature": False})
+                if str(payload.get('user_id')) != str(user_id):
+                     return jsonify({"error": "User ID mismatch"}), 403
+            except:
+                pass
+
+        if not user_id:
+            return jsonify({"error": "User ID required"}), 400
+            
+        preferences = {}
+        
+        # 1. Book IDs -> Categories
+        book_ids = data.get('book_ids', [])
+        if book_ids:
+            db = Database()
+            if db.connect():
+                try:
+                    # Resolve categories
+                    placeholders = ','.join(['%s'] * len(book_ids))
+                    cat_query = f"""
+                        SELECT DISTINCT c.slug 
+                        FROM books b
+                        JOIN categories c ON b.primary_category_id = c.id
+                        WHERE b.id IN ({placeholders})
+                    """
+                    cat_result = db.execute_query(cat_query, tuple(book_ids))
+                    if cat_result:
+                        preferences['categories'] = [row['slug'] for row in cat_result]
+                        preferences['original_book_ids'] = book_ids
+                finally:
+                    db.disconnect()
+        
+        # 2. Daily Goal
+        if 'daily_goal_minutes' in data:
+            preferences['daily_goal_minutes'] = data['daily_goal_minutes']
+            
+        # 3. Primary Goal
+        if 'primary_goal' in data:
+            preferences['primary_goal'] = data['primary_goal']
+
+        # 4. Explicit categories (from step 1) - merge if needed, or keep separate
+        if 'categories' in data:
+            # If we already have categories from books, maybe merge?
+            # For now, just store what client sent if books didn't provide any
+            if 'categories' not in preferences:
+                 preferences['categories'] = data['categories']
+            else:
+                 # Union
+                 existing = set(preferences['categories'])
+                 existing.update(data['categories'])
+                 preferences['categories'] = list(existing)
+            
+        # Save to DB
+        db = Database()
+        if not db.connect():
+            return jsonify({"error": "Database connection failed"}), 500
+            
+        try:
+            import json as json_lib
+            prefs_json = json_lib.dumps(preferences)
+            update_query = "UPDATE users SET preferences = %s WHERE id = %s"
+            db.execute_query(update_query, (prefs_json, user_id))
+            
+            return jsonify({"message": "Preferences saved", "preferences": preferences}), 200
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+        finally:
+            db.disconnect()
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route('/subscription/status', methods=['GET'])
 @jwt_required

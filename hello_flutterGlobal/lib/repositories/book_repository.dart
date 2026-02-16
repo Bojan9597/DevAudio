@@ -10,6 +10,7 @@ import '../services/api_client.dart'; // Import ApiClient
 import '../models/user_stats.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/daily_goal_service.dart';
 
 class BookRepository {
   final AuthService _authService = AuthService();
@@ -1093,7 +1094,9 @@ class BookRepository {
   }
 
   /// Fetch books for onboarding selection, optionally filtered by categories.
-  Future<List<Map<String, dynamic>>> getOnboardingBooks({List<String>? categories}) async {
+  Future<List<Map<String, dynamic>>> getOnboardingBooks({
+    List<String>? categories,
+  }) async {
     try {
       final uri = Uri.parse('${ApiConstants.baseUrl}/onboarding-books').replace(
         queryParameters: {
@@ -1102,9 +1105,10 @@ class BookRepository {
         },
       );
 
-      final response = await http.get(uri, headers: {
-        ApiConstants.appSourceHeader: ApiConstants.appSourceValue,
-      });
+      final response = await http.get(
+        uri,
+        headers: {ApiConstants.appSourceHeader: ApiConstants.appSourceValue},
+      );
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -1128,8 +1132,9 @@ class BookRepository {
     try {
       final headers = await _getHeaders();
       headers[ApiConstants.appSourceHeader] = ApiConstants.appSourceValue;
+
       final response = await http.post(
-        Uri.parse('${ApiConstants.baseUrl}/save-preferences'),
+        Uri.parse('${ApiConstants.baseUrl}/user/preferences'),
         headers: headers,
         body: json.encode({
           'user_id': userId,
@@ -1139,7 +1144,13 @@ class BookRepository {
           'book_ids': bookIds,
         }),
       );
-      return response.statusCode == 200;
+
+      if (response.statusCode == 200) {
+        // Immediately update local goal service
+        DailyGoalService().updateTarget(dailyGoalMinutes);
+        return true;
+      }
+      return false;
     } catch (e) {
       print('Error saving preferences: $e');
       return false;

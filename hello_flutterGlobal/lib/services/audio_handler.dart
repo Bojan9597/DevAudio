@@ -8,6 +8,7 @@ import '../repositories/book_repository.dart';
 import 'download_service.dart';
 import 'player_preferences.dart';
 import '../widgets/content_area.dart';
+import 'daily_goal_service.dart';
 
 class MyAudioHandler extends BaseAudioHandler {
   final AudioPlayer _player = AudioPlayer();
@@ -296,6 +297,8 @@ class MyAudioHandler extends BaseAudioHandler {
     _progressTimer = Timer.periodic(const Duration(seconds: 15), (_) {
       if (_player.playing) {
         _performSave();
+        // Track daily goal progress
+        DailyGoalService().addSeconds(15);
       }
     });
   }

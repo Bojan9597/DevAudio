@@ -675,9 +675,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             ),
                             child: Slider(
                               value: _customSliderValue,
-                              min: 5,
+                              min: 1,
                               max: 120,
-                              divisions: 23,
+                              divisions: 119,
                               onChanged: (value) {
                                 setState(() {
                                   _customSliderValue = value;
@@ -693,7 +693,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               mainAxisAlignment:
                                   MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('5 min',
+                                Text('1 min',
                                     style: TextStyle(
                                         color: Colors.grey.shade600,
                                         fontSize: 12)),
