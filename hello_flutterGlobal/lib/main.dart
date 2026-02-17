@@ -28,9 +28,8 @@ final RouteObserver<ModalRoute<void>> routeObserver =
     RouteObserver<ModalRoute<void>>();
 
 void main() async {
-  // Move SystemChrome to AuthWrapper to ensure main() is strictly non-blocking
-  // await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-
+  WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   runApp(const MyApp());
 }
 
@@ -140,8 +139,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
     _safeInit(() => ConnectivityService().initialize());
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
-    // 5. Init Daily Goal Service
-    _safeInit(() => DailyGoalService().init());
+    // 5. Init Daily Goal Service (awaited so streak tracking works from the start)
+    await _safeInit(() => DailyGoalService().init());
 
     // 6. Check Auth
     await _checkAuth();

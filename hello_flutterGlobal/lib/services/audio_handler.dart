@@ -267,12 +267,24 @@ class MyAudioHandler extends BaseAudioHandler {
 
   /// Force-sync background music with main player.
   /// Call after all initialization is complete to ensure bg music is playing.
+  /// If main player is not yet playing (still buffering), retries after a short delay.
   void syncBgMusic() {
-    if (_bgMusicLoaded && _bgMusicEnabled && _player.playing) {
+    if (!_bgMusicLoaded || !_bgMusicEnabled) return;
+
+    if (_player.playing) {
       if (!_bgPlayer.playing) {
         _bgPlayer.play();
         print('[AudioHandler] BG music force-synced');
       }
+    } else {
+      // Main player might still be buffering after play() was called.
+      // Retry once after a short delay.
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (_bgMusicLoaded && _bgMusicEnabled && _player.playing && !_bgPlayer.playing) {
+          _bgPlayer.play();
+          print('[AudioHandler] BG music force-synced (delayed)');
+        }
+      });
     }
   }
 

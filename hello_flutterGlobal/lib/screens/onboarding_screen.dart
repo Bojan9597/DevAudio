@@ -62,6 +62,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       'desc': 'Unwind with calming content',
     },
     {'label': 'Personal growth', 'icon': '🌱', 'desc': 'Develop yourself'},
+    {'label': 'Other', 'icon': '✨', 'desc': 'Something else entirely'},
   ];
 
   // Step 4 (bonus): Book picks

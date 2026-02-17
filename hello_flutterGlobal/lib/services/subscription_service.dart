@@ -195,11 +195,11 @@ class SubscriptionService {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Clear cache to force refresh
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('${_subscriptionCacheKey}_$userId');
-
         final data = json.decode(response.body);
+
+        // Re-fetch and cache subscription status immediately so offline works
+        await getSubscriptionStatus(forceRefresh: true);
+
         return {
           'success': true,
           'message': data['message'],

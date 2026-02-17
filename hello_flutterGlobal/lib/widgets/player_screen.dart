@@ -20,6 +20,7 @@ import '../utils/api_constants.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/subscription_service.dart';
 import '../screens/quiz_taker_screen.dart'; // Import QuizTakerScreen
+import '../screens/playlist_screen.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -503,7 +504,12 @@ class _PlayerScreenState extends State<PlayerScreen>
       // Currently, it only checks `getPurchasedBookIds`. It DOES NOT check SubscriptionService.
       // We should check SubscriptionService OR check isPremium.
 
-      final isSubscribed = await SubscriptionService().isSubscribed();
+      // Check subscription: try SubscriptionService first, fall back to local persistent status
+      bool isSubscribed = await SubscriptionService().isSubscribed();
+      if (!isSubscribed) {
+        // Fallback to locally persisted status (works offline)
+        isSubscribed = await AuthService().getPersistentSubscriptionStatus();
+      }
       final isFree = !widget.book.isPremium;
 
       if (mounted) {
@@ -851,6 +857,9 @@ class _PlayerScreenState extends State<PlayerScreen>
 
       // Auto-play when player screen is opened
       await audioHandler.play();
+
+      // Force-sync bg music immediately after play starts
+      audioHandler.syncBgMusic();
 
       // Clear any previous error since we succeeded
       _lastError = null;
@@ -1543,7 +1552,22 @@ class _PlayerScreenState extends State<PlayerScreen>
                               child: Center(
                                 child: TextButton.icon(
                                   onPressed: () {
+                                    // Check if this PlayerScreen was opened as a modal bottom sheet (from mini player)
+                                    final isModal = ModalRoute.of(context) is ModalBottomSheetRoute;
+
                                     Navigator.of(context).pop();
+
+                                    // If opened from mini player (modal), navigate to the playlist screen
+                                    // via the global navigator so the user can see the lesson map
+                                    if (isModal) {
+                                      navigatorKey.currentState?.push(
+                                        MaterialPageRoute(
+                                          builder: (_) => PlaylistScreen(
+                                            book: widget.book,
+                                          ),
+                                        ),
+                                      );
+                                    }
                                   },
                                   icon: const Icon(
                                     Icons.map_outlined,

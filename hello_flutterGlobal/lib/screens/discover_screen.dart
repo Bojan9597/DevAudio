@@ -13,6 +13,11 @@ import '../states/layout_state.dart';
 class DiscoverScreen extends StatefulWidget {
   const DiscoverScreen({Key? key}) : super(key: key);
 
+  /// Clear cached data so next build fetches fresh from server
+  static void invalidateCache() {
+    _DiscoverScreenState._lastFetchTime = null;
+  }
+
   @override
   State<DiscoverScreen> createState() => _DiscoverScreenState();
 }
@@ -24,7 +29,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   Timer? _debounce;
 
   // Static cache to persist data across tab switches (30 second cache)
-  static const Duration _cacheDuration = Duration(seconds: 30);
+  static const Duration _cacheDuration = Duration(seconds: 15);
   static DateTime? _lastFetchTime;
   static String _lastSearchQuery = '';
   static List<Book> _cachedBooks = [];

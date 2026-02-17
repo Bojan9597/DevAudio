@@ -39,7 +39,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   // Static cache for profile data (30 seconds)
-  static const Duration _cacheDuration = Duration(seconds: 30);
+  static const Duration _cacheDuration = Duration(seconds: 15);
   static DateTime? _lastFetchTime;
   static Map<String, dynamic>? _cachedUser;
   static List<Book> _cachedHistory = [];

@@ -34,7 +34,7 @@ class ContentArea extends StatefulWidget {
 
 class _ContentAreaState extends State<ContentArea> with WidgetsBindingObserver {
   // Static cache for library data (30 seconds)
-  static const Duration _cacheDuration = Duration(seconds: 30);
+  static const Duration _cacheDuration = Duration(seconds: 15);
   static DateTime? _lastFetchTime;
   static List<Book> _cachedAllBooks = [];
   static List<String> _cachedPurchasedIds = [];
@@ -804,10 +804,15 @@ class _ContentAreaState extends State<ContentArea> with WidgetsBindingObserver {
     final index = _allBooks.indexWhere((b) => b.id == book.id);
     if (index == -1) return;
 
+    final newFavState = !book.isFavorite;
+
     setState(() {
-      _allBooks[index] = _allBooks[index].copyWith(
-        isFavorite: !book.isFavorite,
-      );
+      _allBooks[index] = _allBooks[index].copyWith(isFavorite: newFavState);
+      // Also update history books so continue listening tab reflects the change
+      final histIdx = _historyBooks.indexWhere((b) => b.id == book.id);
+      if (histIdx != -1) {
+        _historyBooks[histIdx] = _historyBooks[histIdx].copyWith(isFavorite: newFavState);
+      }
     });
 
     final success = await BookRepository().toggleFavorite(
@@ -823,6 +828,10 @@ class _ContentAreaState extends State<ContentArea> with WidgetsBindingObserver {
           _allBooks[index] = _allBooks[index].copyWith(
             isFavorite: book.isFavorite,
           );
+          final histIdx = _historyBooks.indexWhere((b) => b.id == book.id);
+          if (histIdx != -1) {
+            _historyBooks[histIdx] = _historyBooks[histIdx].copyWith(isFavorite: book.isFavorite);
+          }
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -911,7 +920,24 @@ class _ContentAreaState extends State<ContentArea> with WidgetsBindingObserver {
               ),
           ],
         ),
-        trailing: Text('$percent%'),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('$percent%'),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () => _toggleFavorite(book),
+              child: Padding(
+                padding: const EdgeInsets.all(4.0),
+                child: Icon(
+                  book.isFavorite ? Icons.favorite : Icons.favorite_border,
+                  color: book.isFavorite ? Colors.red : Colors.grey,
+                  size: 22,
+                ),
+              ),
+            ),
+          ],
+        ),
         onTap: () => _openPlayer(book),
       ),
     );

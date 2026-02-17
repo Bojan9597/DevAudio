@@ -104,7 +104,7 @@ class _MiniPlayerState extends State<MiniPlayer> {
         }
 
         return Dismissible(
-          key: Key(mediaItem.id),
+          key: Key('${mediaItem.id}_${mediaItem.extras?['launchId'] ?? ''}'),
           // Allow swipe left/right to dismiss
           direction: DismissDirection.horizontal,
           onDismissed: (direction) {

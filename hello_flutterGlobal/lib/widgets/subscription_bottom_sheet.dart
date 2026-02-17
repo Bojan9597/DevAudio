@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import '../services/subscription_service.dart';
+import '../services/auth_service.dart';
+import '../screens/discover_screen.dart';
+import '../screens/profile_screen.dart';
+import 'content_area.dart';
 import '../l10n/generated/app_localizations.dart';
 
 class SubscriptionBottomSheet extends StatefulWidget {
@@ -49,6 +53,14 @@ class _SubscriptionBottomSheetState extends State<SubscriptionBottomSheet> {
       final result = await SubscriptionService().subscribe(_selectedPlan);
 
       if (result['success'] == true) {
+        // Persist subscription status locally for offline access
+        await AuthService().setSubscriptionStatus(true);
+
+        // Invalidate all screen caches so UI reflects subscription immediately
+        ContentArea.invalidateLibraryCache();
+        DiscoverScreen.invalidateCache();
+        ProfileScreenCache.clear();
+
         widget.onSubscribed();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
