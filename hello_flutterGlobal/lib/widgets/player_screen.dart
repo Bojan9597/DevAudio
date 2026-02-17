@@ -472,65 +472,72 @@ class _PlayerScreenState extends State<PlayerScreen>
         audioHandler.setUserId(userId);
       }
 
-      // Check if user is admin - admin always has access
-      final isAdmin = await AuthService().isAdmin();
-
-      // Parallel fetch for better performance
-      final results = await Future.wait([
-        BookRepository().getPurchasedBookIds(userId),
-        BookRepository().getFavoriteBookIds(userId),
-      ]);
-
-      final purchasedIds = results[0] as List<String>;
-      final favoriteIds =
-          results[1] as List<int>; // getFavoriteBookIds returns List<int>
-
-      final isOwned = purchasedIds.contains(widget.book.id);
-      // Ensure we compare int to int or string to string. widget.book.id is String.
-      final isFav = favoriteIds.contains(int.tryParse(widget.book.id) ?? -1);
-
-      // Check access logic:
-      // 1. Admin always has access
-      // 2. Free books (!isPremium) always have access
-      // 3. Purchased books always have access
-      // 4. Subscribed users have access (checked in PlaylistScreen, passed implicitly via 'isSubscribed' check there? No, we check here too)
-
-      // Wait, PlayerScreen checks ownership via api calls.
-      // But PlaylistScreen ALREADY checked access.
-      // If we are in PlayerScreen, we SHOULD assume access is granted unless we want to double check.
-      // However, PlayerScreen handles "Subscription Overlay" itself (lines 1492+).
-
-      // We need to verify if user is SUBSCRIBED here too, OR trust the caller.
-      // Currently, it only checks `getPurchasedBookIds`. It DOES NOT check SubscriptionService.
-      // We should check SubscriptionService OR check isPremium.
-
-      // Check subscription: try SubscriptionService first, fall back to local persistent status
-      bool isSubscribed = await SubscriptionService().isSubscribed();
-      if (!isSubscribed) {
-        // Fallback to locally persisted status (works offline)
-        isSubscribed = await AuthService().getPersistentSubscriptionStatus();
-      }
+      // FAST PATH: Check local persistent subscription status FIRST (no network)
+      // This prevents showing the subscribe overlay while network calls are in-flight
       final isFree = !widget.book.isPremium;
+      final isAdmin = await AuthService().isAdmin();
+      final localSubscribed = await AuthService().getPersistentSubscriptionStatus();
 
-      if (mounted) {
-        setState(() {
-          _isAdmin = isAdmin;
-          _isPurchased = isAdmin || isOwned || isSubscribed || isFree;
-          _isFavorite = isFav; // Update favorite status from backend
-          _isLoadingOwnership = false;
-        });
+      if (isFree || isAdmin || localSubscribed) {
+        // Grant access immediately based on local data
+        if (mounted) {
+          setState(() {
+            _isAdmin = isAdmin;
+            _isPurchased = true;
+            _isLoadingOwnership = false;
+          });
+          _startProgressSync();
+        }
       }
 
-      if (_isPurchased && mounted) {
-        _startProgressSync();
-      } else if (!_isPurchased && mounted) {
-        // Stop playback if user doesn't have access
-        await _player.stop();
+      // SLOW PATH: Verify with server (update favorites, purchased status, etc.)
+      try {
+        final results = await Future.wait([
+          BookRepository().getPurchasedBookIds(userId),
+          BookRepository().getFavoriteBookIds(userId),
+        ]);
+
+        final purchasedIds = results[0] as List<String>;
+        final favoriteIds = results[1] as List<int>;
+
+        final isOwned = purchasedIds.contains(widget.book.id);
+        final isFav = favoriteIds.contains(int.tryParse(widget.book.id) ?? -1);
+
+        // Check subscription from server (also updates cache)
+        bool isSubscribed = await SubscriptionService().isSubscribed();
+        if (!isSubscribed) {
+          isSubscribed = localSubscribed;
+        }
+
+        if (mounted) {
+          setState(() {
+            _isAdmin = isAdmin;
+            _isPurchased = isAdmin || isOwned || isSubscribed || isFree;
+            _isFavorite = isFav;
+            _isLoadingOwnership = false;
+          });
+        }
+
+        if (_isPurchased && mounted) {
+          _startProgressSync();
+        } else if (!_isPurchased && mounted) {
+          await _player.stop();
+        }
+      } catch (networkError) {
+        // Network calls failed - keep the fast-path decision
+        print("Network check failed, using local data: $networkError");
       }
     } catch (e) {
       print("Error checking ownership/favorites: $e");
       if (mounted) {
-        setState(() => _isLoadingOwnership = false);
+        // Even on error, check local subscription as fallback
+        final localSubscribed = await AuthService().getPersistentSubscriptionStatus();
+        final isFree = !widget.book.isPremium;
+        setState(() {
+          _isPurchased = localSubscribed || isFree;
+          _isLoadingOwnership = false;
+        });
+        if (_isPurchased) _startProgressSync();
       }
     }
   }
@@ -858,8 +865,20 @@ class _PlayerScreenState extends State<PlayerScreen>
       // Auto-play when player screen is opened
       await audioHandler.play();
 
-      // Force-sync bg music immediately after play starts
+      // Force-sync bg music: listen for the main player to actually be playing
+      // and then start bg music. This handles the case where play() returns
+      // but the player is still buffering.
+      StreamSubscription<PlayerState>? bgSyncSub;
+      bgSyncSub = _player.playerStateStream.listen((state) {
+        if (state.playing && state.processingState == ProcessingState.ready) {
+          audioHandler.syncBgMusic();
+          bgSyncSub?.cancel();
+        }
+      });
+      // Also try immediately in case the player is already ready
       audioHandler.syncBgMusic();
+      // Safety timeout: cancel listener after 10 seconds to avoid leaks
+      Future.delayed(const Duration(seconds: 10), () => bgSyncSub?.cancel());
 
       // Clear any previous error since we succeeded
       _lastError = null;

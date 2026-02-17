@@ -51,21 +51,6 @@ class _MiniPlayerState extends State<MiniPlayer> {
     });
   }
 
-  void _expand() {
-    if (!_isExpanded) {
-      setState(() {
-        _isExpanded = true;
-      });
-    }
-  }
-
-  void _collapse() {
-    if (_isExpanded) {
-      setState(() {
-        _isExpanded = false;
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -120,16 +105,8 @@ class _MiniPlayerState extends State<MiniPlayer> {
               final playing = playbackState?.playing ?? false;
 
               return GestureDetector(
-                // Vertical Swipes for Expand/Collapse
-                onVerticalDragEnd: (details) {
-                  if (details.primaryVelocity! < 0) {
-                    // Swiped Up -> Expand
-                    _expand();
-                  } else if (details.primaryVelocity! > 0) {
-                    // Swiped Down -> Collapse
-                    _collapse();
-                  }
-                },
+                // Only use onTap - let Dismissible handle horizontal swipes freely
+                // Use the chevron button for expand/collapse instead of vertical swipes
                 onTap: () {
                   // Open full player on tap
                   if (audioHandler.currentBook != null) {
