@@ -1875,254 +1875,235 @@ def get_discover():
     """
     import time
     start_total = time.time()
-    
+
     db = Database()
     if not db.connect():
         return jsonify({"error": "Database connection failed"}), 500
-    
+
     try:
         user_id = request.args.get('user_id', None, type=int)
         page = request.args.get('page', 1, type=int)
         limit = request.args.get('limit', 10, type=int)
-        
-        # Check cache (both anonymous and authenticated requests)
+        offset = max(0, (page - 1) * limit)
+
         cache_key = f"discover:{user_id or 'anon'}:{page}:{limit}"
         cached_data = cache.get(cache_key)
         if cached_data:
             return jsonify(cached_data)
 
-        offset = (page - 1) * limit
-        
-        # Helper function to build book list from query results
-        def build_books(books_result, subcats_by_book, progress_by_book, read_status_by_book, favIds, user_bg_prefs):
+        query = """
+            WITH params AS (
+                SELECT %s::int AS user_id, %s::int AS page_limit, %s::int AS page_offset
+            ),
+            default_bg AS (
+                SELECT id AS default_bg_id
+                FROM background_music
+                ORDER BY is_default DESC, id ASC
+                LIMIT 1
+            ),
+            book_base AS (
+                SELECT
+                    b.id,
+                    b.title,
+                    b.author,
+                    b.audio_path,
+                    b.cover_image_path,
+                    c.slug AS category_slug,
+                    u.name AS posted_by_name,
+                    b.description,
+                    b.price,
+                    b.posted_by_user_id,
+                    b.duration_seconds,
+                    b.pdf_path,
+                    b.premium,
+                    COALESCE(pi_count.cnt, 0) AS playlist_count,
+                    COALESCE(br_stats.avg_rating, 0) AS average_rating,
+                    COALESCE(br_stats.rating_cnt, 0) AS rating_count,
+                    COALESCE(ub.is_read, 0) AS is_read,
+                    COALESCE(ub.last_played_position_seconds, 0) AS last_position,
+                    ub.current_playlist_item_id,
+                    ub.last_accessed_at,
+                    COALESCE(
+                        ub.background_music_id,
+                        b.background_music_id,
+                        (SELECT default_bg_id FROM default_bg)
+                    ) AS active_bg_id,
+                    COALESCE(subcats.slugs, '[]'::jsonb) AS subcategory_ids
+                FROM books b
+                LEFT JOIN categories c ON b.primary_category_id = c.id
+                LEFT JOIN users u ON b.posted_by_user_id = u.id
+                LEFT JOIN (
+                    SELECT book_id, COUNT(*) AS cnt
+                    FROM playlist_items
+                    GROUP BY book_id
+                ) pi_count ON pi_count.book_id = b.id
+                LEFT JOIN (
+                    SELECT book_id, AVG(stars) AS avg_rating, COUNT(*) AS rating_cnt
+                    FROM book_ratings
+                    GROUP BY book_id
+                ) br_stats ON br_stats.book_id = b.id
+                LEFT JOIN user_books ub
+                    ON ub.book_id = b.id
+                   AND ub.user_id = (SELECT user_id FROM params)
+                LEFT JOIN LATERAL (
+                    SELECT jsonb_agg(c2.slug ORDER BY c2.slug) AS slugs
+                    FROM book_categories bc
+                    JOIN categories c2 ON c2.id = bc.category_id
+                    WHERE bc.book_id = b.id
+                ) subcats ON TRUE
+            ),
+            new_rows AS (
+                SELECT *
+                FROM book_base
+                ORDER BY id DESC
+                LIMIT 5
+            ),
+            top_rows AS (
+                SELECT *
+                FROM book_base
+                ORDER BY (average_rating * rating_count) DESC NULLS LAST, id DESC
+                LIMIT 5
+            ),
+            all_rows AS (
+                SELECT *
+                FROM book_base
+                ORDER BY id DESC
+                LIMIT (SELECT page_limit FROM params)
+                OFFSET (SELECT page_offset FROM params)
+            ),
+            history_rows AS (
+                SELECT *
+                FROM book_base
+                WHERE (SELECT user_id FROM params) IS NOT NULL
+                  AND last_position > 0
+                  AND COALESCE(is_read, 0) = 0
+                ORDER BY last_accessed_at DESC
+            ),
+            favorites_cte AS (
+                SELECT COALESCE(jsonb_agg(f.book_id), '[]'::jsonb) AS favorites
+                FROM favorites f
+                WHERE f.user_id = (SELECT user_id FROM params)
+            ),
+            categories_cte AS (
+                SELECT COALESCE(
+                    jsonb_agg(
+                        jsonb_build_object(
+                            'id', c.id,
+                            'name', c.name,
+                            'slug', c.slug,
+                            'parent_id', c.parent_id
+                        )
+                        ORDER BY c.id
+                    ),
+                    '[]'::jsonb
+                ) AS categories
+                FROM categories c
+            ),
+            subscription_cte AS (
+                SELECT EXISTS(
+                    SELECT 1
+                    FROM subscriptions s
+                    WHERE s.user_id = (SELECT user_id FROM params)
+                      AND s.status = 'active'
+                      AND (s.end_date IS NULL OR s.end_date > NOW() AT TIME ZONE 'UTC')
+                ) AS is_subscribed
+            )
+            SELECT
+                (SELECT is_subscribed FROM subscription_cte) AS is_subscribed,
+                COALESCE((SELECT favorites FROM favorites_cte), '[]'::jsonb) AS favorites,
+                COALESCE((SELECT jsonb_agg(to_jsonb(nr) ORDER BY nr.id DESC) FROM new_rows nr), '[]'::jsonb) AS new_releases,
+                COALESCE((SELECT jsonb_agg(to_jsonb(tp) ORDER BY (tp.average_rating * tp.rating_count) DESC, tp.id DESC) FROM top_rows tp), '[]'::jsonb) AS top_picks,
+                COALESCE((SELECT jsonb_agg(to_jsonb(ar) ORDER BY ar.id DESC) FROM all_rows ar), '[]'::jsonb) AS all_books,
+                COALESCE((SELECT jsonb_agg(to_jsonb(hr) ORDER BY hr.last_accessed_at DESC) FROM history_rows hr), '[]'::jsonb) AS listen_history,
+                COALESCE((SELECT categories FROM categories_cte), '[]'::jsonb) AS categories
+        """
+        result = db.execute_query(query, (user_id, limit, offset))
+        if not result:
+            response = {
+                "newReleases": [],
+                "topPicks": [],
+                "allBooks": [],
+                "favorites": [],
+                "isSubscribed": False,
+                "listenHistory": [],
+                "categories": [],
+            }
+            cache.set(cache_key, response, 30)
+            return jsonify(response)
+
+        payload = result[0]
+        favorites_raw = payload.get('favorites') or []
+        favorite_ids = [int(x) for x in favorites_raw if x is not None]
+        favorite_set = set(favorite_ids)
+
+        def serialize_books(rows):
             books = []
-            for row in books_result:
-                book_id = row['id']
-                subcategory_ids = subcats_by_book.get(book_id, [])
-                audio_path = resolve_stored_url(row['audio_path'], "AudioBooks")
-                cover_path, cover_thumbnail_path = resolve_cover_urls(row['cover_image_path'])
-                
-                percentage = None
-                if user_id:
-                    if read_status_by_book.get(book_id):
-                        percentage = 100.0
-                    else:
-                        total_duration = row['duration_seconds'] or 0
-                        is_playlist = row.get('playlist_count', 0) > 0
-                        if total_duration > 0:
-                            if is_playlist:
-                                tracks = progress_by_book.get(book_id, {}).get('tracks', [])
-                                total_listened = 0
-                                for track in tracks:
-                                    if track['is_completed'] and track['duration'] > 0:
-                                        total_listened += track['duration']
-                                    else:
-                                        total_listened += min(track['last_position'], track['duration']) if track['duration'] > 0 else track['last_position']
-                                percentage = round((total_listened / total_duration * 100), 2)
-                            else:
-                                single_progress = progress_by_book.get(book_id, {}).get('single_progress', 0)
-                                percentage = round((single_progress / total_duration * 100), 2)
-                        else:
-                            percentage = 0
-                
-                # Determine Background Music
-                # Prioritize User Preference -> then Book Default
-                bg_music_id = user_bg_prefs.get(book_id)
-                if bg_music_id is None:
-                    bg_music_id = row.get('background_music_id')
+            for row in rows or []:
+                book_id = row.get('id')
+                if book_id is None:
+                    continue
+
+                cover_path, cover_thumbnail_path = resolve_cover_urls(row.get('cover_image_path'))
+                audio_path = resolve_stored_url(row.get('audio_path'), "AudioBooks")
+                duration = int(row.get('duration_seconds') or 0)
+                is_read = bool(row.get('is_read'))
+                last_position = int(row.get('last_position') or 0)
+
+                if is_read:
+                    percentage = 100.0
+                elif duration > 0:
+                    percentage = round((min(last_position, duration) / duration) * 100, 2)
+                else:
+                    percentage = 0.0
+
+                subcategory_ids = row.get('subcategory_ids') or []
+                if not isinstance(subcategory_ids, list):
+                    subcategory_ids = []
 
                 books.append({
                     "id": str(book_id),
-                    "title": row['title'],
-                    "author": row['author'],
-                    "audioUrl": audio_path,
+                    "title": row.get('title') or "Untitled",
+                    "author": row.get('author') or "Unknown",
+                    "audioUrl": audio_path or "",
                     "coverUrl": cover_path,
                     "coverUrlThumbnail": cover_thumbnail_path,
                     "categoryId": row.get('category_slug') or "",
                     "subcategoryIds": subcategory_ids,
                     "postedBy": row.get('posted_by_name') or "Unknown",
-                    "description": row.get('description'),
-                    "price": float(row['price']) if row.get('price') else 0.0,
-                    "postedByUserId": str(row.get('posted_by_user_id', 0)),
-                    "isPlaylist": row.get('playlist_count', 0) > 0,
-                    "duration": row['duration_seconds'] or 0,
-                    "averageRating": round(float(row['average_rating']), 1) if row.get('average_rating') else 0.0,
-                    "ratingCount": row.get('rating_count') or 0,
+                    "description": row.get('description') or "",
+                    "price": float(row.get('price') or 0.0),
+                    "postedByUserId": str(row.get('posted_by_user_id') or ""),
+                    "isPlaylist": (row.get('playlist_count') or 0) > 0,
+                    "duration": duration,
+                    "averageRating": round(float(row.get('average_rating') or 0.0), 1),
+                    "ratingCount": int(row.get('rating_count') or 0),
                     "pdfUrl": resolve_stored_url(row.get('pdf_path'), "AudioBooks"),
                     "premium": row.get('premium') or 0,
-                    "isFavorite": int(book_id) in favIds,
+                    "isFavorite": int(book_id) in favorite_set,
                     "percentage": percentage,
-                    "lastPosition": row.get('last_position'),
-                    "backgroundMusicId": bg_music_id,
-                    "currentPlaylistItemId": row.get('current_playlist_item_id')
+                    "lastPosition": last_position,
+                    "backgroundMusicId": row.get('active_bg_id'),
+                    "currentPlaylistItemId": row.get('current_playlist_item_id'),
                 })
             return books
-        
-        # Get favorites for user
-        favIds = []
-        if user_id:
-            fav_result = db.execute_query("SELECT book_id FROM favorites WHERE user_id = %s", (user_id,))
-            if fav_result:
-                favIds = [row['book_id'] for row in fav_result]
-        
-        # Get subscription status
-        is_subscribed = False
-        if user_id:
-            is_subscribed = is_subscriber(user_id, db)
-        
-        # Base query for books - uses JOINs instead of correlated subqueries
-        base_select = """
-            SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, c.slug as category_slug,
-                   u.name as posted_by_name, b.description, b.price, b.posted_by_user_id, b.duration_seconds, b.pdf_path,
-                   b.premium, b.background_music_id,
-                   COALESCE(pi_count.cnt, 0) as playlist_count,
-                   br_stats.avg_rating as average_rating,
-                   COALESCE(br_stats.rating_cnt, 0) as rating_count
-            FROM books b
-            LEFT JOIN categories c ON b.primary_category_id = c.id
-            LEFT JOIN users u ON b.posted_by_user_id = u.id
-            LEFT JOIN (
-                SELECT book_id, COUNT(*) as cnt FROM playlist_items GROUP BY book_id
-            ) pi_count ON pi_count.book_id = b.id
-            LEFT JOIN (
-                SELECT book_id, AVG(stars) as avg_rating, COUNT(*) as rating_cnt FROM book_ratings GROUP BY book_id
-            ) br_stats ON br_stats.book_id = b.id
-        """
 
-        # Fetch user preferences for personalized top picks
-        user_pref_categories = None
-        if user_id:
-            pref_result = db.execute_query("SELECT preferences FROM users WHERE id = %s", (user_id,))
-            if pref_result and pref_result[0].get('preferences'):
-                prefs_data = pref_result[0]['preferences']
-                if isinstance(prefs_data, str):
-                    import json as json_lib
-                    prefs_data = json_lib.loads(prefs_data)
-                user_pref_categories = prefs_data.get('categories', [])
+        categories_flat = payload.get('categories') or []
+        categories_tree = build_category_tree(categories_flat) if categories_flat else []
 
-        # Fetch all three book lists in one go (newest, popular/personalized, paginated)
-        newest_result = db.execute_query(base_select + " ORDER BY b.id DESC LIMIT 5")
-
-        # Top Picks: personalized by preferred categories if available, else by rating
-        if user_pref_categories:
-            cat_placeholders = ','.join(['%s'] * len(user_pref_categories))
-            popular_result = db.execute_query(base_select + f"""
-                WHERE c.slug IN ({cat_placeholders})
-                ORDER BY (
-                    COALESCE(br_stats.avg_rating, 0) * COALESCE(br_stats.rating_cnt, 0)
-                ) DESC NULLS LAST, b.id DESC LIMIT 5""", tuple(user_pref_categories))
-            # Fall back to general popularity if not enough personalized results
-            if not popular_result or len(popular_result) < 5:
-                popular_result = db.execute_query(base_select + """ ORDER BY (
-                    COALESCE(br_stats.avg_rating, 0) * COALESCE(br_stats.rating_cnt, 0)
-                ) DESC NULLS LAST, b.id DESC LIMIT 5""")
-        else:
-            popular_result = db.execute_query(base_select + """ ORDER BY (
-                COALESCE(br_stats.avg_rating, 0) * COALESCE(br_stats.rating_cnt, 0)
-            ) DESC NULLS LAST, b.id DESC LIMIT 5""")
-
-        all_result = db.execute_query(base_select + " ORDER BY b.id DESC LIMIT %s OFFSET %s", (limit, offset))
-        
-        # Collect all book IDs for batch subcategory/progress queries
-        all_book_ids = set()
-        for result in [newest_result, popular_result, all_result]:
-            if result:
-                for row in result:
-                    all_book_ids.add(row['id'])
-        all_book_ids = list(all_book_ids)
-        
-        # Batch fetch subcategories
-        subcats_by_book = {}
-        if all_book_ids:
-            placeholders = ','.join(['%s'] * len(all_book_ids))
-            subcats_result = db.execute_query(f"""
-                SELECT bc.book_id, c.slug 
-                FROM book_categories bc
-                JOIN categories c ON bc.category_id = c.id
-                WHERE bc.book_id IN ({placeholders})
-            """, tuple(all_book_ids))
-            if subcats_result:
-                for row in subcats_result:
-                    bid = row['book_id']
-                    if bid not in subcats_by_book:
-                        subcats_by_book[bid] = []
-                    subcats_by_book[bid].append(row['slug'])
-        
-        # Batch fetch progress data (if user logged in)
-        progress_by_book = {}
-        read_status_by_book = {}
-        user_bg_prefs = {}
-        
-        if user_id and all_book_ids:
-            placeholders = ','.join(['%s'] * len(all_book_ids))
-            
-            read_result = db.execute_query(f"""
-                SELECT book_id, is_read, background_music_id FROM user_books 
-                WHERE user_id = %s AND book_id IN ({placeholders})
-            """, (user_id, *all_book_ids))
-            if read_result:
-                for row in read_result:
-                    read_status_by_book[row['book_id']] = row.get('is_read', False)
-                    if row.get('background_music_id'):
-                        user_bg_prefs[row['book_id']] = row['background_music_id']
-            
-            single_result = db.execute_query(f"""
-                SELECT book_id, COALESCE(MAX(played_seconds), 0) as last_position
-                FROM playback_history WHERE user_id = %s AND book_id IN ({placeholders})
-                GROUP BY book_id
-            """, (user_id, *all_book_ids))
-            if single_result:
-                for row in single_result:
-                    progress_by_book[row['book_id']] = {'single_progress': row['last_position']}
-        
-        # Get listen history (using user_books table like /listen-history endpoint)
-        listen_history = []
-        if user_id:
-            history_query = """
-                SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, b.duration_seconds,
-                       b.premium, b.pdf_path, c.slug as category_slug,
-                       ub.last_played_position_seconds as last_position,
-                       ub.current_playlist_item_id,
-                       COALESCE(pi_count.cnt, 0) as playlist_count,
-                       br_stats.avg_rating as average_rating,
-                       COALESCE(br_stats.rating_cnt, 0) as rating_count
-                FROM user_books ub
-                JOIN books b ON ub.book_id = b.id
-                LEFT JOIN categories c ON b.primary_category_id = c.id
-                LEFT JOIN (
-                    SELECT book_id, COUNT(*) as cnt FROM playlist_items GROUP BY book_id
-                ) pi_count ON pi_count.book_id = b.id
-                LEFT JOIN (
-                    SELECT book_id, AVG(stars) as avg_rating, COUNT(*) as rating_cnt FROM book_ratings GROUP BY book_id
-                ) br_stats ON br_stats.book_id = b.id
-                WHERE ub.user_id = %s AND ub.last_played_position_seconds > 0 AND (ub.is_read = 0 OR ub.is_read IS NULL)
-                ORDER BY ub.last_accessed_at DESC
-            """
-            history_result = db.execute_query(history_query, (user_id,))
-            if history_result:
-                listen_history = build_books(history_result, subcats_by_book, progress_by_book, read_status_by_book, favIds, user_bg_prefs)
-        
-        # Build response
-        # Fetch categories (reuse the same logic as /categories endpoint)
-        categories_result = db.execute_query("SELECT id, name, slug, parent_id FROM categories ORDER BY id ASC")
-        categories_tree = build_category_tree(categories_result) if categories_result else []
-        
-        # Build response
         response = {
-            "newReleases": build_books(newest_result or [], subcats_by_book, progress_by_book, read_status_by_book, favIds, user_bg_prefs),
-            "topPicks": build_books(popular_result or [], subcats_by_book, progress_by_book, read_status_by_book, favIds, user_bg_prefs),
-            "allBooks": build_books(all_result or [], subcats_by_book, progress_by_book, read_status_by_book, favIds, user_bg_prefs),
-            "favorites": favIds,
-            "isSubscribed": is_subscribed,
-            "listenHistory": listen_history,
+            "newReleases": serialize_books(payload.get('new_releases') or []),
+            "topPicks": serialize_books(payload.get('top_picks') or []),
+            "allBooks": serialize_books(payload.get('all_books') or []),
+            "favorites": favorite_ids,
+            "isSubscribed": bool(payload.get('is_subscribed')),
+            "listenHistory": serialize_books(payload.get('listen_history') or []),
             "categories": categories_tree,
         }
-        
+
         print(f"[TIMING] get_discover: total={round((time.time() - start_total) * 1000)}ms")
-        
         cache.set(cache_key, response, 30)
         return jsonify(response)
-        
+
     except Exception as e:
         print(f"Error in get_discover: {e}")
         import traceback
@@ -2146,211 +2127,249 @@ def get_reels():
     
     if not user_id:
         return jsonify({"error": "User ID required"}), 400
+    try:
+        user_id_int = int(user_id)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid user_id"}), 400
         
     db = Database()
     if not db.connect():
         return jsonify({"error": "Database connection failed"}), 500
-        
-    # STATEFUL REELS: Server manages the offset.
-    # Client asks for "more", we give next batch and update offset.
-    # STATEFUL REELS: Hybrid approach.
-    # Client CAN send offset. If valid, we use it. If not, we use DB.
-    # This allows client to retry specific pages or sync state.
-    limit = int(request.args.get('limit', 5))
-    client_offset = request.args.get('offset') # string or None
+
+    limit = max(1, int(request.args.get('limit', 5)))
+    client_offset_raw = request.args.get('offset')
+    client_offset = None
+    if client_offset_raw is not None:
+        try:
+            client_offset = int(client_offset_raw)
+        except ValueError:
+            client_offset = None
 
     try:
-        # 1. Determine start offset
-        offset = 0
-        saved_offset = 0
-        
-        # Get DB offset (always needed for fallback or "Resume")
-        try:
-            offset_result = db.execute_query("SELECT reels_offset FROM users WHERE id = %s", (user_id,))
-            if offset_result and offset_result[0].get('reels_offset') is not None:
-                saved_offset = offset_result[0]['reels_offset']
-        except Exception as e:
-            print(f"Could not fetch reels_offset: {e}")
-        
-        # Decide which offset to use
-        if client_offset is not None:
-            try:
-                offset = int(client_offset)
-                # If client says 0, but we have saved progress, should we override?
-                # User said: "if current offset is 0, offset should be 5... on server... update offset"
-                # If client sends 0, they might mean "Restart" or "Fresh".
-                # But usually we want Resume.
-                # If client sends explicit 0, we treat it as 0 unless smart resume is active?
-                # Let's trust client if they send explicit value, BUT if value is 0 and we have >0, maybe resume?
-                # User complained "returns to beginning always".
-                if offset == 0:
-                     offset = saved_offset
-            except ValueError:
-                offset = saved_offset
-        else:
-            offset = saved_offset
-        
-        # Check subscription
-        user_id_int = int(user_id)
-        subscribed = is_subscriber(user_id_int, db)
-        
-        if not subscribed:
-             return jsonify({
-                 "isSubscribed": False,
-                 "books": [],
-                 "hasMore": False,
-                 "savedOffset": offset
-             }), 200
-
-        # 2. Get total book count
-        count_result = db.execute_query("SELECT COUNT(*) as count FROM books")
-        if not count_result:
-             print("[REELS] Error: Could not fetch book count.")
-             return jsonify({"isSubscribed": True, "books": [], "hasMore": False, "savedOffset": offset}), 200
-             
-        total_books = count_result[0]['count']
-        
-        if total_books == 0:
-            return jsonify({"isSubscribed": True, "books": [], "hasMore": False, "savedOffset": 0}), 200
-        
-        # 3. Calculate effective offset (circular)
-        effective_offset = offset % total_books
-        print(f"[REELS] Stateful Fetch: User {user_id} at offset {offset} (effective {effective_offset}). Fetching {limit} items.")
-
-        # 4. Fetch books (Joined with user_books for background music preference)
-        books_query = """
-            SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, b.duration_seconds,
-                   b.description, b.posted_by_user_id, b.background_music_id as default_bg_id,
-                   ub.background_music_id as user_bg_id
-            FROM books b
-            LEFT JOIN user_books ub ON b.id = ub.book_id AND ub.user_id = %s
-            ORDER BY b.id DESC
-            LIMIT %s OFFSET %s
-        """
-        books_result = db.execute_query(books_query, (user_id, limit + 5, effective_offset))
-        
-        # Wrap around logic
-        if books_result and len(books_result) < limit:
-            remaining = limit - len(books_result)
-            wrap_query = """
-                SELECT b.id, b.title, b.author, b.audio_path, b.cover_image_path, b.duration_seconds,
-                       b.description, b.posted_by_user_id, b.background_music_id as default_bg_id,
-                       ub.background_music_id as user_bg_id
+        query = """
+            WITH params AS (
+                SELECT %s::int AS user_id, %s::int AS limit_val, %s::int AS requested_offset
+            ),
+            subscription_cte AS (
+                SELECT EXISTS(
+                    SELECT 1
+                    FROM subscriptions s
+                    WHERE s.user_id = (SELECT user_id FROM params)
+                      AND s.status = 'active'
+                      AND (s.end_date IS NULL OR s.end_date > NOW() AT TIME ZONE 'UTC')
+                ) AS is_subscribed
+            ),
+            total_cte AS (
+                SELECT COUNT(*)::int AS total_books
+                FROM books
+            ),
+            user_state AS (
+                SELECT COALESCE(u.reels_offset, 0)::int AS saved_offset
+                FROM users u
+                WHERE u.id = (SELECT user_id FROM params)
+            ),
+            offset_cte AS (
+                SELECT
+                    t.total_books,
+                    CASE
+                        WHEN p.requested_offset IS NULL THEN COALESCE(us.saved_offset, 0)
+                        WHEN p.requested_offset = 0 THEN COALESCE(us.saved_offset, 0)
+                        ELSE p.requested_offset
+                    END AS raw_offset
+                FROM params p
+                CROSS JOIN total_cte t
+                LEFT JOIN user_state us ON TRUE
+            ),
+            effective_offset_cte AS (
+                SELECT
+                    oc.total_books,
+                    oc.raw_offset,
+                    CASE
+                        WHEN oc.total_books > 0 THEN (oc.raw_offset %% oc.total_books)
+                        ELSE 0
+                    END AS effective_offset
+                FROM offset_cte oc
+            ),
+            default_bg AS (
+                SELECT id AS default_bg_id
+                FROM background_music
+                ORDER BY is_default DESC, id ASC
+                LIMIT 1
+            ),
+            ranked_books AS (
+                SELECT
+                    b.id,
+                    b.title,
+                    b.author,
+                    b.audio_path,
+                    b.cover_image_path,
+                    b.duration_seconds,
+                    b.description,
+                    b.posted_by_user_id,
+                    b.background_music_id,
+                    ROW_NUMBER() OVER (ORDER BY b.id DESC) - 1 AS rn
                 FROM books b
-                LEFT JOIN user_books ub ON b.id = ub.book_id AND ub.user_id = %s
-                ORDER BY b.id DESC
-                LIMIT %s OFFSET 0
-            """
-            wrap_result = db.execute_query(wrap_query, (user_id, remaining + 5,))
-            if wrap_result:
-                existing_ids = {b['id'] for b in books_result}
-                for book in wrap_result:
-                    if book['id'] not in existing_ids:
-                        books_result.append(book)
-        
-        # 5. IMMEDIATE UPDATE: Advance offset for next time
-        # We increment by 'limit' to advance by page size, regardless of actual returned (due to wrap).
-        # Ensures smooth pagination.
-        new_offset = (offset + limit) % total_books
-        try:
-            db.execute_query("UPDATE users SET reels_offset = %s WHERE id = %s", (new_offset, user_id))
-            print(f"[REELS] Updated offset to {new_offset} for user {user_id}")
-        except Exception as e:
-            print(f"Failed to update reels_offset: {e}")
+            ),
+            selected_books AS (
+                SELECT
+                    rb.*,
+                    ((rb.rn - eo.effective_offset + eo.total_books) %% eo.total_books) AS seq
+                FROM ranked_books rb
+                CROSS JOIN effective_offset_cte eo
+                WHERE eo.total_books > 0
+                ORDER BY seq
+                LIMIT (SELECT limit_val + 5 FROM params)
+            )
+            SELECT
+                sc.is_subscribed,
+                eo.total_books,
+                eo.raw_offset AS saved_offset,
+                eo.effective_offset,
+                COALESCE(
+                    jsonb_agg(
+                        jsonb_build_object(
+                            'id', sb.id,
+                            'title', sb.title,
+                            'author', sb.author,
+                            'audio_path', sb.audio_path,
+                            'cover_image_path', sb.cover_image_path,
+                            'duration_seconds', sb.duration_seconds,
+                            'description', sb.description,
+                            'posted_by_user_id', sb.posted_by_user_id,
+                            'default_bg_id', sb.background_music_id,
+                            'user_bg_id', ub.background_music_id,
+                            'active_bg_id', COALESCE(
+                                ub.background_music_id,
+                                sb.background_music_id,
+                                (SELECT default_bg_id FROM default_bg)
+                            ),
+                            'tracks', COALESCE(tr.tracks, '[]'::jsonb)
+                        )
+                        ORDER BY sb.seq
+                    ) FILTER (WHERE sb.id IS NOT NULL),
+                    '[]'::jsonb
+                ) AS books
+            FROM subscription_cte sc
+            CROSS JOIN effective_offset_cte eo
+            LEFT JOIN selected_books sb ON TRUE
+            LEFT JOIN user_books ub
+                   ON ub.book_id = sb.id
+                  AND ub.user_id = (SELECT user_id FROM params)
+            LEFT JOIN LATERAL (
+                SELECT jsonb_agg(
+                    jsonb_build_object(
+                        'id', pi.id::text,
+                        'title', COALESCE(pi.title, 'Unknown Track'),
+                        'audioUrl', pi.file_path,
+                        'duration', COALESCE(pi.duration_seconds, 0),
+                        'order', COALESCE(pi.track_order, 0)
+                    )
+                    ORDER BY pi.track_order
+                ) AS tracks
+                FROM playlist_items pi
+                WHERE pi.book_id = sb.id
+            ) tr ON TRUE
+            GROUP BY sc.is_subscribed, eo.total_books, eo.raw_offset, eo.effective_offset
+        """
+        reels_result = db.execute_query(query, (user_id_int, limit, client_offset))
+        if not reels_result:
+            return jsonify({"error": "Failed to load reels"}), 500
 
-        if not books_result:
-             return jsonify({"isSubscribed": True, "books": [], "hasMore": True, "savedOffset": offset}), 200
+        row = reels_result[0]
+        is_subscribed = bool(row.get('is_subscribed'))
+        total_books = int(row.get('total_books') or 0)
+        saved_offset = int(row.get('saved_offset') or 0)
 
-        # Collect IDs and fetch playlist items (same as before)
-        book_ids = list(set([b['id'] for b in books_result]))
-        
-        playlist_result = []
-        if book_ids:
-            placeholders = ','.join(['%s'] * len(book_ids))
-            playlist_query = f"""
-                SELECT id, book_id, file_path, title, duration_seconds, track_order
-                FROM playlist_items
-                WHERE book_id IN ({placeholders})
-                ORDER BY book_id, track_order
-            """
-            playlist_result = db.execute_query(playlist_query, tuple(book_ids))
-        
-        tracks_by_book = {}
-        if playlist_result:
-            for row in playlist_result:
-                bid = row['book_id']
-                if bid not in tracks_by_book:
-                    tracks_by_book[bid] = []
-                audio_path = resolve_stored_url(row['file_path'], "AudioBooks")
-                tracks_by_book[bid].append({
-                    "id": str(row['id']),
-                    "title": row['title'] or "Unknown Track",
-                    "audioUrl": audio_path or "",
-                    "duration": row['duration_seconds'] or 0,
-                    "order": row['track_order'] or 0
-                })
-        
+        if not is_subscribed:
+            return jsonify({
+                "isSubscribed": False,
+                "books": [],
+                "hasMore": False,
+                "savedOffset": saved_offset,
+            }), 200
+
         books_data = []
-        for book in books_result:
+        books_raw = row.get('books') or []
+        for book in books_raw:
             try:
-                book_id = book['id']
-                cover_path, cover_thumb = resolve_cover_urls(book['cover_image_path'])
-                audio_path = resolve_stored_url(book['audio_path'], "AudioBooks")
-                tracks = tracks_by_book.get(book_id, [])
-                
-                if not tracks and book['audio_path']:
+                book_id = book.get('id')
+                if book_id is None:
+                    continue
+
+                cover_path, cover_thumb = resolve_cover_urls(book.get('cover_image_path'))
+                audio_path = resolve_stored_url(book.get('audio_path'), "AudioBooks")
+                tracks_raw = book.get('tracks') or []
+                tracks = []
+
+                for track in tracks_raw:
+                    track_audio = resolve_stored_url(track.get('audioUrl'), "AudioBooks")
+                    tracks.append({
+                        "id": str(track.get('id') or ""),
+                        "title": track.get('title') or "Unknown Track",
+                        "audioUrl": track_audio or "",
+                        "duration": int(track.get('duration') or 0),
+                        "order": int(track.get('order') or 0),
+                    })
+
+                if not tracks and book.get('audio_path'):
                     tracks = [{
                         "id": f"book_{book_id}",
-                        "title": book['title'] or "Untitled",
+                        "title": book.get('title') or "Untitled",
                         "audioUrl": audio_path or "",
-                        "duration": book['duration_seconds'] or 0,
-                        "order": 0
+                        "duration": int(book.get('duration_seconds') or 0),
+                        "order": 0,
                     }]
-                
+
                 if not tracks:
                     continue
-                
-                active_bg_id = book.get('user_bg_id')
-                if active_bg_id is None:
-                    active_bg_id = book.get('default_bg_id')
 
                 books_data.append({
                     "id": str(book_id),
-                    "title": book['title'] or "Untitled",
-                    "author": book['author'] or "Unknown",
+                    "title": book.get('title') or "Untitled",
+                    "author": book.get('author') or "Unknown",
                     "coverUrl": cover_path,
                     "coverUrlThumbnail": cover_thumb,
-                    "description": book['description'] or "",
-                    "postedByUserId": str(book['posted_by_user_id'] or ""),
+                    "description": book.get('description') or "",
+                    "postedByUserId": str(book.get('posted_by_user_id') or ""),
                     "categoryId": "",
                     "subcategoryIds": [],
-                    "audioUrl": audio_path if book['audio_path'] else "",
+                    "audioUrl": audio_path or "",
                     "isPlaylist": len(tracks) > 0,
                     "isPremium": True,
                     "price": 0.0,
                     "averageRating": 0.0,
                     "ratingCount": 0,
                     "tracks": tracks,
-                    "backgroundMusicId": active_bg_id
+                    "backgroundMusicId": book.get('active_bg_id'),
                 })
             except Exception as e:
-                print(f"Skipping bad book {book.get('id')}: {e}")
+                print(f"Skipping bad book row in reels: {e}")
                 continue
-            
-        # Slice to limit if we fetched extra
+
         if len(books_data) > limit:
             books_data = books_data[:limit]
+
+        if total_books > 0:
+            new_offset = (saved_offset + limit) % total_books
+            update_result = db.execute_query(
+                "UPDATE users SET reels_offset = %s WHERE id = %s",
+                (new_offset, user_id_int),
+            )
+            if update_result is None:
+                print(f"[REELS] Failed to update reels_offset for user {user_id}")
 
         return jsonify({
             "isSubscribed": True,
             "books": books_data,
-            "hasMore": len(books_result) > limit,
-            "savedOffset": saved_offset
+            "hasMore": total_books > limit,
+            "savedOffset": saved_offset,
         }), 200
-        
+
     except Exception as e:
         print(f"Error in get_reels: {e}")
         return jsonify({"error": str(e)}), 500
+    finally:
+        db.disconnect()
 
 @app.route('/reels/offset', methods=['GET'])
 def get_reels_offset():
@@ -3220,7 +3239,7 @@ def get_book_status(user_id, book_id):
 @app.route('/user-books/background-music', methods=['POST'])
 @jwt_required
 def update_user_background_music():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     user_id = data.get('user_id')
     book_id = data.get('book_id')
     bg_music_id = data.get('background_music_id')
@@ -3228,31 +3247,46 @@ def update_user_background_music():
     if not all([user_id, book_id]):
         return jsonify({"error": "Missing user_id or book_id"}), 400
 
+    try:
+        user_id = int(user_id)
+        book_id = int(book_id)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid user_id or book_id"}), 400
+
+    # Allow explicit null to clear user override so fallback applies:
+    # user_books -> books.default -> global default.
+    if bg_music_id in ("", "null", "None"):
+        bg_music_id = None
+    elif bg_music_id is not None:
+        try:
+            bg_music_id = int(bg_music_id)
+        except (TypeError, ValueError):
+            return jsonify({"error": "Invalid background_music_id"}), 400
+
     db = Database()
     if not db.connect():
         return jsonify({"error": "Database connection failed"}), 500
 
     try:
+        if bg_music_id is not None:
+            exists = db.execute_query(
+                "SELECT id FROM background_music WHERE id = %s",
+                (bg_music_id,),
+            )
+            if not exists:
+                return jsonify({"error": "Background music not found"}), 404
+
         # Upsert user_books record
-        # Note: This assumes there is a UNIQUE constraint on (user_id, book_id) in user_books.
-        # If not, we might get duplicates or errors, but standard join tables usually have it.
-        # We'll use ON CONFLICT DO UPDATE.
-        
-        # First ensure the record exists or create it, then update.
-        # Actually standard INSERT ON CONFLICT handle creation.
-        
-        # We also need to be careful if the user hasn't "started" the book yet?
-        # Usually user_books implies opened/purchased. 
-        # If it doesn't exist, we insert it.
-        
         query = """
             INSERT INTO user_books (user_id, book_id, background_music_id, last_accessed_at)
             VALUES (%s, %s, %s, NOW())
             ON CONFLICT (user_id, book_id)
             DO UPDATE SET background_music_id = EXCLUDED.background_music_id, last_accessed_at = NOW()
         """
-        db.execute_query(query, (user_id, book_id, bg_music_id))
-        
+        affected = db.execute_query(query, (user_id, book_id, bg_music_id))
+        if affected is None:
+            return jsonify({"error": "Failed to update background music preference"}), 500
+
         return jsonify({"message": "Background music preference updated"}), 200
     except Exception as e:
         print(f"Error updating background music: {e}")
@@ -3354,7 +3388,13 @@ def upload_book():
         description = request.form.get('description', '')
         price = request.form.get('price', 0.0)
         is_premium = request.form.get('is_premium', '0')  # Default to 0 (not premium)
-        background_music_id = request.form.get('background_music_id') # Optional background music ID
+        raw_background_music_id = request.form.get('background_music_id')
+        background_music_id = None
+        if raw_background_music_id not in (None, '', 'null', 'None'):
+            try:
+                background_music_id = int(raw_background_music_id)
+            except (TypeError, ValueError):
+                return jsonify({"error": "Invalid background_music_id"}), 400
 
         if not all([title, author, category_id, user_id]):
              return jsonify({"error": "Missing required fields"}), 400
@@ -3378,6 +3418,30 @@ def upload_book():
                  return jsonify({"error": f"Invalid category: {category_id}"}), 400
         else:
             numeric_cat_id = cats[0]['id']
+
+        # Enforce background music at book level:
+        # upload value -> existing default track.
+        if background_music_id is None:
+            default_bg = db.execute_query(
+                "SELECT id FROM background_music WHERE is_default = TRUE ORDER BY id ASC LIMIT 1"
+            )
+            if default_bg:
+                background_music_id = default_bg[0]['id']
+            else:
+                fallback_bg = db.execute_query(
+                    "SELECT id FROM background_music ORDER BY id ASC LIMIT 1"
+                )
+                if fallback_bg:
+                    background_music_id = fallback_bg[0]['id']
+                else:
+                    db.disconnect()
+                    return jsonify({"error": "No background music configured on server"}), 400
+        elif not db.execute_query(
+            "SELECT id FROM background_music WHERE id = %s",
+            (background_music_id,),
+        ):
+            db.disconnect()
+            return jsonify({"error": "Selected background music not found"}), 400
 
         # Check for files
         audio_files = request.files.getlist('audio')

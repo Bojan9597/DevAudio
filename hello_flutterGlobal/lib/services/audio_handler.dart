@@ -20,6 +20,7 @@ class MyAudioHandler extends BaseAudioHandler {
   bool _bgMusicLoaded = false;
   int? _selectedBgMusicId;
   StreamSubscription? _bgSyncSubscription;
+  StreamSubscription<PlayerState>? _bgDeferredSyncSubscription;
 
   AudioPlayer get player => _player;
   AudioPlayer get bgPlayer => _bgPlayer;
@@ -143,21 +144,14 @@ class MyAudioHandler extends BaseAudioHandler {
   ) async {
     // Avoid reloading if same source
     if (_selectedBgMusicId == bgMusicId && _bgMusicLoaded) {
-      // Check if we need to sync play state (e.g. if main player is playing but bg is not)
-      if (_bgMusicEnabled) {
-        final mainPlaying =
-            _player.playing ||
-            _player.processingState == ProcessingState.loading ||
-            _player.processingState == ProcessingState.buffering;
-        if (mainPlaying && !_bgPlayer.playing) {
-          _bgPlayer.play();
-        }
-      }
+      syncBgMusic();
       return;
     }
 
     _selectedBgMusicId = bgMusicId;
     _bgMusicLoaded = false;
+    _bgDeferredSyncSubscription?.cancel();
+    _bgDeferredSyncSubscription = null;
     await _bgPlayer.stop(); // FORCE STOP immediately when switching
 
     if (bgMusicId == null) {
@@ -209,41 +203,28 @@ class MyAudioHandler extends BaseAudioHandler {
       }
 
       _bgMusicLoaded = true;
+      syncBgMusic();
 
-      // After loading, check current main player state and sync
-      // Use longer delay with retry to handle buffering scenarios
-      // Retry for up to 5 seconds (10 checks * 500ms)
-      for (int attempt = 0; attempt < 10; attempt++) {
-        // Check IMMEDIATELY on first attempt, then wait
-        if (attempt > 0)
-          await Future.delayed(const Duration(milliseconds: 500));
+      // If main playback starts a little later (common on first app launch),
+      // keep a short-lived watcher so BG music starts automatically.
+      _bgDeferredSyncSubscription = _player.playerStateStream.listen((state) {
+        final shouldPlay =
+            state.playing &&
+            state.processingState != ProcessingState.completed &&
+            state.processingState != ProcessingState.idle;
 
-        final isMainPlayerPlaying = _player.playing;
-        // RELAXED CONDITION: Allow sync even if processingState is buffering.
-        // The main player handles its own UI (we just fixed that), so bg music
-        // should try to start if the intent is to play.
-
-        if (isMainPlayerPlaying && _bgMusicEnabled) {
+        if (shouldPlay && _bgMusicLoaded && _bgMusicEnabled) {
           if (!_bgPlayer.playing) {
-            // Seek to 0 only if not already playing (to avoid stutter on re-sync)
-            // But if it's a fresh load, position is 0 anyway.
-            // await _bgPlayer.seek(Duration.zero);
             _bgPlayer.play();
-            print(
-              '[AudioHandler] BG music started (post-load sync, attempt ${attempt + 1})',
-            );
           }
-          break; // Successfully started, exit retry loop
-        } else {
-          print(
-            '[AudioHandler] BG sync retry ${attempt + 1}: main player not playing yet (state: ${_player.processingState})',
-          );
-          // If we've tried for 2 seconds and still nothing, maybe pause BG just in case
-          if (attempt >= 4 && _bgPlayer.playing) {
-            _bgPlayer.pause();
-          }
+          _bgDeferredSyncSubscription?.cancel();
+          _bgDeferredSyncSubscription = null;
         }
-      }
+      });
+      Future.delayed(const Duration(seconds: 20), () {
+        _bgDeferredSyncSubscription?.cancel();
+        _bgDeferredSyncSubscription = null;
+      });
 
       print('[AudioHandler] Background music loaded: ${track['title']}');
     } catch (e) {
@@ -260,6 +241,8 @@ class MyAudioHandler extends BaseAudioHandler {
 
   /// Stop background music
   Future<void> stopBgMusic() async {
+    _bgDeferredSyncSubscription?.cancel();
+    _bgDeferredSyncSubscription = null;
     await _bgPlayer.stop();
     _bgMusicLoaded = false;
     _selectedBgMusicId = null;
@@ -292,6 +275,8 @@ class MyAudioHandler extends BaseAudioHandler {
   void toggleBgMusicEnabled(bool enabled) {
     _bgMusicEnabled = enabled;
     if (!enabled) {
+      _bgDeferredSyncSubscription?.cancel();
+      _bgDeferredSyncSubscription = null;
       _bgPlayer.pause();
     } else if (_bgMusicLoaded && _player.playing) {
       _bgPlayer.play();

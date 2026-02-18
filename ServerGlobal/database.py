@@ -29,18 +29,25 @@ def get_connection_pool():
             port = 6432  # PgBouncer
             options = ''  # PgBouncer handles timeouts (query_timeout=3)
 
+        effective_host = os.getenv("DB_HOST", host)
+        effective_port = int(os.getenv("DB_PORT", port))
+        effective_db = os.getenv("DB_NAME", "velorusb_echoHistory")
+        effective_user = os.getenv("DB_USER", "velorusb_echoHistoryAdmin")
+
         _connection_pool = pool.ThreadedConnectionPool(
             minconn=5,      # Minimum connections to keep open
             maxconn=40,     # PgBouncer limits real PG connections to 80, app pool can be larger
-            host=os.getenv("DB_HOST", host),
-            database=os.getenv("DB_NAME", "velorusb_echoHistory"),
-            user=os.getenv("DB_USER", "velorusb_echoHistoryAdmin"),
+            host=effective_host,
+            database=effective_db,
+            user=effective_user,
             password=os.getenv("DB_PASSWORD", "Pijanista123!"),
-            port=int(os.getenv("DB_PORT", port)),
+            port=effective_port,
             connect_timeout=3,
             options=options
         )
-        print(f"Database connection pool created (maxconn=40, port={port})")
+        print(
+            f"Database connection pool created (maxconn=40, host={effective_host}, port={effective_port}, db={effective_db}, user={effective_user})"
+        )
     return _connection_pool
 
 
@@ -174,14 +181,17 @@ class Database:
                 cursor.execute(query, params)
             else:
                 cursor.execute(query)
-            
-            if query.strip().upper().startswith(("SELECT", "SHOW")):
+
+            # Use cursor metadata instead of query prefix so CTE/`WITH ... SELECT`
+            # queries are handled correctly and return rows.
+            if cursor.description is not None:
                 result = cursor.fetchall()
+                self.connection.commit()
                 # Convert RealDictRow to regular dicts
                 return [dict(row) for row in result]
-            else:
-                self.connection.commit()
-                return cursor.rowcount
+
+            self.connection.commit()
+            return cursor.rowcount
         except Exception as e:
             print(f"Error executing query: {e}")
             self.connection.rollback()

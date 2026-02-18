@@ -53,6 +53,13 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
       if (mounted) {
         setState(() {
           _bgMusicList = list;
+          if (_selectedBgMusicId == null && _bgMusicList.isNotEmpty) {
+            final defaultTrack = _bgMusicList.firstWhere(
+              (e) => e['isDefault'] == true,
+              orElse: () => _bgMusicList.first,
+            );
+            _selectedBgMusicId = defaultTrack['id'] as int?;
+          }
         });
       }
     } catch (e) {
@@ -373,20 +380,14 @@ class _UploadBookScreenState extends State<UploadBookScreen> {
                   context,
                 )!.defaultBackgroundMusicOptional,
               ),
-              items: [
-                DropdownMenuItem<int>(
-                  value: null,
-                  child: Text(AppLocalizations.of(context)!.none),
-                ),
-                ..._bgMusicList.map((bg) {
-                  return DropdownMenuItem<int>(
-                    value: bg['id'] as int,
-                    child: Text(
-                      bg['title'] ?? AppLocalizations.of(context)!.unknown,
-                    ),
-                  );
-                }).toList(),
-              ],
+              items: _bgMusicList.map((bg) {
+                return DropdownMenuItem<int>(
+                  value: bg['id'] as int,
+                  child: Text(
+                    bg['title'] ?? AppLocalizations.of(context)!.unknown,
+                  ),
+                );
+              }).toList(),
               onChanged: (val) => setState(() => _selectedBgMusicId = val),
             ),
             const SizedBox(height: 16),

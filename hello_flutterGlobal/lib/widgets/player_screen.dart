@@ -2364,7 +2364,7 @@ class _PlayerScreenState extends State<PlayerScreen>
 
                       // Save Preference
                       try {
-                        BookRepository().updateUserBackgroundMusic(
+                        await BookRepository().updateUserBackgroundMusic(
                           int.parse(widget.book.id),
                           val,
                         );

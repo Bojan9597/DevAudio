@@ -16,6 +16,8 @@ class _MiniPlayerState extends State<MiniPlayer> {
   bool _isHidden = false;
   bool _isExpanded = false; // Start collapsed (notification style)
   String? _lastMediaId;
+  double _verticalDragDelta = 0.0;
+  static const double _verticalSwipeThreshold = 20.0;
 
   // For slider interaction in expanded mode
   bool _isDraggingSlider = false;
@@ -49,6 +51,29 @@ class _MiniPlayerState extends State<MiniPlayer> {
     setState(() {
       _isExpanded = !_isExpanded;
     });
+  }
+
+  void _handleVerticalDragStart(DragStartDetails details) {
+    _verticalDragDelta = 0.0;
+  }
+
+  void _handleVerticalDragUpdate(DragUpdateDetails details) {
+    _verticalDragDelta += details.primaryDelta ?? 0.0;
+  }
+
+  void _handleVerticalDragEnd(DragEndDetails details) {
+    final swipeUp = _verticalDragDelta < -_verticalSwipeThreshold;
+    final swipeDown = _verticalDragDelta > _verticalSwipeThreshold;
+    _verticalDragDelta = 0.0;
+
+    if (swipeUp && !_isExpanded) {
+      setState(() => _isExpanded = true);
+      return;
+    }
+
+    if (swipeDown && _isExpanded) {
+      setState(() => _isExpanded = false);
+    }
   }
 
 
@@ -105,8 +130,10 @@ class _MiniPlayerState extends State<MiniPlayer> {
               final playing = playbackState?.playing ?? false;
 
               return GestureDetector(
-                // Only use onTap - let Dismissible handle horizontal swipes freely
-                // Use the chevron button for expand/collapse instead of vertical swipes
+                behavior: HitTestBehavior.opaque,
+                onVerticalDragStart: _handleVerticalDragStart,
+                onVerticalDragUpdate: _handleVerticalDragUpdate,
+                onVerticalDragEnd: _handleVerticalDragEnd,
                 onTap: () {
                   // Open full player on tap
                   if (audioHandler.currentBook != null) {

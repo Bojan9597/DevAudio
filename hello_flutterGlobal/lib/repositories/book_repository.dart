@@ -953,27 +953,26 @@ class BookRepository {
   }
 
   Future<void> updateUserBackgroundMusic(int bookId, int? bgMusicId) async {
-    try {
-      final userId = await _authService.getCurrentUserId();
-      if (userId == null) return;
+    final userId = await _authService.getCurrentUserId();
+    if (userId == null) {
+      throw Exception('User not logged in');
+    }
 
-      final url = Uri.parse(
-        '${ApiConstants.baseUrl}/user-books/background-music',
-      );
-      print('[DEBUG] Updating user background music: $bookId -> $bgMusicId');
-      final headers = await _getHeaders();
-      final body = json.encode({
-        'user_id': userId,
-        'book_id': bookId,
-        'background_music_id': bgMusicId,
-      });
+    final url = Uri.parse('${ApiConstants.baseUrl}/user-books/background-music');
+    print('[DEBUG] Updating user background music: $bookId -> $bgMusicId');
+    final headers = await _getHeaders();
+    final body = json.encode({
+      'user_id': userId,
+      'book_id': bookId,
+      'background_music_id': bgMusicId,
+    });
 
-      final response = await _apiClient.post(url, headers: headers, body: body);
-      print(
-        '[DEBUG] Update response: ${response.statusCode} - ${response.body}',
+    final response = await _apiClient.post(url, headers: headers, body: body);
+    print('[DEBUG] Update response: ${response.statusCode} - ${response.body}');
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        'Failed to update background music: ${response.statusCode} ${response.body}',
       );
-    } catch (e) {
-      print('Error updating user background music preference: $e');
     }
   }
 

@@ -75,6 +75,8 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
   @override
   void initState() {
     super.initState();
+    _bgVolume = AudioConnector.handler?.bgVolume ?? _bgVolume;
+    _selectedBgMusicId = AudioConnector.handler?.selectedBgMusicId;
     _initAudioSession();
     _initBgPlayer();
     _stopGlobalAudio(); // Stop global audio when entering reels
@@ -207,10 +209,14 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
           _verticalController.jumpToPage(startIndex);
         }
 
-        _playTrack(startIndex, 0);
-        _applyBgMusicFromBook(startIndex);
+        await _startPlaybackForBook(startIndex, 0);
       }
     }
+  }
+
+  Future<void> _startPlaybackForBook(int bookIndex, int trackIndex) async {
+    await _playTrack(bookIndex, trackIndex);
+    await _applyBgMusicFromBook(bookIndex);
   }
 
   // _saveOffset removed - Server updates offset automatically on fetch
@@ -377,6 +383,7 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
         // We need to call play() explicitly or update `loadAudio` to play.
         // Helper `loadAudio` in handler: `await _player.setUrl(url);`
         await AudioConnector.handler?.play();
+        AudioConnector.handler?.syncBgMusic();
 
         setState(() {
           _currentBookIndex = bookIndex;
@@ -537,11 +544,10 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
           itemCount: _books.length,
           onPageChanged: (index) {
             // Play first track of new book immediately
-            _playTrack(index, 0);
+            _startPlaybackForBook(index, 0);
 
             // Apply background music from pre-fetched data (No API call!)
             print("[DEBUG] onPageChanged: Index $index");
-            _applyBgMusicFromBook(index);
 
             // Pre-load next batch if we are near the end (e.g., 2 items remaining)
             if (index >= _books.length - 2) {
@@ -959,7 +965,7 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
     );
   }
 
-  void _applyBgMusicFromBook(int index) {
+  Future<void> _applyBgMusicFromBook(int index) async {
     if (index < 0 || index >= _books.length) return;
     final book = _books[index];
 
@@ -985,11 +991,20 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
     print(
       "[DEBUG] _applyBgMusicFromBook: Final _selectedBgMusicId: $_selectedBgMusicId",
     );
-    _setBgMusicSource(musicId); // Fire and forget (it manages its own state)
+    await _setBgMusicSource(musicId);
   }
 
   Future<void> _setBgMusicSource(int? musicId) async {
-    if (musicId == null) {
+    int? effectiveMusicId = musicId;
+    if (effectiveMusicId == null && _bgMusicList.isNotEmpty) {
+      final defaultTrack = _bgMusicList.firstWhere(
+        (e) => e['isDefault'] == true,
+        orElse: () => _bgMusicList.first,
+      );
+      effectiveMusicId = defaultTrack['id'] as int?;
+    }
+
+    if (effectiveMusicId == null) {
       await AudioConnector.handler?.stopBgMusic();
       if (mounted) setState(() {});
       return;
@@ -998,7 +1013,9 @@ class _ReelsScreenState extends State<ReelsScreen> with RouteAware {
     // We just pass the ID and the List to the handler
     // The handler has the logic to find URL, check cache, etc.
     // AND it handles synchronization with main player.
-    await AudioConnector.handler?.setBgMusicSource(musicId, _bgMusicList);
+    await AudioConnector.handler?.setBgMusicSource(effectiveMusicId, _bgMusicList);
+    await AudioConnector.handler?.setBgMusicVolume(_bgVolume);
+    AudioConnector.handler?.syncBgMusic();
 
     // Also sync volume
     if (AudioConnector.handler != null) {

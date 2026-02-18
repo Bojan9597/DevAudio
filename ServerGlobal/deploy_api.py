@@ -19,20 +19,28 @@ def deploy():
         
         sftp = ssh.open_sftp()
         
-        # Upload api.py
-        local_path = "api.py"
-        remote_path = f"{REMOTE_DIR}/api.py"
-        print(f"Uploading {local_path} to {remote_path}...")
-        sftp.put(local_path, remote_path)
-
-        # Upload badge_service.py
-        local_path = "badge_service.py"
-        remote_path = f"{REMOTE_DIR}/badge_service.py"
-        print(f"Uploading {local_path} to {remote_path}...")
-        sftp.put(local_path, remote_path)
+        files_to_upload = [
+            "api.py",
+            "database.py",
+            "badge_service.py",
+        ]
+        for local_path in files_to_upload:
+            remote_path = f"{REMOTE_DIR}/{local_path}"
+            print(f"Uploading {local_path} to {remote_path}...")
+            sftp.put(local_path, remote_path)
             
         sftp.close()
         print("Files uploaded.")
+
+        # Force DB port in remote .env to PgBouncer (6432)
+        print("Ensuring remote .env uses PgBouncer (DB_PORT=6432)...")
+        env_cmd = (
+            f"if [ -f {REMOTE_DIR}/.env ]; then "
+            f"if grep -q '^DB_PORT=' {REMOTE_DIR}/.env; then "
+            f"sed -i 's/^DB_PORT=.*/DB_PORT=6432/' {REMOTE_DIR}/.env; "
+            f"else echo 'DB_PORT=6432' >> {REMOTE_DIR}/.env; fi; fi"
+        )
+        ssh.exec_command(env_cmd)[1].channel.recv_exit_status()
 
         # Restart Service
         print("Restarting echo_history.service...")

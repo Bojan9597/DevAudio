@@ -1,6 +1,8 @@
 import '../utils/url_helper.dart';
 
 class Book {
+  static const Object _unset = Object();
+
   final String id;
   final String title;
   final String author;
@@ -144,8 +146,8 @@ class Book {
     double? averageRating,
     int? ratingCount,
     List<dynamic>? tracks,
-    int? backgroundMusicId,
-    int? currentPlaylistItemId,
+    Object? backgroundMusicId = _unset,
+    Object? currentPlaylistItemId = _unset,
   }) {
     return Book(
       id: id,
@@ -170,9 +172,12 @@ class Book {
       pdfUrl: pdfUrl ?? this.pdfUrl,
       isPremium: isPremium ?? this.isPremium,
       tracks: tracks ?? this.tracks,
-      backgroundMusicId: backgroundMusicId ?? this.backgroundMusicId,
-      currentPlaylistItemId:
-          currentPlaylistItemId ?? this.currentPlaylistItemId,
+      backgroundMusicId: identical(backgroundMusicId, _unset)
+          ? this.backgroundMusicId
+          : backgroundMusicId as int?,
+      currentPlaylistItemId: identical(currentPlaylistItemId, _unset)
+          ? this.currentPlaylistItemId
+          : currentPlaylistItemId as int?,
     );
   }
 }
