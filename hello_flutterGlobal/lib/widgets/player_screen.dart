@@ -2084,10 +2084,7 @@ class _PlayerScreenState extends State<PlayerScreen>
 
                   // Bottom Options
                   Padding(
-                    // Added Padding for bottom navigation overlap
-                    padding: EdgeInsets.only(
-                      bottom: MediaQuery.of(context).padding.bottom + 20,
-                    ),
+                    padding: const EdgeInsets.only(bottom: 20),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
@@ -2131,7 +2128,6 @@ class _PlayerScreenState extends State<PlayerScreen>
                     ),
                   ),
 
-                  const SizedBox(height: 20), // Extra safety margin
                 ],
               ),
             ),
