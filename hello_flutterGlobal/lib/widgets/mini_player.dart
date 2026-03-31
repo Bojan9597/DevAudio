@@ -6,7 +6,8 @@ import 'player_screen.dart';
 import '../services/player_preferences.dart';
 
 class MiniPlayer extends StatefulWidget {
-  const MiniPlayer({super.key});
+  final bool addBottomInset;
+  const MiniPlayer({super.key, this.addBottomInset = false});
 
   @override
   State<MiniPlayer> createState() => _MiniPlayerState();
@@ -79,8 +80,9 @@ class _MiniPlayerState extends State<MiniPlayer> {
 
   @override
   Widget build(BuildContext context) {
-    // 65 for collapsed, 150 for expanded
-    final double miniPlayerHeight = _isExpanded ? 150.0 : 65.0;
+    final double bottomInset = widget.addBottomInset ? MediaQuery.of(context).padding.bottom : 0.0;
+    final double contentHeight = _isExpanded ? 150.0 : 65.0;
+    final double miniPlayerHeight = contentHeight + bottomInset;
 
     return StreamBuilder<MediaItem?>(
       stream: audioHandler.mediaItem,
@@ -155,58 +157,66 @@ class _MiniPlayerState extends State<MiniPlayer> {
                   curve: Curves.easeInOut,
                   height: miniPlayerHeight,
                   color: Colors.grey[900],
-                  // Wrap in SingleChildScrollView to prevent overflow errors during animation
-                  child: SingleChildScrollView(
-                    physics: const NeverScrollableScrollPhysics(),
-                    child: SizedBox(
-                      height: miniPlayerHeight,
-                      child: Stack(
-                        children: [
-                          // Background Image (Blurred)
-                          if (mediaItem.artUri != null)
-                            Positioned.fill(
-                              child: Opacity(
-                                opacity: 0.3,
-                                child: Image.network(
-                                  mediaItem.artUri.toString(),
-                                  headers: ApiConstants.imageHeaders,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      const SizedBox(),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Wrap in SingleChildScrollView to prevent overflow errors during animation
+                      SingleChildScrollView(
+                        physics: const NeverScrollableScrollPhysics(),
+                        child: SizedBox(
+                          height: contentHeight,
+                          child: Stack(
+                            children: [
+                              // Background Image (Blurred)
+                              if (mediaItem.artUri != null)
+                                Positioned.fill(
+                                  child: Opacity(
+                                    opacity: 0.3,
+                                    child: Image.network(
+                                      mediaItem.artUri.toString(),
+                                      headers: ApiConstants.imageHeaders,
+                                      fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (context, error, stackTrace) =>
+                                              const SizedBox(),
+                                    ),
+                                  ),
+                                ),
+
+                              // Main Content
+                              _isExpanded
+                                  ? _buildExpandedLayout(mediaItem, playing)
+                                  : _buildCollapsedLayout(mediaItem, playing),
+
+                              // Toggle Button (Chevron)
+                              Positioned(
+                                top: 2,
+                                right: 12,
+                                child: SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: IconButton(
+                                    padding: EdgeInsets.zero,
+                                    visualDensity: VisualDensity.compact,
+                                    iconSize: 20,
+                                    constraints: const BoxConstraints(),
+                                    icon: Icon(
+                                      _isExpanded
+                                          ? Icons.keyboard_arrow_down
+                                          : Icons.keyboard_arrow_up,
+                                      color: Colors.white54,
+                                    ),
+                                    onPressed: _toggleExpanded,
+                                  ),
                                 ),
                               ),
-                            ),
-
-                          // Main Content
-                          _isExpanded
-                              ? _buildExpandedLayout(mediaItem, playing)
-                              : _buildCollapsedLayout(mediaItem, playing),
-
-                          // Toggle Button (Chevron) - Above 'Next' button
-                          Positioned(
-                            top: 2,
-                            right: 12, // Align with the controls padding
-                            child: SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: IconButton(
-                                padding: EdgeInsets.zero,
-                                visualDensity: VisualDensity.compact,
-                                iconSize: 20,
-                                constraints: const BoxConstraints(),
-                                icon: Icon(
-                                  _isExpanded
-                                      ? Icons.keyboard_arrow_down
-                                      : Icons.keyboard_arrow_up,
-                                  color: Colors.white54,
-                                ),
-                                onPressed: _toggleExpanded,
-                              ),
-                            ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                      // Spacer for system navigation bar
+                      SizedBox(height: bottomInset),
+                    ],
                   ),
                 ),
               );

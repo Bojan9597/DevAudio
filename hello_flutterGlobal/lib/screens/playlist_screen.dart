@@ -1139,7 +1139,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       ),
       floatingActionButton: null,
       // floatingActionButtonLocation: FloatingActionButtonLocation.endTop,
-      bottomNavigationBar: const MiniPlayer(),
+      bottomNavigationBar: const MiniPlayer(addBottomInset: true),
     );
   }
 }
