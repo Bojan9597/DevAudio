@@ -279,31 +279,34 @@ class _PlayerScreenState extends State<PlayerScreen>
           }
 
           if (hasQuiz && !isPassed && PlayerScreen.isAppInForeground) {
+            // Suppress auto-advance in audio handler so the next chapter
+            // doesn't start playing in the background while the quiz is shown.
+            audioHandler.suppressAutoAdvance = true;
             // Stop audio before navigating to quiz (only in foreground)
             await _player.stop();
 
             // Navigate to Quiz for the COMPLETED track
             Future.microtask(() async {
-              if (mounted) {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => QuizTakerScreen(
-                      bookId: widget.book.id,
-                      playlistItemId: int.parse(completedTrackId!),
+              try {
+                if (mounted) {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => QuizTakerScreen(
+                        bookId: widget.book.id,
+                        playlistItemId: int.parse(completedTrackId!),
+                      ),
                     ),
-                  ),
-                );
-
-                // After quiz, advance to next track using existing flow
+                  );
+                }
+              } finally {
+                // Always re-enable auto-advance and unblock completion handling,
+                // even if navigation failed or screen was unmounted.
+                audioHandler.suppressAutoAdvance = false;
                 _isHandlingCompletion = false;
                 if (mounted && widget.playlist != null) {
-                  // Use same flow as non-quiz path - this properly handles page transition and audio loading
                   _playNext();
-                  // Auto-play the next track and start background music
-                  await Future.delayed(
-                    const Duration(milliseconds: 500),
-                  ); // Wait for player to load
+                  await Future.delayed(const Duration(milliseconds: 500));
                   if (mounted) {
                     await audioHandler.play();
                   }
@@ -524,17 +527,29 @@ class _PlayerScreenState extends State<PlayerScreen>
           await _player.stop();
         }
       } catch (networkError) {
-        // Network calls failed - keep the fast-path decision
-        print("Network check failed, using local data: $networkError");
+        // Network calls failed — check confirmed subscription record before giving up.
+        // SubscriptionService honours the permanent local record when offline.
+        print("Network check failed, checking confirmed subscription: $networkError");
+        if (mounted) {
+          final isFree = !widget.book.isPremium;
+          final confirmedSub = await SubscriptionService().isSubscribed();
+          final localSubscribed = await AuthService().getPersistentSubscriptionStatus();
+          final hasAccess = isFree || _isAdmin || confirmedSub || localSubscribed;
+          setState(() {
+            _isPurchased = hasAccess;
+            _isLoadingOwnership = false;
+          });
+          if (hasAccess) _startProgressSync();
+        }
       }
     } catch (e) {
       print("Error checking ownership/favorites: $e");
       if (mounted) {
-        // Even on error, check local subscription as fallback
-        final localSubscribed = await AuthService().getPersistentSubscriptionStatus();
         final isFree = !widget.book.isPremium;
+        final confirmedSub = await SubscriptionService().isSubscribed();
+        final localSubscribed = await AuthService().getPersistentSubscriptionStatus();
         setState(() {
-          _isPurchased = localSubscribed || isFree;
+          _isPurchased = isFree || confirmedSub || localSubscribed;
           _isLoadingOwnership = false;
         });
         if (_isPurchased) _startProgressSync();

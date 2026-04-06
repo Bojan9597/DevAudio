@@ -2,14 +2,55 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'connectivity_service.dart';
 import 'auth_service.dart';
-import 'api_client.dart'; // Import ApiClient
+import 'api_client.dart';
 import '../utils/api_constants.dart';
 import '../models/subscription.dart';
 
 class SubscriptionService {
   final AuthService _authService = AuthService();
-  static const String _subscriptionCacheKey = 'subscription_status';
-  static const int _cacheValidityMinutes = 5;
+
+  // Permanent local subscription record.
+  // Written when user subscribes or server confirms active.
+  // ONLY cleared by explicit successful cancellation.
+  static const String _confirmedSubKey = 'confirmed_subscription';
+
+  // ── Local record helpers ──────────────────────────────────────────────────
+
+  Future<Subscription?> _getLocalSubscription(
+    SharedPreferences prefs,
+    int userId,
+  ) async {
+    final raw = prefs.getString('${_confirmedSubKey}_$userId');
+    if (raw == null) return null;
+    try {
+      final sub = Subscription.fromJson(json.decode(raw));
+      if (sub.planType == 'lifetime') return sub; // never expires
+      if (sub.endDate == null) return sub;
+      final nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      return sub.endDate! > nowSeconds ? sub : null; // expired
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _saveLocalSubscription(
+    SharedPreferences prefs,
+    int userId,
+    Subscription sub,
+  ) async {
+    await prefs.setString('${_confirmedSubKey}_$userId', json.encode(sub.toJson()));
+    print('[SubscriptionService] Local subscription saved (plan=${sub.planType}, endDate=${sub.endDate})');
+  }
+
+  Future<void> _clearLocalSubscription(
+    SharedPreferences prefs,
+    int userId,
+  ) async {
+    await prefs.remove('${_confirmedSubKey}_$userId');
+    print('[SubscriptionService] Local subscription cleared');
+  }
+
+  // ── Headers ───────────────────────────────────────────────────────────────
 
   Future<Map<String, String>> _getHeaders() async {
     final token = await _authService.getAccessToken();
@@ -19,85 +60,48 @@ class SubscriptionService {
     };
   }
 
-  /// Get subscription status with caching
-  /// First checks local cache (with timestamp), then fetches from server if needed
+  // ── Main status check ─────────────────────────────────────────────────────
+
+  /// Returns the subscription status.
+  ///
+  /// Priority:
+  ///   1. Local confirmed record — if valid (end date not passed) → return immediately, no server call.
+  ///   2. Server — only reached if local is missing or expired.
+  ///      On success: update local record.
+  ///      On failure: return none (local was already expired/missing).
+  ///
+  /// Pass [forceRefresh] = true to bypass local and always hit the server
+  /// (use only after subscribing or cancelling).
   Future<Subscription?> getSubscriptionStatus({
     bool forceRefresh = false,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final userId = await _authService.getCurrentUserId();
-
     if (userId == null) {
-      print('[SubscriptionService] No user ID found');
+      print('[SubscriptionService] No user ID');
       return null;
     }
 
-    final cacheKey = '${_subscriptionCacheKey}_$userId';
-
-    // Check cache first (unless force refresh)
+    // ── Step 1: Local is the source of truth ─────────────────────────────
     if (!forceRefresh) {
-      final cached = prefs.getString(cacheKey);
-      if (cached != null) {
-        try {
-          final data = json.decode(cached);
-          final cachedAt = DateTime.parse(data['cached_at']);
-          final subscription = Subscription.fromJson(data['subscription']);
-
-          // Check if subscription has expired since caching
-          // endDate is now int (seconds since epoch)
-          final nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-
-          if (subscription.endDate != null &&
-              subscription.endDate! < nowSeconds) {
-            // Subscription expired - clear cache and fetch fresh
-            print(
-              '[SubscriptionService] Cached subscription expired, fetching fresh',
-            );
-            await prefs.remove(cacheKey);
-            // Recursive call with forceRefresh to get fresh data immediately
-            return getSubscriptionStatus(forceRefresh: true);
-          } else if (DateTime.now().difference(cachedAt).inMinutes <
-              _cacheValidityMinutes) {
-            // Cache still valid
-            print(
-              '[SubscriptionService] Using cached subscription: isActive=${subscription.isActive}',
-            );
-            return subscription;
-          } else {
-            print(
-              '[SubscriptionService] Cache expired (>$_cacheValidityMinutes min), fetching fresh',
-            );
-          }
-        } catch (e) {
-          print('[SubscriptionService] Error parsing cached subscription: $e');
-        }
-      } else {
-        print('[SubscriptionService] No cached subscription found');
+      final local = await _getLocalSubscription(prefs, userId);
+      if (local != null) {
+        print('[SubscriptionService] Local subscription valid — skipping server (plan=${local.planType})');
+        return local;
       }
+      print('[SubscriptionService] No valid local subscription — checking server');
     }
 
-    // Fetch from server
+    // ── Step 2: Server (only when local is missing/expired or forceRefresh) ─
+    if (ConnectivityService().isOffline) {
+      print('[SubscriptionService] Offline and no valid local subscription');
+      return Subscription.none(userId);
+    }
+
     try {
-      if (ConnectivityService().isOffline) {
-        // Return cached even if expired when offline
-        final cached = prefs.getString(cacheKey);
-        if (cached != null) {
-          final data = json.decode(cached);
-          print('[SubscriptionService] Offline - using cached data');
-          return Subscription.fromJson(data['subscription']);
-        }
-        print('[SubscriptionService] Offline - no cache, returning none');
-        return Subscription.none(userId);
-      }
-
       final headers = await _getHeaders();
-      print('[SubscriptionService] Fetching from server for user $userId');
-
-      // Use ApiClient
       final response = await ApiClient().get(
-        Uri.parse(
-          '${ApiConstants.baseUrl}/subscription/status?user_id=$userId',
-        ),
+        Uri.parse('${ApiConstants.baseUrl}/subscription/status?user_id=$userId'),
         headers: headers,
       );
 
@@ -105,89 +109,49 @@ class SubscriptionService {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        print('[SubscriptionService] Server data: $data');
-
-        // Cache the result
-        await prefs.setString(
-          cacheKey,
-          json.encode({
-            'subscription': data,
-            'cached_at': DateTime.now().toIso8601String(),
-          }),
-        );
-
         final subscription = Subscription.fromJson(data);
 
-        // Subscription parsed with integer timestamps
+        if (subscription.isActive) {
+          // Save to local so future checks never need the server
+          await _saveLocalSubscription(prefs, userId, subscription);
+        } else {
+          // Server confirms not active — clear any stale local record
+          await _clearLocalSubscription(prefs, userId);
+        }
 
-        print(
-          '[SubscriptionService] Parsed subscription: isActive=${subscription.isActive}, status=${subscription.status}',
-        );
+        print('[SubscriptionService] Server: isActive=${subscription.isActive}');
         return subscription;
       } else {
-        print('[SubscriptionService] Server error: ${response.body}');
+        print('[SubscriptionService] Server error ${response.statusCode}');
       }
     } catch (e) {
-      print('[SubscriptionService] Error fetching subscription status: $e');
+      print('[SubscriptionService] Network error: $e');
     }
 
-    print('[SubscriptionService] Returning none subscription');
     return Subscription.none(userId);
   }
 
-  /// Quick check if user is subscribed (uses cache)
+  /// Returns true if the user has an active subscription.
+  /// Local record is checked first — no server call if local is valid.
   Future<bool> isSubscribed({bool forceRefresh = false}) async {
     final sub = await getSubscriptionStatus(forceRefresh: forceRefresh);
-    if (sub == null) return false;
-
-    // If we forced a refresh, trust the server's judgment completely.
-    // The server handles the time comparison and sets 'isActive'.
-    // This avoids issues with local clock drift vs server time.
-    if (forceRefresh) {
-      print('[SubscriptionService] isSubscribed (fresh): ${sub.isActive}');
-      return sub.isActive;
-    }
-
-    // If using cache, check for expiration locally (using timestamps)
-    // We compare current timestamp (seconds) vs endDate (seconds)
-    final nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-
-    if (sub.endDate != null && sub.endDate! < nowSeconds) {
-      print(
-        '[SubscriptionService] Cached subscription expired locally (endDate=${sub.endDate}, now=$nowSeconds), checking server...',
-      );
-
-      // Force refresh to confirm with server
-      final freshSub = await getSubscriptionStatus(forceRefresh: true);
-      if (freshSub != null) {
-        print(
-          '[SubscriptionService] Server confirmed status: ${freshSub.isActive}',
-        );
-        // Trust the server's isActive flag for the fresh data
-        return freshSub.isActive;
-      }
-      return false;
-    }
-
-    print('[SubscriptionService] isSubscribed (cache): ${sub.isActive}');
-    return sub.isActive;
+    final result = sub?.isActive ?? false;
+    print('[SubscriptionService] isSubscribed=$result (forceRefresh=$forceRefresh)');
+    return result;
   }
 
-  /// Subscribe user to a plan
+  // ── Subscribe ─────────────────────────────────────────────────────────────
+
   Future<Map<String, dynamic>> subscribe(String planType) async {
     final userId = await _authService.getCurrentUserId();
-    if (userId == null) {
-      return {'success': false, 'error': 'User not logged in'};
+    if (userId == null) return {'success': false, 'error': 'User not logged in'};
+
+    if (ConnectivityService().isOffline) {
+      return {'success': false, 'error': 'Cannot subscribe while offline'};
     }
 
     try {
-      if (ConnectivityService().isOffline) {
-        return {'success': false, 'error': 'Cannot subscribe while offline'};
-      }
-
       final headers = await _getHeaders();
-
-      // Use ApiClient
       final response = await ApiClient().post(
         Uri.parse('${ApiConstants.baseUrl}/subscription/subscribe'),
         headers: headers,
@@ -197,8 +161,26 @@ class SubscriptionService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = json.decode(response.body);
 
-        // Re-fetch and cache subscription status immediately so offline works
-        await getSubscriptionStatus(forceRefresh: true);
+        // Save the local record immediately from the subscribe response —
+        // no second server call. A second call risks a race condition where
+        // the status endpoint hasn't updated yet and returns is_active=false,
+        // which would wipe the local record and cause instant paywall after subscribing.
+        int? parseEndDate(dynamic val) {
+          if (val == null) return null;
+          if (val is int) return val;
+          if (val is String) return int.tryParse(val);
+          return null;
+        }
+
+        final prefs = await SharedPreferences.getInstance();
+        final confirmedSub = Subscription(
+          userId: userId,
+          planType: data['plan_type'] ?? planType,
+          status: 'active',
+          isActive: true,
+          endDate: parseEndDate(data['end_date']),
+        );
+        await _saveLocalSubscription(prefs, userId, confirmedSub);
 
         return {
           'success': true,
@@ -208,32 +190,26 @@ class SubscriptionService {
         };
       } else {
         final error = json.decode(response.body);
-        return {
-          'success': false,
-          'error': error['error'] ?? 'Subscription failed',
-        };
+        return {'success': false, 'error': error['error'] ?? 'Subscription failed'};
       }
     } catch (e) {
-      print('Error subscribing: $e');
+      print('[SubscriptionService] Subscribe error: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
 
-  /// Cancel subscription
+  // ── Cancel ────────────────────────────────────────────────────────────────
+
   Future<Map<String, dynamic>> cancelSubscription() async {
     final userId = await _authService.getCurrentUserId();
-    if (userId == null) {
-      return {'success': false, 'error': 'User not logged in'};
+    if (userId == null) return {'success': false, 'error': 'User not logged in'};
+
+    if (ConnectivityService().isOffline) {
+      return {'success': false, 'error': 'Cannot cancel while offline'};
     }
 
     try {
-      if (ConnectivityService().isOffline) {
-        return {'success': false, 'error': 'Cannot cancel while offline'};
-      }
-
       final headers = await _getHeaders();
-
-      // Use ApiClient
       final response = await ApiClient().post(
         Uri.parse('${ApiConstants.baseUrl}/subscription/cancel'),
         headers: headers,
@@ -241,30 +217,27 @@ class SubscriptionService {
       );
 
       if (response.statusCode == 200) {
-        // Clear cache
+        // Only clear local record after server confirms cancellation
         final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('${_subscriptionCacheKey}_$userId');
-
+        await _clearLocalSubscription(prefs, userId);
         return {'success': true, 'message': 'Subscription cancelled'};
       } else {
         final error = json.decode(response.body);
-        return {
-          'success': false,
-          'error': error['error'] ?? 'Cancellation failed',
-        };
+        return {'success': false, 'error': error['error'] ?? 'Cancellation failed'};
       }
     } catch (e) {
-      print('Error cancelling subscription: $e');
+      print('[SubscriptionService] Cancel error: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
 
-  /// Clear subscription cache (e.g., on logout)
+  // ── Cache clear (logout) ──────────────────────────────────────────────────
+
+  /// Clears only in-memory/temp state on logout.
+  /// Does NOT clear the local subscription record — it survives logout
+  /// so the user isn't locked out on next login before a server check.
   Future<void> clearCache() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userId = await _authService.getCurrentUserId();
-    if (userId != null) {
-      await prefs.remove('${_subscriptionCacheKey}_$userId');
-    }
+    // Nothing to clear — the local record is intentionally permanent.
+    // It will be validated against endDate on next access.
   }
 }

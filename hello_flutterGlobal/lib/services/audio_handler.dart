@@ -28,6 +28,9 @@ class MyAudioHandler extends BaseAudioHandler {
   bool get bgMusicEnabled => _bgMusicEnabled;
   int? get selectedBgMusicId => _selectedBgMusicId;
 
+  // When true, auto-advance on completion is suppressed (e.g. while showing a quiz)
+  bool suppressAutoAdvance = false;
+
   // Stream to notify listeners of track completion
   final StreamController<String> _trackCompletionController =
       StreamController<String>.broadcast();
@@ -116,8 +119,14 @@ class MyAudioHandler extends BaseAudioHandler {
           _trackCompletionController.add(trackId);
         }
 
-        // Automatically skip to next track
-        skipToNext();
+        // Schedule auto-advance as a microtask so that any synchronous
+        // playerStateStream listeners (e.g. PlayerScreen) can set
+        // suppressAutoAdvance = true before skipToNext() is actually called.
+        Future.microtask(() {
+          if (!suppressAutoAdvance) {
+            skipToNext();
+          }
+        });
       }
     });
 
