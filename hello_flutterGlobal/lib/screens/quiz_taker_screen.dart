@@ -226,109 +226,116 @@ class _QuizTakerScreenState extends State<QuizTakerScreen> {
         },
         itemBuilder: (context, index) {
           final q = _questions[index];
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  q.question,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                ...List.generate(4, (optIndex) {
-                  final char = ['A', 'B', 'C', 'D'][optIndex];
-                  final text = q.options[optIndex];
-                  final isSelected = _userAnswers[index] == char;
-
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: isSelected
-                            ? Colors.orange.withOpacity(0.2)
-                            : null,
-                        side: BorderSide(
-                          color: isSelected ? Colors.orange : Colors.grey,
-                        ),
-                        padding: const EdgeInsets.all(16),
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _userAnswers[index] = char;
-                        });
-                      },
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 15,
-                            backgroundColor: isSelected
-                                ? Colors.orange
-                                : Colors.grey.shade300,
-                            child: Text(
-                              char,
-                              style: const TextStyle(color: Colors.black),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              text,
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-
-                const SizedBox(height: 32),
-
-                Container(
-                  padding: EdgeInsets.only(
-                    bottom: MediaQuery.of(context).size.height * 0.1,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          return Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      if (index > 0)
-                        TextButton(
-                          onPressed: () {
-                            _pageController.previousPage(
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeInOut,
-                            );
-                          },
-                          child: const Text("Previous"),
+                      Text(
+                        q.question,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
                         ),
+                      ),
+                      const SizedBox(height: 20),
+                      ...List.generate(4, (optIndex) {
+                        final char = ['A', 'B', 'C', 'D'][optIndex];
+                        final text = q.options[optIndex];
+                        final isSelected = _userAnswers[index] == char;
 
-                      if (index < _questions.length - 1)
-                        ElevatedButton(
-                          onPressed: () {
-                            _pageController.nextPage(
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeInOut,
-                            );
-                          },
-                          child: const Text("Next Question"),
-                        )
-                      else
-                        ElevatedButton(
-                          onPressed: _finishQuiz,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: isSelected
+                                  ? Colors.orange.withValues(alpha: 0.2)
+                                  : null,
+                              side: BorderSide(
+                                color: isSelected ? Colors.orange : Colors.grey,
+                              ),
+                              padding: const EdgeInsets.all(16),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _userAnswers[index] = char;
+                              });
+                            },
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 15,
+                                  backgroundColor: isSelected
+                                      ? Colors.orange
+                                      : Colors.grey.shade300,
+                                  child: Text(
+                                    char,
+                                    style: const TextStyle(color: Colors.black),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    text,
+                                    style: const TextStyle(fontSize: 16),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          child: const Text("Submit Quiz"),
-                        ),
+                        );
+                      }),
+                      const SizedBox(height: 16),
                     ],
                   ),
                 ),
-              ],
-            ),
+              ),
+              SafeArea(
+                top: false,
+                child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    if (index > 0)
+                      TextButton(
+                        onPressed: () {
+                          _pageController.previousPage(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                          );
+                        },
+                        child: const Text("Previous"),
+                      )
+                    else
+                      const SizedBox.shrink(),
+
+                    if (index < _questions.length - 1)
+                      ElevatedButton(
+                        onPressed: () {
+                          _pageController.nextPage(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                          );
+                        },
+                        child: const Text("Next Question"),
+                      )
+                    else
+                      ElevatedButton(
+                        onPressed: _finishQuiz,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                        ),
+                        child: const Text("Submit Quiz"),
+                      ),
+                  ],
+                ),
+              ),
+              ),
+            ],
           );
         },
       ),
